@@ -1,4 +1,5 @@
 import os
+import xacro
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -19,17 +20,14 @@ def generate_launch_description():
 
     def create_robot(ns, color, x, y, is_leader=False):
 
-        # robot_description = os.popen(
-        # f"xacro {leo_description}/urdf/leo_sim.urdf.xacro robot_ns:={ns} robot_color:={color}"
-        # ).read()
-
-        xacro_file_path = os.path.join(leo_description, 'urdf', 'leo_sim.urdf.xacro')
+        xacro_file = os.path.join(leo_description, 'urdf', 'leo_sim.urdf.xacro')
         
-        robot_description = Command([
-            'xacro', ' ', xacro_file_path,
-            ' ', 'robot_ns:=', ns,
-            ' ', 'robot_color:=', color,
-        ])
+        doc = xacro.process_file(xacro_file, mappings={
+            "robot_ns": ns,
+            "chassis_color": color,
+            "is_leader": str(is_leader).lower()
+        })
+        robot_description = doc.toxml()
 
         # State Publisher
         state_pub = Node(
@@ -94,22 +92,34 @@ def generate_launch_description():
 
         return [state_pub, spawn, behavior_node] + bridges    
 
+    color_map = {
+        "red": "1 0 0 1",
+        "green": "0 1 0 1",
+        "yellow": "1 1 0 1",
+        "blue": "0 0 1 1",
+        "magenta": "1 0 1 1",
+        "cyan": "0 1 1 1",
+        "gray": "0.5 0.5 0.5 1",
+        "orange": "1 0.5 0 1"
+    }
+
     # Spawn 3 Leaders
-    leader_colors = ["red", "green", "yellow"]
+    leader_colors = ["red", "green", "blue"]
     for i in range(3):
         ns = f"robot_leader_{i}"
-        color = leader_colors[i % len(leader_colors)]
+        color_name = leader_colors[i % len(leader_colors)]
+        color_rgba = color_map[color_name]
         x, y = i * 3.0, 0.0 
         aruco_id = i + 1
-        launch_description += create_robot(ns, color, x, y, is_leader=True)
+        launch_description += create_robot(ns, color_rgba, x, y, is_leader=True)
 
     # Spawn 5 followers
     for i in range(5):
         ns = f"robot_follower_{i}"
-        color = "blue"
+        color_rgba = color_map["yellow"]
         x, y = i * 1.5, 2.0 
         aruco_id = i + 10
-        launch_description += create_robot(ns, color, x, y, is_leader=False)
+        launch_description += create_robot(ns, color_rgba, x, y, is_leader=False)
     
 
     return LaunchDescription(launch_description)

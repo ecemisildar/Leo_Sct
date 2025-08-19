@@ -39,7 +39,7 @@ class FollowerNode(Node):
 
         self.signals["EV_press"] = True
         self.signals["EV_getR"] = True
-        self.signals["EV_getG"] = True
+        self.signals["EV_getB"] = True
 
         self.timer = self.create_timer(0.2, self.step)   
 
@@ -71,7 +71,6 @@ class FollowerNode(Node):
 
         for ev, ev_id in self.EV.items():
             # Sensor input logic
-            print(ev)
             if ev in ["EV_getR", "EV_getG", "EV_getB", 
                         "EV_getNotR", "EV_getNotG", "EV_getNotB"]:
                 self.supervisor.add_callback(ev_id, self.noop, self.make_input_checker(ev), None)
@@ -109,19 +108,19 @@ class FollowerNode(Node):
     
 
     def move_forward(self, _):
-        self.get_logger().info("Moving forward")
+        #self.get_logger().info("Moving forward")
         msg = Twist()
         msg.linear.x = 0.2
         self.cmd_pub.publish(msg)
 
     def turn_CW(self, _):
-        self.get_logger().info("Turning CW")
+        #self.get_logger().info("Turning CW")
         msg = Twist()
         msg.angular.z = -0.5
         self.cmd_pub.publish(msg)
 
     def turn_CCW(self, _):
-        self.get_logger().info("Turning CCW")
+        #self.get_logger().info("Turning CCW")
         msg = Twist()
         msg.angular.z = 0.5
         self.cmd_pub.publish(msg)

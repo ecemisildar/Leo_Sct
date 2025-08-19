@@ -60,7 +60,7 @@ def generate_launch_description():
 
     spawn_robot = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(pkg_project_gazebo, "launch", "yedek_seg.launch.py")
+            os.path.join(pkg_project_gazebo, "launch", "segregation.launch.py")
         ),
         launch_arguments={"robot_ns": LaunchConfiguration("robot_ns")}.items(),
     )
