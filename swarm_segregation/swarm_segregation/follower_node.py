@@ -30,9 +30,6 @@ class FollowerNode(Node):
         self.signals = {ev: False for ev in self.EV}
 
         self.cmd_pub = self.create_publisher(Twist, 'cmd_vel', 10)
-        self.img_pub = self.create_publisher(Image, '/camera/image_raw', 10)
-        self.bridge = CvBridge()
-        self.image = None
 
         self.create_subscription(String, '/leader_broadcast/red', self.on_red, 10)
         self.create_subscription(String, '/leader_broadcast/green', self.on_green, 10)
@@ -44,16 +41,7 @@ class FollowerNode(Node):
         self.signals["EV_getR"] = True
         self.signals["EV_getG"] = True
 
-        self.timer = self.create_timer(0.2, self.step)
-
-    def image_callback(self, msg):
-        self.image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-
-    def timer_callback(self):
-        if self.image is not None:
-            msg = self.bridge.cv2_to_imgmsg(self.image, encoding='bgr8')
-            self.image_publisher_.publish(msg)
-            self.get_logger().info('Published image')    
+        self.timer = self.create_timer(0.2, self.step)   
 
     def on_red(self, msg):
         self.get_logger().info("Received red leader message")
@@ -83,6 +71,7 @@ class FollowerNode(Node):
 
         for ev, ev_id in self.EV.items():
             # Sensor input logic
+            print(ev)
             if ev in ["EV_getR", "EV_getG", "EV_getB", 
                         "EV_getNotR", "EV_getNotG", "EV_getNotB"]:
                 self.supervisor.add_callback(ev_id, self.noop, self.make_input_checker(ev), None)

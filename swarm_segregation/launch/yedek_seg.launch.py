@@ -17,25 +17,6 @@ def generate_launch_description():
     leo_description = get_package_share_directory("leo_description")
     launch_description = []
 
-    # ==================== CLOCK BRIDGE ====================
-    # Bridge ROS topics and Gazebo messages for establishing communication
-    topic_bridge = Node(
-        package="ros_gz_bridge",
-        executable="parameter_bridge",
-        name="clock_bridge",
-        arguments=[
-            "/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock",
-        ],
-        parameters=[
-            {
-                "qos_overrides./tf_static.publisher.durability": "transient_local",
-            }
-        ],
-        output="screen",
-    )
-    launch_description.append(topic_bridge)
-
-
     def create_robot(ns, color, x, y, is_leader=False):
 
         # robot_description = os.popen(
@@ -101,11 +82,11 @@ def generate_launch_description():
             executable="parameter_bridge",
             name=f"{ns}_bridge",
             arguments=[
-                f"/{ns}/cmd_vel@geometry_msgs/msg/Twist[ignition.msgs.Twist",
-                f"/{ns}/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
-                f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
-                f"/{ns}/tf_static@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
-                f"/{ns}/camera/image_raw@sensor_msgs/msg/Image]ignition.msgs.Image", 
+                f"/{ns}/cmd_vel@geometry_msgs/msg/Twist@ignition.msgs.Twist",
+                f"/{ns}/odom@nav_msgs/msg/Odometry@ignition.msgs.Odometry",
+                f"/{ns}/tf@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
+                f"/{ns}/tf_static@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
+                f"/{ns}/camera/image_raw@sensor_msgs/msg/Image@ignition.msgs.Image", 
             ],
             parameters=[{"qos_overrides./tf_static.publisher.durability": "transient_local"}],
             output="screen",    

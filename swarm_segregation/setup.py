@@ -11,6 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', ['launch/segregation.launch.py']),
+        ('share/' + package_name + '/launch', ['launch/yedek_seg.launch.py']),
         ('share/' + package_name + '/launch', ['launch/leo_gz.launch.py']),
         ('share/' + package_name + '/config', ['config/supervisor.yaml']),
     ],
