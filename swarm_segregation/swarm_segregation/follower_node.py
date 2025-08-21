@@ -1,145 +1,148 @@
 import rclpy
 from rclpy.node import Node
-
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+from std_msgs.msg import String
+from swarm_segregation.sct import SCT
 import os
 from ament_index_python.packages import get_package_share_directory
-
-from swarm_segregation.sct import SCT
-
-from geometry_msgs.msg import Twist
-from std_msgs.msg import String
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
-import cv2
-import cv2.aruco as aruco
 import numpy as np
+import time
 
-# TO DO
-# limited comm range e.g. 3 meters using aruco markers
-# add collision avoidance with each robot
+
+# FIX DISTANCE CALCULATION
 
 class FollowerNode(Node):
     def __init__(self):
-        super().__init__('follower_node')
+        super().__init__('follower')
+        self.signals = {"red": False, "green": False, "blue": False}
 
-
+        # Load your SCT automaton
         yaml_path = os.path.join(get_package_share_directory('swarm_segregation'), 'config', 'supervisor.yaml')
+        self.sct = SCT(yaml_path)
 
-        self.supervisor = SCT(yaml_path)
-        self.EV, _ = self.supervisor.get_events()
-        self.signals = {ev: False for ev in self.EV}
+        for event_name, idx in self.sct.EV.items():
+            # Add a dummy callback for all events if you don't need them
+            self.sct.add_callback(
+                event=idx,
+                clbk=lambda data: None,  # does nothing
+                ci=lambda data: True,    # always returns True for input reading
+                sup_data=None
+            )
+        self.signals["EV_press"] = True
 
-        self.cmd_pub = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.dist2red = float("100")
+        self.dist2green = float("100")
+        self.dist2blue = float("100")
 
+        self.red_leader_pos   = np.array([0.0, 0.0])
+        self.green_leader_pos = np.array([3.0, 3.0])
+        self.blue_leader_pos  = np.array([6.0, 0.0])
+
+
+        # Subscriptions to leader colors
         self.create_subscription(String, '/leader_broadcast/red', self.on_red, 10)
         self.create_subscription(String, '/leader_broadcast/green', self.on_green, 10)
         self.create_subscription(String, '/leader_broadcast/blue', self.on_blue, 10)
 
-        self.register_callbacks()
+        self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
 
-        self.signals["EV_press"] = True
-        self.signals["EV_getR"] = True
-        self.signals["EV_getB"] = True
 
-        self.timer = self.create_timer(0.2, self.step)   
+        # Publisher for robot movement
+        self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
 
+        # Timer for main loop
+        self.create_timer(0.2, self.run_step)  # 5 Hz
+        
+    def odom_callback(self, msg):
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        follower_pos = np.array([x, y])
+        self.get_logger().info(f"pos= {follower_pos}")
+
+        self.dist2red = np.linalg.norm(self.red_leader_pos - follower_pos)
+        self.dist2green = np.linalg.norm(self.green_leader_pos - follower_pos)
+        self.dist2blue = np.linalg.norm(self.blue_leader_pos - follower_pos)
+        self.get_logger().info(f"Distances: dist_red={self.dist2red}, dist_green={self.dist2green}, dist_blue={self.dist2blue}")
+    
+        
+    # Callbacks for leader signals
     def on_red(self, msg):
-        self.get_logger().info("Received red leader message")
-        self.signals["EV_getR"] = True
-        self.signals["EV_getNotB"] = True
-        self.signals["EV_getNotG"] = True
-        self.signals["EV_sendR"] = True
-        self.signals["EV_sendNothing"] = True
+        if self.dist2red < 3.0:
+            self.signals["red"] = True
 
     def on_green(self, msg):
-        self.get_logger().info("Received green leader message")
-        self.signals["EV_getG"] = True
-        self.signals["EV_getNotB"] = True
-        self.signals["EV_getNotR"] = True 
-        self.signals["EV_sendG"] = True
-        self.signals["EV_sendNothing"] = True
+        if self.dist2green < 3.0:
+            self.signals["green"] = True
 
     def on_blue(self, msg):
-        self.get_logger().info("Received blue leader message")
-        self.signals["EV_getB"] = True
-        self.signals["EV_getNotR"] = True
-        self.signals["EV_getNotG"] = True 
-        self.signals["EV_sendB"] = True
-        self.signals["EV_sendNothing"] = True
+        if self.dist2blue < 3.0:
+            self.signals["blue"] = True
 
-    def register_callbacks(self):
+    # Map SCT controllable events to robot commands
+    def exec_sct_action(self, event_name):
+        twist = Twist()
+        if event_name == "EV_moveFW":
+            self.get_logger().info("Moving forward")
+            twist.linear.x = 0.8
+            self.pub.publish(twist)
+            time.sleep(0.5)
+        elif event_name == "EV_moveStop":
+            self.get_logger().info("Stopping")
+            twist.linear.x = 0.0
+            self.pub.publish(twist)
+            time.sleep(0.5)
+        elif event_name == "EV_turnCW":
+            self.get_logger().info("Turning CW")
+            twist.angular.z = -0.8
+            self.pub.publish(twist)
+            time.sleep(0.5)
+        elif event_name == "EV_turnCCW":
+            self.get_logger().info("Turning CCW")
+            twist.angular.z = 0.8
+            self.pub.publish(twist)
+            time.sleep(0.5)
+        
 
-        for ev, ev_id in self.EV.items():
-            # Sensor input logic
-            if ev in ["EV_getR", "EV_getG", "EV_getB", 
-                        "EV_getNotR", "EV_getNotG", "EV_getNotB"]:
-                self.supervisor.add_callback(ev_id, self.noop, self.make_input_checker(ev), None)
+    # Main loop
+    def run_step(self):
+        # Determine which colors were received this timestep
+        colors_received = [c for c in ["red", "green", "blue"] if self.signals[c]]
 
-            # Movement logic
-            elif ev == "EV_moveFW":
-                self.supervisor.add_callback(ev_id, self.move_forward, self.always_true, None)
-            elif ev == "EV_turnCW":
-                self.supervisor.add_callback(ev_id, self.turn_CW, self.always_true, None)
-            elif ev == "EV_turnCCW":
-                self.supervisor.add_callback(ev_id, self.turn_CCW, self.always_true, None)
-            elif ev == "EV_moveStop":
-                self.supervisor.add_callback(ev_id, self.stop_moving, self.always_true, None)
+        # Reset SCT input buffer
+        self.sct.input_buffer = []
 
-            # Anything else we don't handle → ignore safely
-            else:
-                self.supervisor.add_callback(ev_id, self.noop, self.always_true, None)   
+        if len(colors_received) <= 1:
+            # Received 0 or 1 colors → do not move
+            #self.get_logger().info(f"Received {len(colors_received)} color(s) ({colors_received}); robot stays put")
+            twist = Twist()
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
+            self.pub.publish(twist)
+        else:
+            # Received more than one color → feed them to SCT
+            for color in colors_received:
+                ev_name = f"EV_get{color[0].upper()}"  # EV_getR, EV_getG, EV_getB
+                self.sct.input_buffer.append(self.sct.EV[ev_name])
+                #self.get_logger().info(f"Received {color} leader signal; feeding {ev_name} to SCT")
 
-    def make_input_checker(self, ev):
-        def check(_): return self.signals.get(ev, False)   
-        return check
+            # Execute SCT step
+            self.sct.run_step()
 
-    def step(self):
-        #self.get_logger().info(f"Step called. Current signals: {self.signals}")
+            # Execute all enabled controllable events as robot actions
+            for event_name in self.sct.get_enabled_events():
+                self.exec_sct_action(event_name)
 
-        current_sct_states = self.supervisor.get_current_state()
-        #self.get_logger().info(f"SCT Current States (Sup0, Sup1, Sup2): {current_sct_states}")
-
-        self.supervisor.run_step()
-
-        enabled_sct_events = self.supervisor.get_enabled_events()
-        #self.get_logger().info(f"SCT Enabled Events AFTER run_step: {enabled_sct_events}")
-
-        self.signals = {ev: False for ev in self.EV}
-    
-
-    def move_forward(self, _):
-        #self.get_logger().info("Moving forward")
-        msg = Twist()
-        msg.linear.x = 0.2
-        self.cmd_pub.publish(msg)
-
-    def turn_CW(self, _):
-        #self.get_logger().info("Turning CW")
-        msg = Twist()
-        msg.angular.z = -0.5
-        self.cmd_pub.publish(msg)
-
-    def turn_CCW(self, _):
-        #self.get_logger().info("Turning CCW")
-        msg = Twist()
-        msg.angular.z = 0.5
-        self.cmd_pub.publish(msg)
-
-    def stop_moving(self, _):
-        self.cmd_pub.publish(Twist())  
-
-    def always_true(self, _): return True
-
-    def noop(self, _): pass
-
+        # Reset signals for next iteration
+        for k in self.signals:
+            self.signals[k] = False
 
 def main(args=None):
-
     rclpy.init(args=args)
     node = FollowerNode()
     rclpy.spin(node)
     node.destroy_node()
-    rclpy.shutdown()      
+    rclpy.shutdown()    
 
-
-
+if __name__ == "__main__":
+    main()

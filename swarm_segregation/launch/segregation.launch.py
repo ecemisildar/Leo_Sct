@@ -74,21 +74,21 @@ def generate_launch_description():
         )
 
         bridges = []
-        if not is_leader: 
-            bridges.append(Node(
-            package="ros_gz_bridge",
-            executable="parameter_bridge",
-            name=f"{ns}_bridge",
-            arguments=[
-                f"/{ns}/cmd_vel@geometry_msgs/msg/Twist@ignition.msgs.Twist",
-                f"/{ns}/odom@nav_msgs/msg/Odometry@ignition.msgs.Odometry",
-                f"/{ns}/tf@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
-                f"/{ns}/tf_static@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
-                f"/{ns}/camera/image_raw@sensor_msgs/msg/Image@ignition.msgs.Image", 
-            ],
-            parameters=[{"qos_overrides./tf_static.publisher.durability": "transient_local"}],
-            output="screen",    
-            ))
+        # if not is_leader: 
+        bridges.append(Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name=f"{ns}_bridge",
+        arguments=[
+            f"/{ns}/cmd_vel@geometry_msgs/msg/Twist@ignition.msgs.Twist",
+            f"/{ns}/odom@nav_msgs/msg/Odometry@ignition.msgs.Odometry",
+            f"/{ns}/tf@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
+            f"/{ns}/tf_static@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
+            #f"/{ns}/camera/image_raw@sensor_msgs/msg/Image@ignition.msgs.Image", 
+        ],
+        parameters=[{"qos_overrides./tf_static.publisher.durability": "transient_local"}],
+        output="screen",    
+        ))
 
         return [state_pub, spawn, behavior_node] + bridges    
 
@@ -109,16 +109,20 @@ def generate_launch_description():
         ns = f"robot_leader_{i}"
         color_name = leader_colors[i % len(leader_colors)]
         color_rgba = color_map[color_name]
-        x, y = i * 3.0, 0.0 
-        aruco_id = i + 1
+        if i == 0:
+            x, y = 0.0, 0.0
+        elif i == 1:
+            x, y = 3.0, 3.0  
+        elif i == 2:
+            x, y = 6.0, 0.0        
+        
         launch_description += create_robot(ns, color_rgba, x, y, is_leader=True)
 
     # Spawn 5 followers
-    for i in range(5):
+    for i in range(1):
         ns = f"robot_follower_{i}"
         color_rgba = color_map["yellow"]
-        x, y = i * 1.5, 2.0 
-        aruco_id = i + 10
+        x, y = 3.0, 0.0 
         launch_description += create_robot(ns, color_rgba, x, y, is_leader=False)
     
 
