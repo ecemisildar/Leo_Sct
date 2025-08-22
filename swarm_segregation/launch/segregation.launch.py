@@ -41,6 +41,8 @@ def generate_launch_description():
             output="screen",
         )
 
+
+
         # Spawn in Gazebo
         spawn = Node(
             package="ros_gz_sim",
@@ -58,7 +60,9 @@ def generate_launch_description():
 
         # Behavior Node (leader/follower)
         params = [
-            {"color": color}
+            {"color": color},
+            {"spawn_x": x},   # pass offset
+            {"spawn_y": y},   # pass offset
         ]
         
         if is_leader: 
@@ -72,6 +76,7 @@ def generate_launch_description():
             parameters=params,
             output="screen",
         )
+
 
         bridges = []
         # if not is_leader: 
@@ -119,11 +124,20 @@ def generate_launch_description():
         launch_description += create_robot(ns, color_rgba, x, y, is_leader=True)
 
     # Spawn 5 followers
-    for i in range(1):
+    for i in range(5):
         ns = f"robot_follower_{i}"
         color_rgba = color_map["yellow"]
-        x, y = 3.0, 0.0 
+        if i == 0:
+            x, y = 3.0, 0.0
+        elif i == 1:
+            x, y = 1.0, 1.0  
+        elif i == 2:
+            x, y = 4.0, 1.0 
+        elif i == 3:
+            x, y = 3.0, -3.0  
+        elif i == 4:
+            x, y = 0.0, 3.0      
+        
         launch_description += create_robot(ns, color_rgba, x, y, is_leader=False)
     
-
     return LaunchDescription(launch_description)

@@ -39,6 +39,17 @@ class FollowerNode(Node):
         self.green_leader_pos = np.array([3.0, 3.0])
         self.blue_leader_pos  = np.array([6.0, 0.0])
 
+        self.declare_parameter("spawn_x", 0.0)
+        self.declare_parameter("spawn_y", 0.0)
+        self.declare_parameter("color", "yellow")
+        self.declare_parameter("is_leader", False)
+
+        # Get values
+        self.spawn_x = self.get_parameter("spawn_x").get_parameter_value().double_value
+        self.spawn_y = self.get_parameter("spawn_y").get_parameter_value().double_value
+        self.color = self.get_parameter("color").get_parameter_value().string_value
+        self.is_leader = self.get_parameter("is_leader").get_parameter_value().bool_value
+
 
         # Subscriptions to leader colors
         self.create_subscription(String, '/leader_broadcast/red', self.on_red, 10)
@@ -54,17 +65,30 @@ class FollowerNode(Node):
         # Timer for main loop
         self.create_timer(0.2, self.run_step)  # 5 Hz
         
-    def odom_callback(self, msg):
-        x = msg.pose.pose.position.x
-        y = msg.pose.pose.position.y
-        follower_pos = np.array([x, y])
-        self.get_logger().info(f"pos= {follower_pos}")
+    # def odom_callback(self, msg):
+    #     x = msg.pose.pose.position.x
+    #     y = msg.pose.pose.position.y
+    #     follower_pos = np.array([x, y])
+    #     self.get_logger().info(f"pos= {follower_pos}")
+
+    #     self.dist2red = np.linalg.norm(self.red_leader_pos - follower_pos)
+    #     self.dist2green = np.linalg.norm(self.green_leader_pos - follower_pos)
+    #     self.dist2blue = np.linalg.norm(self.blue_leader_pos - follower_pos)
+    #     self.get_logger().info(f"Distances: dist_red={self.dist2red}, dist_green={self.dist2green}, dist_blue={self.dist2blue}")
+    
+  
+    def odom_callback(self, msg: Odometry):
+        global_x = self.spawn_x + msg.pose.pose.position.x
+        global_y = self.spawn_y + msg.pose.pose.position.y
+
+        follower_pos = np.array([global_x, global_y])
 
         self.dist2red = np.linalg.norm(self.red_leader_pos - follower_pos)
         self.dist2green = np.linalg.norm(self.green_leader_pos - follower_pos)
         self.dist2blue = np.linalg.norm(self.blue_leader_pos - follower_pos)
         self.get_logger().info(f"Distances: dist_red={self.dist2red}, dist_green={self.dist2green}, dist_blue={self.dist2blue}")
     
+
         
     # Callbacks for leader signals
     def on_red(self, msg):

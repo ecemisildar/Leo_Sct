@@ -26,7 +26,7 @@ setup(
         'console_scripts': [
             'follower_node = swarm_segregation.follower_node:main',
             'leader_node = swarm_segregation.leader_node:main',
-            'spawn_robot = swarm_segregation.spawn_robot:main',
+            #'odom_frame_renamer = swarm_segregation.odom_frame_renamer:main',
         ],
     },
 )
