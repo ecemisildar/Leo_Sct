@@ -1,71 +1,43 @@
 import rclpy
 from rclpy.node import Node
+from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from std_msgs.msg import String
-from swarm_segregation.sct import SCT
-import os
-from ament_index_python.packages import get_package_share_directory
-import numpy as np
-import time
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy
+
+from swarm_segregation.movement_controller import MovementController
+from swarm_segregation.position_tracker import PositionTracker
+from swarm_segregation.leader_signals import LeaderSignalHandler
+from swarm_segregation.sct_wrapper import SCTWrapper
 
 class FollowerNode(Node):
     def __init__(self):
         super().__init__('follower')
-        self.signals = {"red": False, "green": False, "blue": False}
 
         self.ready = False
 
-        # Load your SCT automaton
-        yaml_path = os.path.join(get_package_share_directory('swarm_segregation'), 'config', 'supervisor.yaml')
-        self.sct = SCT(yaml_path)
-
-        for event_name, idx in self.sct.EV.items():
-            # Add a dummy callback for all events if you don't need them
-            self.sct.add_callback(
-                event=idx,
-                clbk=lambda data: None,  # does nothing
-                ci=lambda data: True,    # always returns True for input reading
-                sup_data=None
-            )
-        self.signals["EV_press"] = True
-
-        self.dist2red = float("100")
-        self.dist2green = float("100")
-        self.dist2blue = float("100")
-
-        self.red_leader_pos   = np.array([0.0, 0.0])
-        self.green_leader_pos = np.array([3.0, 3.0])
-        self.blue_leader_pos  = np.array([6.0, 0.0])
-
+        # Parameters
         self.declare_parameter("spawn_x", 0.0)
         self.declare_parameter("spawn_y", 0.0)
         self.declare_parameter("color", "yellow")
         self.declare_parameter("is_leader", False)
 
-        # Get values
-        self.spawn_x = self.get_parameter("spawn_x").get_parameter_value().double_value
-        self.spawn_y = self.get_parameter("spawn_y").get_parameter_value().double_value
-        self.color = self.get_parameter("color").get_parameter_value().string_value
-        self.is_leader = self.get_parameter("is_leader").get_parameter_value().bool_value
+        spawn_x = self.get_parameter("spawn_x").get_parameter_value().double_value
+        spawn_y = self.get_parameter("spawn_y").get_parameter_value().double_value
 
+        # Modules
+        self.tracker = PositionTracker(spawn_x, spawn_y, self.get_logger())
+        self.signals = LeaderSignalHandler()
+        self.sct = SCTWrapper()
+        self.mover = MovementController(self.create_publisher(Twist, 'cmd_vel', 10), self.get_logger())
 
-        # Subscriptions to leader colors
-        self.create_subscription(String, '/leader_broadcast/red', self.on_red, 10)
-        self.create_subscription(String, '/leader_broadcast/green', self.on_green, 10)
-        self.create_subscription(String, '/leader_broadcast/blue', self.on_blue, 10)
+        # Subscriptions
+        self.create_subscription(String, '/leader_broadcast/red',   lambda msg: self.signals.on_red(msg, self.tracker.dist2red), 10)
+        self.create_subscription(String, '/leader_broadcast/green', lambda msg: self.signals.on_green(msg, self.tracker.dist2green), 10)
+        self.create_subscription(String, '/leader_broadcast/blue',  lambda msg: self.signals.on_blue(msg, self.tracker.dist2blue), 10)
+        self.create_subscription(Odometry, 'odom', self.tracker.odom_callback, 10)
 
-        self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
-
-
-        # Publisher for robot movement
-        self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
-
-        # Timer for main loop
-        self.create_timer(0.2, self.run_step)  # 5 Hz
-
-
+        # Timer
+        self.create_timer(0.2, self.run_step)
         self.ready_timer = self.create_timer(0.2, self.check_ready)
 
     def check_ready(self):
@@ -79,99 +51,38 @@ class FollowerNode(Node):
             self.get_logger().info("All required topics ready, starting behavior!")
             self.ready_timer.cancel()  # Stop checking
 
-    def odom_callback(self, msg: Odometry):
-        global_x = self.spawn_x + msg.pose.pose.position.x
-        global_y = self.spawn_y + msg.pose.pose.position.y
-
-        follower_pos = np.array([global_x, global_y])
-
-        self.dist2red = np.linalg.norm(self.red_leader_pos - follower_pos)
-        self.dist2green = np.linalg.norm(self.green_leader_pos - follower_pos)
-        self.dist2blue = np.linalg.norm(self.blue_leader_pos - follower_pos)
-        self.get_logger().info(f"Distances: dist_red={self.dist2red}, dist_green={self.dist2green}, dist_blue={self.dist2blue}")
-    
-
-        
-    # Callbacks for leader signals
-    def on_red(self, msg):
-        if self.dist2red < 3.0:
-            self.signals["red"] = True
-
-    def on_green(self, msg):
-        if self.dist2green < 3.0:
-            self.signals["green"] = True
-
-    def on_blue(self, msg):
-        if self.dist2blue < 3.0:
-            self.signals["blue"] = True
-
-    # Map SCT controllable events to robot commands
-    def exec_sct_action(self, event_name):
-        twist = Twist()
-        if event_name == "EV_moveFW":
-            self.get_logger().info("Moving forward")
-            twist.linear.x = 10.8
-            self.pub.publish(twist)
-            time.sleep(1.0)
-        elif event_name == "EV_moveStop":
-            self.get_logger().info("Stopping")
-            twist.linear.x = 0.0
-            self.pub.publish(twist)
-            time.sleep(1.0)
-        elif event_name == "EV_turnCW":
-            self.get_logger().info("Turning CW")
-            twist.angular.z = -10.8
-            self.pub.publish(twist)
-            time.sleep(1.0)
-        elif event_name == "EV_turnCCW":
-            self.get_logger().info("Turning CCW")
-            twist.angular.z = 10.8
-            self.pub.publish(twist)
-            time.sleep(1.0)
-        
-
-    # Main loop
     def run_step(self):
         if not self.ready:
             return  # Do nothing until topics exist
 
-        # Determine which colors were received this timestep
-        colors_received = [c for c in ["red", "green", "blue"] if self.signals[c]]
-
-        # Reset SCT input buffer
-        self.sct.input_buffer = []
+        colors_received = [c for c in ["red", "green", "blue"] if self.signals.signals[c]]
+        self.sct.sct.input_buffer = []
 
         if len(colors_received) <= 1:
-            # Received 0 or 1 colors → do not move
-            #self.get_logger().info(f"Received {len(colors_received)} color(s) ({colors_received}); robot stays put")
-            twist = Twist()
-            twist.linear.x = 0.0
-            twist.angular.z = 0.0
-            self.pub.publish(twist)
+            self.mover.stop()
         else:
-            # Received more than one color → feed them to SCT
             for color in colors_received:
-                ev_name = f"EV_get{color[0].upper()}"  # EV_getR, EV_getG, EV_getB
-                self.sct.input_buffer.append(self.sct.EV[ev_name])
-                #self.get_logger().info(f"Received {color} leader signal; feeding {ev_name} to SCT")
+                ev_name = f"EV_get{color[0].upper()}"
+                self.sct.add_event(ev_name)
 
-            # Execute SCT step
-            self.sct.run_step()
+            for ev in self.sct.run():
+                if ev == "EV_moveFW":
+                    self.mover.move_forward()
+                elif ev == "EV_moveStop":
+                    self.mover.stop()
+                elif ev == "EV_turnCW":
+                    self.mover.turn_cw()
+                elif ev == "EV_turnCCW":
+                    self.mover.turn_ccw()
 
-            # Execute all enabled controllable events as robot actions
-            for event_name in self.sct.get_enabled_events():
-                self.exec_sct_action(event_name)
-
-        # Reset signals for next iteration
-        for k in self.signals:
-            self.signals[k] = False
+        self.signals.reset()
 
 def main(args=None):
     rclpy.init(args=args)
     node = FollowerNode()
     rclpy.spin(node)
     node.destroy_node()
-    rclpy.shutdown()    
+    rclpy.shutdown()
 
 if __name__ == "__main__":
     main()

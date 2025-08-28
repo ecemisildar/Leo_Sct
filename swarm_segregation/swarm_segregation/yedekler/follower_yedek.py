@@ -8,14 +8,14 @@ import os
 from ament_index_python.packages import get_package_share_directory
 import numpy as np
 import time
-
-
-# FIX DISTANCE CALCULATION
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy
 
 class FollowerNode(Node):
     def __init__(self):
         super().__init__('follower')
         self.signals = {"red": False, "green": False, "blue": False}
+
+        self.ready = False
 
         # Load your SCT automaton
         yaml_path = os.path.join(get_package_share_directory('swarm_segregation'), 'config', 'supervisor.yaml')
@@ -64,7 +64,21 @@ class FollowerNode(Node):
 
         # Timer for main loop
         self.create_timer(0.2, self.run_step)  # 5 Hz
-  
+
+
+        self.ready_timer = self.create_timer(0.2, self.check_ready)
+
+    def check_ready(self):
+        # Check if required topics exist
+        topics = [t[0] for t in self.get_topic_names_and_types()]
+        odom_topic = f'{self.get_namespace()}/odom'
+        leader_topics = [f'/leader_broadcast/{c}' for c in ["red", "green", "blue"]]
+
+        if odom_topic in topics and all(t in topics for t in leader_topics):
+            self.ready = True
+            self.get_logger().info("All required topics ready, starting behavior!")
+            self.ready_timer.cancel()  # Stop checking
+
     def odom_callback(self, msg: Odometry):
         global_x = self.spawn_x + msg.pose.pose.position.x
         global_y = self.spawn_y + msg.pose.pose.position.y
@@ -96,28 +110,31 @@ class FollowerNode(Node):
         twist = Twist()
         if event_name == "EV_moveFW":
             self.get_logger().info("Moving forward")
-            twist.linear.x = 0.8
+            twist.linear.x = 10.8
             self.pub.publish(twist)
-            time.sleep(0.5)
+            time.sleep(1.0)
         elif event_name == "EV_moveStop":
             self.get_logger().info("Stopping")
             twist.linear.x = 0.0
             self.pub.publish(twist)
-            time.sleep(0.5)
+            time.sleep(1.0)
         elif event_name == "EV_turnCW":
             self.get_logger().info("Turning CW")
-            twist.angular.z = -0.8
+            twist.angular.z = -10.8
             self.pub.publish(twist)
-            time.sleep(0.5)
+            time.sleep(1.0)
         elif event_name == "EV_turnCCW":
             self.get_logger().info("Turning CCW")
-            twist.angular.z = 0.8
+            twist.angular.z = 10.8
             self.pub.publish(twist)
-            time.sleep(0.5)
+            time.sleep(1.0)
         
 
     # Main loop
     def run_step(self):
+        if not self.ready:
+            return  # Do nothing until topics exist
+
         # Determine which colors were received this timestep
         colors_received = [c for c in ["red", "green", "blue"] if self.signals[c]]
 

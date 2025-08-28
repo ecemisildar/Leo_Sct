@@ -12,7 +12,7 @@ class MovementController:
     def move_forward(self):
         twist = Twist()
         self.logger.info("Moving forward")
-        twist.linear.x = 0.8
+        twist.linear.x = 5.0
         self.pub.publish(twist)
         time.sleep(0.5)
 
