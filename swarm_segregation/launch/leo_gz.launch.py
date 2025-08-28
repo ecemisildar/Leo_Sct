@@ -17,19 +17,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+
+
+import os
+
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-
-from launch.actions import ExecuteProcess
-
-import os
-os.environ['GAZEBO_SIM_SYSTEM'] = 'ignition'
 
 
 def generate_launch_description():
@@ -40,7 +39,7 @@ def generate_launch_description():
 
     sim_world = DeclareLaunchArgument(
         "sim_world",
-        default_value=os.path.join(pkg_project_worlds, "worlds", "leo_circles.sdf"), #leo_empty.sdf
+        default_value=os.path.join(pkg_project_worlds, "worlds", "leo_circles.sdf"),
         description="Path to the Gazebo world file",
     )
 
@@ -50,7 +49,7 @@ def generate_launch_description():
         description="Robot namespace",
     )
 
-    # --- Force Ignition Gazebo ---
+    # Setup to launch the simulator and Gazebo world
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_ros_gz_sim, "launch", "gz_sim.launch.py")
