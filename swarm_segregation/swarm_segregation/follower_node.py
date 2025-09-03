@@ -37,8 +37,8 @@ class FollowerNode(Node):
         self.create_subscription(Odometry, 'odom', self.tracker.odom_callback, 10)
 
         # Timer
-        self.create_timer(0.2, self.run_step)
-        self.ready_timer = self.create_timer(0.2, self.check_ready)
+        self.create_timer(1.0, self.run_step)
+        self.ready_timer = self.create_timer(1.0, self.check_ready)
 
     def check_ready(self):
         # Check if required topics exist
@@ -55,7 +55,10 @@ class FollowerNode(Node):
         if not self.ready:
             return  # Do nothing until topics exist
 
-        colors_received = [c for c in ["red", "green", "blue"] if self.signals.signals[c]]
+        # colors_received = [c for c in ["red", "green", "blue"] if self.signals.signals[c]]
+        colors_received = self.signals.get_active_signals()
+
+        # self.get_logger().info(f'colors received: {colors_received}')
         self.sct.sct.input_buffer = []
 
         if len(colors_received) <= 1:
@@ -63,6 +66,7 @@ class FollowerNode(Node):
         else:
             for color in colors_received:
                 ev_name = f"EV_get{color[0].upper()}"
+                # self.get_logger().info(f'ev_name: {ev_name}')
                 self.sct.add_event(ev_name)
 
             for ev in self.sct.run():
@@ -71,11 +75,14 @@ class FollowerNode(Node):
                 elif ev == "EV_moveStop":
                     self.mover.stop()
                 elif ev == "EV_turnCW":
+                    pass
                     self.mover.turn_cw()
                 elif ev == "EV_turnCCW":
+                    pass
                     self.mover.turn_ccw()
-
-        self.signals.reset()
+                    
+        self.mover.publish_last()
+        # self.signals.reset()
 
 def main(args=None):
     rclpy.init(args=args)

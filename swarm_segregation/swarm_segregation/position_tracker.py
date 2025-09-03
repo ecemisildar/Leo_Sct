@@ -9,7 +9,7 @@ class PositionTracker:
 
         self.red_leader_pos   = np.array([0.0, 0.0])
         self.green_leader_pos = np.array([3.0, 3.0])
-        self.blue_leader_pos  = np.array([6.0, 0.0])
+        self.blue_leader_pos  = np.array([4.0, 0.0])
 
         self.dist2red = float("inf")
         self.dist2green = float("inf")
@@ -25,7 +25,7 @@ class PositionTracker:
         self.dist2green = np.linalg.norm(self.green_leader_pos - follower_pos)
         self.dist2blue = np.linalg.norm(self.blue_leader_pos - follower_pos)
 
-        self.logger.info(f"Distances: dist_red={self.dist2red}, dist_green={self.dist2green}, dist_blue={self.dist2blue}")
+        # self.logger.info(f"Distances: dist_red={self.dist2red}, dist_green={self.dist2green}, dist_blue={self.dist2blue}")
     
 
     

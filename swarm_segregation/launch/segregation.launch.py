@@ -35,7 +35,9 @@ def generate_launch_description():
         })
 
     # --- Followers ---
-    follower_positions = [(3.0, 0.0), (2.0, 1.0), (4.0, 1.0), (3.0, -3.0), (0.0, 3.0)]
+    follower_positions = [
+        (3.0, 0.0), (2.0, 1.0), (4.0, 1.0), (3.0, -3.0), (0.0, 3.0),
+        (2.0, 0.0), (1.0, 1.0), (5.0, 1.0), (2.0, -3.0), (0.0, 5.0)]
     for i, pos in enumerate(follower_positions):
         robots_to_spawn.append({
             "ns": f"robot_follower_{i}",
@@ -58,6 +60,7 @@ def generate_launch_description():
                 f"/{ns}/odom@nav_msgs/msg/Odometry@ignition.msgs.Odometry",
                 f"/{ns}/tf@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
                 f"/{ns}/tf_static@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
+                f"/{ns}/camera/camera_info@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
             ]
 
         bridge_node = Node(
@@ -127,6 +130,15 @@ def generate_launch_description():
                 output="screen"
             )
 
+            # Camera image bridge
+            image_bridge = Node(
+                package="ros_gz_image",
+                executable="image_bridge",
+                name="image_bridge",
+                arguments=[f"/{ns}/camera/image_raw"],
+                output="screen",
+            )
+
             # Only start behavior node after spawn finishes
             behavior_after_spawn = RegisterEventHandler(
                 OnProcessExit(
@@ -136,7 +148,7 @@ def generate_launch_description():
             )
 
             # Add all nodes for this robot
-            nodes += [state_pub, spawn_node, behavior_after_spawn]
+            nodes += [state_pub, spawn_node, image_bridge, behavior_after_spawn]
 
         return nodes
 
