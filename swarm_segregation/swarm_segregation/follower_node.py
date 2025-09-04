@@ -1,4 +1,5 @@
 import rclpy
+import time
 from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
@@ -9,6 +10,8 @@ from swarm_segregation.position_tracker import PositionTracker
 from swarm_segregation.leader_signals import LeaderSignalHandler
 from swarm_segregation.sct_wrapper import SCTWrapper
 
+
+# ps aux | grep -E "gz|ign"
 class FollowerNode(Node):
     def __init__(self):
         super().__init__('follower')
@@ -36,8 +39,13 @@ class FollowerNode(Node):
         self.create_subscription(String, '/leader_broadcast/blue',  lambda msg: self.signals.on_blue(msg, self.tracker.dist2blue), 10)
         self.create_subscription(Odometry, 'odom', self.tracker.odom_callback, 10)
 
+        self.twist = Twist()
+        self.cmd_pub = self.create_publisher(Twist, 'cmd_vel', 10)
         # Timer
         self.create_timer(1.0, self.run_step)
+        self.timer = self.create_timer(0.1, self.publisher)
+        self.last_cmd_time = 0.0
+
         self.ready_timer = self.create_timer(1.0, self.check_ready)
 
     def check_ready(self):
@@ -54,35 +62,44 @@ class FollowerNode(Node):
     def run_step(self):
         if not self.ready:
             return  # Do nothing until topics exist
-
-        # colors_received = [c for c in ["red", "green", "blue"] if self.signals.signals[c]]
         colors_received = self.signals.get_active_signals()
-
         # self.get_logger().info(f'colors received: {colors_received}')
         self.sct.sct.input_buffer = []
 
         if len(colors_received) <= 1:
-            self.mover.stop()
-        else:
-            for color in colors_received:
-                ev_name = f"EV_get{color[0].upper()}"
-                # self.get_logger().info(f'ev_name: {ev_name}')
-                self.sct.add_event(ev_name)
+            if time.time() - self.last_cmd_time > 2.0:
+                self.twist.linear.x = 0.0
+                self.twist.angular.z = 0.0
+            return
 
-            for ev in self.sct.run():
-                if ev == "EV_moveFW":
-                    self.mover.move_forward()
-                elif ev == "EV_moveStop":
-                    self.mover.stop()
-                elif ev == "EV_turnCW":
-                    pass
-                    self.mover.turn_cw()
-                elif ev == "EV_turnCCW":
-                    pass
-                    self.mover.turn_ccw()
-                    
-        self.mover.publish_last()
-        # self.signals.reset()
+        linear, angular = self.twist.linear.x, self.twist.angular.z
+
+        for color in colors_received:
+            ev_name = f"EV_get{color[0].upper()}"
+            self.sct.add_event(ev_name)
+
+        for ev in self.sct.run():
+            if ev == "EV_moveFW":
+                self.get_logger().info(f'ev: {ev}')
+                linear = 0.4
+            elif ev == "EV_moveStop":
+                self.get_logger().info(f'ev: {ev}')
+                linear = 0.0
+                angular = 0.0
+            elif ev == "EV_turnCW":
+                self.get_logger().info(f'ev: {ev}')
+                angular = -0.4
+            elif ev == "EV_turnCCW":
+                self.get_logger().info(f'ev: {ev}')
+                angular = 0.4
+
+        self.twist.linear.x = linear
+        self.twist.angular.z = angular
+        self.last_cmd_time = time.time()  
+
+    def publisher(self):
+        self.cmd_pub.publish(self.twist)
+    
 
 def main(args=None):
     rclpy.init(args=args)

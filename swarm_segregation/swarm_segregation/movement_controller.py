@@ -5,48 +5,30 @@ class MovementController:
     def __init__(self, publisher, logger):
         self.pub = publisher
         self.logger = logger
-        self.current_twist = Twist()
-        self.action_end_time = 0.0  # timestamp until which action is locked
-        self.action_duration = 0
+        self.twist = Twist()
+        self.current_action = "stop"
 
-    def set_twist(self, twist: Twist, duration: float = 1.0):
-        """Set a new twist command and hold it for duration seconds"""
-        self.last_twist = twist
-        self.action_start_time = time.time()
-        self.action_duration = duration
-        self.pub.publish(twist)
-        self.logger.info(f"Publishing twist: lin={twist.linear.x}, ang={twist.angular.z}")
+    def set_action(self, action: str):
+        self.current_action = action
 
-    def move_forward(self):
-        twist = Twist()
-        twist.linear.x = 0.5
-        twist.angular.z = 0.0 
-        self.set_twist(twist)
-        self.logger.info("Moving forward")
+    def publish(self):
+        # update twist depending on current action
+        if self.current_action == "forward":
+            self.logger.info("FORWARD")
+            self.twist.linear.x = 0.5
+            self.twist.angular.z = 0.0
+        elif self.current_action == "cw":
+            self.logger.info("CW")
+            self.twist.linear.x = 0.0
+            self.twist.angular.z = -0.05
+        elif self.current_action == "ccw":
+            self.logger.info("CCW")
+            self.twist.linear.x = 0.0
+            self.twist.angular.z = 0.05
+        elif self.current_action == "stop":  
+            self.twist.linear.x = 0.0
+            self.twist.angular.z = 0.0
 
-    def stop(self):
-        twist = Twist()
-        twist.linear.x = 0.0
-        twist.angular.z = 0.0 
-        self.set_twist(twist)
-        self.logger.info("Stopping")
+        self.pub.publish(self.twist)
 
-    def turn_cw(self):
-        twist = Twist()
-        twist.linear.x = 0.5
-        twist.angular.z = -0.5
-        self.set_twist(twist)
-        self.logger.info("Turning CW")
-
-    def turn_ccw(self):
-        twist = Twist()
-        twist.linear.x = 0.5
-        twist.angular.z = 0.5
-        self.set_twist(twist)
-        self.logger.info("Turning CCW")
-
-    def publish_last(self):
-        """Keep publishing the last twist until duration expires"""
-        if time.time() - self.action_start_time < self.action_duration:
-            self.pub.publish(self.last_twist)
 

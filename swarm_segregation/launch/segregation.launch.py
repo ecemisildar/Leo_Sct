@@ -56,10 +56,10 @@ def generate_launch_description():
         for robot in robots:
             ns = robot["ns"]
             bridge_args += [
-                f"/{ns}/cmd_vel@geometry_msgs/msg/Twist@ignition.msgs.Twist",
-                f"/{ns}/odom@nav_msgs/msg/Odometry@ignition.msgs.Odometry",
-                f"/{ns}/tf@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
-                f"/{ns}/tf_static@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
+                f"/{ns}/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
+                f"/{ns}/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
+                f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+                # f"/{ns}/tf_static@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
                 f"/{ns}/camera/camera_info@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
             ]
 
