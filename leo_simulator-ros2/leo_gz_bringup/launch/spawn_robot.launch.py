@@ -91,6 +91,7 @@ def spawn_robot(context: LaunchContext, namespace: LaunchConfiguration):
             robot_ns
             + "/camera/camera_info@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
             robot_ns + "/joint_states@sensor_msgs/msg/JointState[ignition.msgs.Model",
+            robot_ns + "/lidar/scan@sensor_msgs/msg/LaserScan@ignition.msgs.LaserScan",
         ],
         parameters=[
             {

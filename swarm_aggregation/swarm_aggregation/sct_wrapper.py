@@ -1,10 +1,10 @@
-from swarm_segregation.sct import SCT
+from swarm_aggregation.sct import SCT
 import os
 from ament_index_python.packages import get_package_share_directory
 
 class SCTWrapper:
-    def __init__(self):
-
+    def __init__(self, logger):
+        self.logger = logger
         yaml_path = os.path.join(
             get_package_share_directory('swarm_aggregation'),
             'config',
@@ -29,6 +29,6 @@ class SCTWrapper:
         self.sct.run_step()
         return self.sct.get_enabled_events() 
 
-    def get_event_name(self, ev_idx):
-        """Return name from event index"""
-        return self.sct.get_event_name(ev_idx)            
+        
+
+          

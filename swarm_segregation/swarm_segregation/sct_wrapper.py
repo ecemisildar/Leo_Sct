@@ -27,4 +27,6 @@ class SCTWrapper:
 
     def run(self):
         self.sct.run_step()
-        return self.sct.get_enabled_events()        
+        return self.sct.get_enabled_events() 
+
+          

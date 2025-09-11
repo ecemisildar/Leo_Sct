@@ -42,7 +42,7 @@ class SCT:
 
 
     def run_step(self):
-        self.input_buffer = [] # clear buffer
+        # self.input_buffer = [] # clear buffer
         self.update_input()
 
         # Get all uncontrollable events
@@ -61,6 +61,7 @@ class SCT:
             self.make_transition(ce)
             self.exec_callback(ce)
 
+        return ce_exists, ce
 
     def input_read(self, ev):
         if ev < self.num_events and self.callback[ev]:
@@ -161,10 +162,14 @@ class SCT:
                 ev_disable[value] = 0
                 position += 3
 
+            # print(f"Supervisor {i}, state {self.sup_current_state[i]}, transitions: {value}", flush=True)
+
             # Remove the controllable events to disable, leaving an array of enabled controllable events
             for j in range(0, self.num_events):
                 if ev_disable[j] == 1 and events[j]:
                     events[j] = 0
+
+        print("Enabled controllables after supervisors:", events, flush=True)
 
         return events
 

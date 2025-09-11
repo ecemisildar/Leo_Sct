@@ -5,6 +5,7 @@ from std_msgs.msg import String
 import os
 from ament_index_python.packages import get_package_share_directory
 from swarm_segregation.sct import SCT
+import time
 
 
 class LeaderNode(Node):
@@ -41,6 +42,8 @@ class LeaderNode(Node):
 
     def check_ready(self):
         topics = [t[0] for t in self.get_topic_names_and_types()]
+        # self.get_logger().info("Waiting 10 seconds before publishing...")
+        # time.sleep(10)
         if f"/leader_broadcast/{self.color}" in topics:
             self.ready = True
             self.get_logger().info(f"Leader topic ready: {self.color}")

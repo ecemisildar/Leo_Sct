@@ -9,6 +9,7 @@ from swarm_segregation.movement_controller import MovementController
 from swarm_segregation.position_tracker import PositionTracker
 from swarm_segregation.leader_signals import LeaderSignalHandler
 from swarm_segregation.sct_wrapper import SCTWrapper
+from sensor_msgs.msg import LaserScan
 
 
 # ps aux | grep -E "gz|ign"
@@ -38,6 +39,7 @@ class FollowerNode(Node):
         self.create_subscription(String, '/leader_broadcast/green', lambda msg: self.signals.on_green(msg, self.tracker.dist2green), 10)
         self.create_subscription(String, '/leader_broadcast/blue',  lambda msg: self.signals.on_blue(msg, self.tracker.dist2blue), 10)
         self.create_subscription(Odometry, 'odom', self.tracker.odom_callback, 10)
+        # self.create_subscription(LaserScan, 'lidar/scan', self.lidar_clbk, 10)
 
         self.twist = Twist()
         self.cmd_pub = self.create_publisher(Twist, 'cmd_vel', 10)
@@ -47,6 +49,9 @@ class FollowerNode(Node):
         self.last_cmd_time = 0.0
 
         self.ready_timer = self.create_timer(1.0, self.check_ready)
+        
+    def lidar_clbk(self, msg):
+        self.get_logger().info(f"LIDAR Scan {len(msg.ranges)} points")
 
     def check_ready(self):
         # Check if required topics exist
@@ -80,17 +85,17 @@ class FollowerNode(Node):
 
         for ev in self.sct.run():
             if ev == "EV_moveFW":
-                self.get_logger().info(f'ev: {ev}')
+                # self.get_logger().info(f'ev: {ev}')
                 linear = 0.4
             elif ev == "EV_moveStop":
-                self.get_logger().info(f'ev: {ev}')
+                # self.get_logger().info(f'ev: {ev}')
                 linear = 0.0
                 angular = 0.0
             elif ev == "EV_turnCW":
-                self.get_logger().info(f'ev: {ev}')
+                # self.get_logger().info(f'ev: {ev}')
                 angular = -0.4
             elif ev == "EV_turnCCW":
-                self.get_logger().info(f'ev: {ev}')
+                # self.get_logger().info(f'ev: {ev}')
                 angular = 0.4
 
         self.twist.linear.x = linear

@@ -3,6 +3,8 @@ import xacro
 
 from launch import LaunchDescription
 from launch.actions import RegisterEventHandler, OpaqueFunction
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 from launch.event_handlers import OnProcessExit
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
@@ -60,7 +62,8 @@ def generate_launch_description():
                 f"/{ns}/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
                 f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
                 # f"/{ns}/tf_static@tf2_msgs/msg/TFMessage@ignition.msgs.Pose_V",
-                f"/{ns}/camera/camera_info@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
+                # f"/{ns}/camera/camera_info@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
+                # f"/{ns}/lidar/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan",
             ]
 
         bridge_node = Node(
@@ -96,7 +99,11 @@ def generate_launch_description():
                 package="robot_state_publisher",
                 executable="robot_state_publisher",
                 namespace=ns,
-                parameters=[{"use_sim_time": True, "robot_description": robot_description}],
+                parameters=[
+                {"use_sim_time": True, 
+                "robot_description": robot_description,
+                "tf_prefix": ns}
+                ],
                 output="screen"
             )
 
@@ -148,7 +155,23 @@ def generate_launch_description():
             )
 
             # Add all nodes for this robot
-            nodes += [state_pub, spawn_node, image_bridge, behavior_after_spawn]
+            nodes += [state_pub, spawn_node, behavior_after_spawn]
+
+        # --- RViz2 with swarm config ---
+        # rviz_config = PathJoinSubstitution([
+        #     FindPackageShare("leo_description"),
+        #     "rviz",
+        #     "swarm.rviz"
+        # ])
+
+        # rviz_node = Node(
+        #     package="rviz2",
+        #     executable="rviz2",
+        #     arguments=["-d", rviz_config],
+        #     output="screen"
+        # )
+        # nodes.append(rviz_node)
+
 
         return nodes
 
