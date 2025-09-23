@@ -109,10 +109,25 @@ def spawn_robot(context: LaunchContext, namespace: LaunchConfiguration):
         arguments=[robot_ns + "/camera/image_raw"],
         output="screen",
     )
+
+    depth_camera_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name=node_name_prefix + "depth_camera_bridge",
+        arguments=[
+            # Bridge the depth image and camera info
+            robot_ns + "/depth_camera/depth_image@sensor_msgs/msg/Image@ignition.msgs.Image",
+            robot_ns + "/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo",
+        ],
+        output="screen",
+    )
+
+
     return [
         robot_state_publisher,
         leo_rover,
         topic_bridge,
+        depth_camera_bridge,
         image_bridge,
     ]
 

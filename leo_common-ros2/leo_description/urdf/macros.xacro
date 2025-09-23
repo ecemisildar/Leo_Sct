@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-
+  <xacro:property name="PI" value="3.14159265"/>
   <xacro:macro name="leo" 
                params="default_antenna:=true
                        rockers_fixed:=true
@@ -168,6 +168,10 @@
       </link>
     </xacro:if>
 
+    <!-- <link name="${link_prefix}d435i_link"/>
+    <link name="${link_prefix}d435i_optical_link"/> -->
+
+
     <!-- <link name="${link_prefix}camera_frame"/>
     <link name="${link_prefix}camera_optical_frame"/>
     <link name="${link_prefix}imu_frame"/> -->
@@ -293,6 +297,24 @@
         <child link="${link_prefix}antenna_link"/>
       </joint>
     </xacro:if>
+
+    <joint name="${joint_prefix}rgbd_camera_joint" type="fixed">
+        <origin xyz="0.05 0 0.06" rpy="0 0 0"/>
+      <parent link="${link_prefix}base_link"/>
+      <child link="${link_prefix}rgbd_camera_frame"/>
+    </joint>
+    <link name="${link_prefix}rgbd_camera_frame">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://leo_description/models/d435.dae"/>
+        </geometry>
+        <material name="white">
+          <color rgba="0.9 0.9 0.9 1.0"/>
+        </material>
+      </visual>
+    </link>
+
 
     <!-- <joint name="${joint_prefix}camera_joint" type="fixed">
       <origin xyz="0.0971 0 -0.0427" rpy="0 0.2094 0"/>
@@ -487,6 +509,113 @@
         </surface>
       </collision>
     </gazebo>
+
+  <!-- LIDAR -->
+  <joint name="${link_prefix}lidar_joint" type="fixed">
+    <parent link="${link_prefix}base_link"/>
+    <child link="${link_prefix}lidar_link"/>
+    <origin xyz="-0.04 0 0.07" rpy="0 0 0"/>
+  </joint>
+  <link name="${link_prefix}lidar_link">
+    <visual>
+      <origin xyz="-0.0275 -0.0275 -0.02" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://leo_description/models/Lidar_pacecat.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0.1 0.1 0.1 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <gazebo reference="${link_prefix}lidar_link">
+    <sensor name='gpu_lidar' type='gpu_lidar'>"
+      <!-- <ignition_frame_id>${link_prefix}lidar_link</ignition_frame_id>  -->
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+          <vertical>
+            <samples>1</samples> <!--1 for 2D lidar / 16 for 3D-->
+            <resolution>1</resolution>
+            <min_angle>-0.261799</min_angle>
+            <max_angle>0.261799</max_angle>
+          </vertical>
+        </scan>
+        <range>
+          <min>0.1</min>
+          <max>20.0</max>
+          <resolution>0.017453</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+      <always_on>1</always_on>
+      <visualize>0</visualize>
+      <topic>${link_prefix}lidar</topic>
+    </sensor>
+  </gazebo>
+
+  <!-- RGBD CAMERA-->
+  <gazebo reference="${link_prefix}rgbd_camera_frame">
+    <sensor name="rgbd_camera" type="rgbd_camera">
+      <ignition_frame_id>${link_prefix}rgbd_camera_frame</ignition_frame_id>
+      <camera name="rgbd_camera_frame">
+        <horizontal_fov>1.3962634</horizontal_fov>
+        <lens>
+          <intrinsics>
+            <fx>277.1</fx>
+            <fy>277.1</fy>
+            <cx>160.5</cx>
+            <cy>120.5</cy>
+            <s>0</s>
+          </intrinsics>
+        </lens>
+        <distortion>
+          <k1>0.104207</k1>
+          <k2>-0.255558</k2>
+          <k3>0.128694</k3>
+          <p1>0.000512</p1>
+          <p2>0.000319</p2>
+          <center>0.5 0.5</center>
+        </distortion>
+        <image>
+          <width>1280</width>
+          <height>720</height>
+          <format>L8</format>
+        </image>
+        <clip>
+          <near>0.01</near>
+          <far>300</far>
+        </clip>
+        <depth_camera>
+          <clip>
+            <near>0.1</near>
+            <far>10</far>
+          </clip>
+        </depth_camera>
+        <noise>
+          <type>gaussian</type>
+          <mean>0</mean>
+          <stddev>0.003</stddev>
+        </noise>
+      </camera>
+      <always_on>1</always_on>
+      <update_rate>10</update_rate>
+      <visualize>0</visualize>
+      <topic>${link_prefix}depth_camera</topic>
+    </sensor>
+  </gazebo>
+
+
 
     <!-- camera -->
     <!-- <gazebo reference="${link_prefix}camera_frame">

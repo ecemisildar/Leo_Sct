@@ -59,7 +59,7 @@ def generate_launch_description():
 
     spawn_robot = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(pkg_project_gazebo, "launch", "spawn_10_robot.launch.py")
+            os.path.join(pkg_project_gazebo, "launch", "spawn_robot.launch.py")
         ),
         launch_arguments={"robot_ns": LaunchConfiguration("robot_ns")}.items(),
     )
