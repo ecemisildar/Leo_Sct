@@ -7,7 +7,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image
 from tf_transformations import euler_from_quaternion
 from cv_bridge import CvBridge
-
+import cv2
 
 class RobotCircleController(Node):
     def __init__(self):
@@ -87,6 +87,21 @@ class RobotCircleController(Node):
             center_col = cv_image[:, cv_image.shape[1] // 2]
             valid = center_col[np.isfinite(center_col)]
             self.min_front_distance = float(np.nanmin(valid)) if valid.size > 0 else float("inf")
+
+            # --- Visualization ---
+            # # Replace NaN/inf with 0 for visualization
+            # display_image = np.nan_to_num(cv_image, nan=0.0, posinf=0.0, neginf=0.0)
+
+            # # Normalize to 0–255 for display
+            # display_norm = cv2.normalize(display_image, None, 0, 255, cv2.NORM_MINMAX)
+            # display_uint8 = np.uint8(display_norm)
+
+            # # Apply colormap to make depth more visible
+            # depth_colormap = cv2.applyColorMap(display_uint8, cv2.COLORMAP_JET)
+
+            # cv2.imshow("Depth Camera", depth_colormap)
+            # cv2.waitKey(1)
+
         except Exception as e:
             self.get_logger().warn(f"Depth processing failed: {e}")
 

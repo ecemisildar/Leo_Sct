@@ -13,6 +13,7 @@ setup(
         ('share/' + package_name + '/launch', ['launch/spawn_multi_robots.launch.py']),
         ('share/' + package_name + '/launch', ['launch/leo_gz.launch.py']),
         ('share/' + package_name + '/config', ['config/supervisor.yaml']),
+        ('share/' + package_name + '/config', ['config/supervisor2.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -23,7 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'robot_circle_controller = swarm_basics.robot_circle_controller:main',
+            'robot_supervisor_3_movements = swarm_basics.robot_supervisor_3_movements:main',
         ],
     },
 )

@@ -14,16 +14,16 @@ def generate_launch_description():
     leo_description = get_package_share_directory("leo_description")
 
     # --- Total robots (edit here if you want more/less) ---
-    total_robots = 6
+    total_robots = 1
 
     # --- Initial positions for each robot ---
     robot_positions = [
         (0.0, 0.0),
-        (3.0, 0.0),
-        (0.0, 3.0),
-        (3.0, 3.0),
-        (5.0, 0.0),
-        (0.0, 5.0),
+        # (3.0, 0.0),
+        # (0.0, 3.0),
+        # (3.0, 3.0),
+        # (5.0, 0.0),
+        # (0.0, 5.0),
     ]
 
     robots_to_spawn = []
@@ -49,6 +49,7 @@ def generate_launch_description():
                 f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
                 f"/{ns}/depth_camera/depth_image@sensor_msgs/msg/Image@ignition.msgs.Image",
                 f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo",
+                f"/{ns}/depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image", 
             ]
 
         bridge_node = Node(
@@ -105,8 +106,8 @@ def generate_launch_description():
             # Controller node
             behavior_node = Node(
                 package="swarm_basics",
-                executable="robot_circle_controller",
-                name="robot_circle_controller",
+                executable="robot_supervisor_3_movements",
+                name="robot_supervisor",
                 namespace=ns,
                 parameters=[
                     {"spawn_x": x},

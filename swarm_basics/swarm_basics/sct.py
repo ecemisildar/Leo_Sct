@@ -42,7 +42,7 @@ class SCT:
 
 
     def run_step(self):
-        self.input_buffer = [] # clear buffer
+        # self.input_buffer = [] # clear buffer
         self.update_input()
 
         # Get all uncontrollable events
@@ -61,11 +61,10 @@ class SCT:
             self.make_transition(ce)
             self.exec_callback(ce)
 
+        return ce_exists, ce
 
     def input_read(self, ev):
-        # if ev < self.num_events and self.callback[ev]:
-        if ev < self.num_events and ev in self.callback and self.callback[ev]:
-    
+        if ev < self.num_events and self.callback[ev]:
             return self.callback[ev]['check_input'](self.callback[ev]['sup_data'])
         return False
 
@@ -163,10 +162,15 @@ class SCT:
                 ev_disable[value] = 0
                 position += 3
 
+            # print(f"Supervisor {i}, state {self.sup_current_state[i]}, transitions: {value}", flush=True)
+
             # Remove the controllable events to disable, leaving an array of enabled controllable events
             for j in range(0, self.num_events):
                 if ev_disable[j] == 1 and events[j]:
                     events[j] = 0
+
+        # print(f"Supervisor {i}, state {self.sup_current_state[i]}, enabled controllables: {events}", flush=True)
+        #print("Enabled controllables after supervisors:", events, flush=True)
 
         return events
 
@@ -182,38 +186,6 @@ class SCT:
         return self.EV, self.ev_controllable
 
 
-    def get_event_name(self, event_id):
-        for name, idx in self.EV.items():
-            if idx == event_id:
-                return name
-        return f"UnknownEvent_{event_id}"
-
-    def get_current_state(self):
-        """Returns the current state of all supervisors."""
-        return self.sup_current_state
-
-    def get_enabled_events(self):
-        """Returns a list of event names that are currently enabled (controllable events with transitions)."""
-        active_ids = self.get_active_controllable_events()
-        enabled_names = []
-        for i, is_active in enumerate(active_ids):
-            if is_active:
-                enabled_names.append(self.get_event_name(i))
-        return enabled_names
-
-    def get_transitions_from_state(self, supervisor_id, state_id):
-        """Helper to decode transitions from a specific state for a supervisor."""
-        transitions = []
-        position = self.get_state_position(supervisor_id, state_id)
-        num_transitions = self.sup_data[position]
-        current_pos = position + 1
-        for _ in range(num_transitions):
-            event_id = self.get_value(self.sup_data[current_pos])
-            next_state_raw = (self.sup_data[current_pos + 1] * 256) + (self.sup_data[current_pos + 2])
-            transitions.append((self.get_event_name(event_id), next_state_raw))
-            current_pos += 3
-        return transitions
-        
 class SCTPub(SCT):
 
     def __init__(self, filename):
