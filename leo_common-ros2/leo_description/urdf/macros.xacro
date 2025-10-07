@@ -25,9 +25,15 @@
             <mesh filename="package://leo_description/models/Rocker.dae"/>
           </geometry>
         </visual>
-        <collision>
+        <!-- <collision>
           <geometry>
             <mesh filename="package://leo_description/models/Rocker_outline.stl"/>
+          </geometry>
+        </collision> -->
+        <collision>
+          <origin xyz="0 0 -0.05"/>
+          <geometry>
+            <box size="0.25 0.05 0.05"/>
           </geometry>
         </collision>
       </link>
@@ -48,23 +54,23 @@
             <mesh filename="package://leo_description/models/Wheel${model}.dae"/>
           </geometry>
         </visual>
-        <collision>
+        <!-- <collision>
           <origin xyz="0 0.04485 0" rpy="${pi/2} 0 0"/>
           <geometry>
             <cylinder radius="0.057" length="0.07"/>
           </geometry>
-        </collision>
+        </collision> -->
         <collision>
           <origin xyz="0 0.04485 0" rpy="${pi/2} 0 0"/>
           <geometry>
             <cylinder radius="0.0625" length="0.04"/>
           </geometry>
         </collision>
-        <collision>
+        <!-- <collision>
           <geometry>
             <mesh filename="package://leo_description/models/Wheel_outline.stl"/>
           </geometry>
-        </collision>
+        </collision> -->
       </link>
     </xacro:macro>
 
@@ -89,11 +95,11 @@
             <cylinder radius="0.0635" length="0.0515"/>
           </geometry>
         </collision>
-        <collision>
+        <!-- <collision>
           <geometry>
             <mesh filename="package://leo_description/models/Mecanum_wheel_outline.stl"/>
           </geometry>
-        </collision>
+        </collision> -->
       </link>
     </xacro:macro>
 
@@ -122,9 +128,15 @@
           <color rgba="$(arg chassis_color)"/>
         </material>
       </visual>
-      <collision>
+      <!-- <collision>
         <geometry>
           <mesh filename="package://leo_description/models/Chassis_outline.stl"/>
+        </geometry>
+      </collision> -->
+      <collision>
+        <origin xyz="0 0 -0.05"/>
+        <geometry>
+          <box size="0.35 0.25 0.12"/>
         </geometry>
       </collision>
     </link>
@@ -159,12 +171,12 @@
             <mesh filename="package://leo_description/models/Antenna.dae"/>
           </geometry>
         </visual>
-        <collision>
+        <!-- <collision>
           <origin xyz="0 0 0.028"/>
           <geometry>
             <cylinder radius="0.0055" length="0.056"/>
           </geometry>
-        </collision>
+        </collision> -->
       </link>
     </xacro:if>
 
@@ -282,7 +294,7 @@
     <joint name="${joint_prefix}realsense_joint" type="fixed">
       <parent link="${link_prefix}base_link"/>
       <child link="${link_prefix}realsense_link"/>
-      <origin xyz="0.1 0 0.1" rpy="0 0 0"/>
+      <origin xyz="0.1 0 0.03" rpy="0 -0.3 0"/>
     </joint>
 
 
@@ -461,9 +473,9 @@
     <gazebo reference="${link_prefix}realsense_link">
       <sensor name="depth_camera" type="rgbd_camera">
       <always_on>1</always_on>
-        <update_rate>60</update_rate>
+        <update_rate>5</update_rate>
         <camera name="depth_camera">
-          <horizontal_fov>1.0472</horizontal_fov>
+          <horizontal_fov>1.51844</horizontal_fov> <!--87 degrees-->
           <lens>
             <intrinsics>
               <!-- fx = fy = width / ( 2 * tan (hfov / 2 ) ) -->
@@ -485,8 +497,8 @@
             <center>0.5 0.5</center>
           </distortion>
           <image>
-            <width>640</width>
-            <height>480</height>
+            <width>64</width>
+            <height>48</height>
             <format>R8G8B8</format>
           </image>
           <clip>

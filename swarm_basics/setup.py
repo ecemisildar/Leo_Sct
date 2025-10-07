@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'robot_supervisor_3_movements = swarm_basics.robot_supervisor_3_movements:main',
+            'goal_navigator = swarm_basics.goal_navigator:main',
         ],
     },
 )

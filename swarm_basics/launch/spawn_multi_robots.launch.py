@@ -2,28 +2,26 @@ import os
 import xacro
 
 from launch import LaunchDescription
-from launch.actions import RegisterEventHandler, OpaqueFunction
-from launch.event_handlers import OnProcessExit
+from launch.actions import OpaqueFunction
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
-from tf2_ros import Buffer, TransformListener
 
 
 def generate_launch_description():
 
     leo_description = get_package_share_directory("leo_description")
 
-    # --- Total robots (edit here if you want more/less) ---
-    total_robots = 1
+    # --- Total robots ---
+    total_robots = 6
 
     # --- Initial positions for each robot ---
     robot_positions = [
         (0.0, 0.0),
-        # (3.0, 0.0),
-        # (0.0, 3.0),
-        # (3.0, 3.0),
-        # (5.0, 0.0),
-        # (0.0, 5.0),
+        (1.0, 0.0),
+        (0.0, 1.0),
+        (-1.0, 1.0),
+        (-1.0, 0.0),
+        (0.0, -1.0),
     ]
 
     robots_to_spawn = []
@@ -39,7 +37,7 @@ def generate_launch_description():
     def create_all_robot_nodes(context, robots):
         nodes = []
 
-        # One bridge for all robots
+        # --- One bridge for all robots ---
         bridge_args = []
         for robot in robots:
             ns = robot["ns"]
@@ -49,7 +47,7 @@ def generate_launch_description():
                 f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
                 f"/{ns}/depth_camera/depth_image@sensor_msgs/msg/Image@ignition.msgs.Image",
                 f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo",
-                f"/{ns}/depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image", 
+                f"/{ns}/depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image",
             ]
 
         bridge_node = Node(
@@ -62,20 +60,18 @@ def generate_launch_description():
         )
         nodes.append(bridge_node)
 
-        # Create each robot
+        # --- Create each robot ---
         for robot in robots:
             ns = robot["ns"]
             x = robot["x"]
             y = robot["y"]
 
-            # URDF
+            # URDF with per-robot namespace mapping
             xacro_file = os.path.join(leo_description, 'urdf', 'leo_sim.urdf.xacro')
-            doc = xacro.process_file(xacro_file, mappings={
-                "robot_ns": ns,
-            })
+            doc = xacro.process_file(xacro_file, mappings={"robot_ns": ns})
             robot_description = doc.toxml()
 
-            # State publisher
+            # State publisher (per robot)
             state_pub = Node(
                 package="robot_state_publisher",
                 executable="robot_state_publisher",
@@ -85,25 +81,26 @@ def generate_launch_description():
                     "robot_description": robot_description,
                     "tf_prefix": ns
                 }],
+                remappings=[("/joint_states", f"{ns}/joint_states")],
                 output="screen"
             )
 
-            # Spawn robot
+            # Spawn robot in Gazebo
             spawn_node = Node(
                 package="ros_gz_sim",
                 executable="create",
                 namespace=ns,
-                output="screen",
                 arguments=[
                     "-name", ns,
                     "-x", str(x),
                     "-y", str(y),
                     "-z", "0.1",
-                    "-topic", "robot_description"
-                ]
+                    "-topic", f"/{ns}/robot_description"
+                ],
+                output="screen"
             )
 
-            # Controller node
+            # Controller node (per robot)
             behavior_node = Node(
                 package="swarm_basics",
                 executable="robot_supervisor_3_movements",
@@ -116,15 +113,7 @@ def generate_launch_description():
                 output="screen"
             )
 
-            # Start controller after spawn
-            behavior_after_spawn = RegisterEventHandler(
-                OnProcessExit(
-                    target_action=spawn_node,
-                    on_exit=[behavior_node]
-                )
-            )
-
-            nodes += [state_pub, spawn_node, behavior_after_spawn]
+            nodes += [state_pub, spawn_node, behavior_node]
 
         return nodes
 
