@@ -10,7 +10,11 @@ import cv2
 import numpy as np
 from swarm_basics.sct import SCT
 from ament_index_python.packages import get_package_share_directory
-import time
+import time, random, math
+
+from nav_msgs.msg import Odometry
+from math import atan2, sqrt, pi
+import json
 
 
 class RobotSupervisor(Node):
@@ -33,6 +37,22 @@ class RobotSupervisor(Node):
         self.obstacle = False
         self.min_front_distance = float("inf")
         self.obstacle_zones = []
+        self.counter = 0
+        self.visited_waypoints = set()
+
+        self.goal = (-8.0, 0.0)
+        self.position = None
+        self.yaw = 0.0
+        self.goal_reached = False
+
+        self.last_position = None
+        self.last_progress_time = time.time()
+        self.stuck_timeout = 3.0  # seconds with no progress before we trigger recovery
+
+
+        # Subscribe to odometry
+        self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
+
 
         # Ensure all events have a callback entry
         for ev_name, ev_id in self.sct.EV.items():
@@ -67,7 +87,49 @@ class RobotSupervisor(Node):
         self.sct.make_transition = logged_make_transition
 
         self.timer = self.create_timer(0.1, self.timer_callback)
+        self.waypoint_timer = self.create_timer(0.5, self.waypoint_checker)
     
+
+
+    def odom_callback(self, msg: Odometry):
+        # Extract robot position and orientation (yaw)
+        pos = msg.pose.pose.position
+        self.position = (pos.x, pos.y)
+
+        # Convert quaternion to yaw
+        q = msg.pose.pose.orientation
+        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        self.yaw = atan2(siny_cosp, cosy_cosp)
+
+
+    def waypoint_checker(self):
+        if self.position is None: 
+            return
+
+        with open("/home/ecem/ros2_ws/src/swarm_basics/swarm_basics/cylinder_positions.json", "r") as f:
+            waypoint_positions = json.load(f)
+
+        for idx, wp in enumerate(waypoint_positions):
+            if idx in self.visited_waypoints:
+                continue  # Skip if already counted
+
+            # Compute 2D distance (x, y)
+            distance = math.sqrt(
+                (self.position[0] - wp[0])**2 + 
+                (self.position[1] - wp[1])**2
+            )
+
+            # Check if robot is close enough to waypoint
+            if distance < 0.3:
+                self.counter += 1
+                self.visited_waypoints.add(idx)
+                self.get_logger().info(f"Reached waypoint {idx}: {wp}")
+
+        self.get_logger().info(f"Total waypoints counted: {self.counter}")
+    
+
+
     # -------------------------------
     # Depth / obstacle
     # -------------------------------
@@ -109,29 +171,29 @@ class RobotSupervisor(Node):
                 'right': min_dist_right
             }
 
-            # --- 2. Determine closest obstacle zone with center fallback ---
+            # --- 2. Determine closest obstacle zone with corner fallback ---
             OBSTACLE_THRESHOLD = 1.0  
             EPSILON = 0.05 # threshold for considering L ≈ R
 
             min_distance_overall = min(self.min_distances.values())
 
             if min_distance_overall < OBSTACLE_THRESHOLD:
-                # Check if left and right are very close → obstacle in center
+                # Check if left and right are very close → obstacle in corner
                 if abs(min_dist_left - min_dist_right) < EPSILON:
-                    self.closest_obstacle_zone = "CENTER"
-                    # Assign center distance as the min of left/right for logging
-                    self.min_distances['center'] = min(min_dist_left, min_dist_right)
-                    self.obstacle_zones.append("CENTER")
+                    self.closest_obstacle_zone = "corner"
+                    # Assign corner distance as the min of left/right for logging
+                    self.min_distances['corner'] = min(min_dist_left, min_dist_right)
+                    self.obstacle_zones.append("CORNER")
                 else:
                     # Otherwise, pick the section with the absolute min distance
                     closest_zone = min(self.min_distances, key=self.min_distances.get)
                     self.closest_obstacle_zone = closest_zone.upper()
                     self.obstacle_zones.append(closest_zone.upper())
 
-                self.get_logger().info(
-                    f"Dists: L:{min_dist_left:.2f}m | R:{min_dist_right:.2f}m. "
-                    f"Obstacles in: {', '.join(self.obstacle_zones) if self.obstacle_zones else 'NONE'}"
-                )
+                # self.get_logger().info(
+                #     f"Dists: L:{min_dist_left:.2f}m | R:{min_dist_right:.2f}m. "
+                #     f"Obstacles in: {', '.join(self.obstacle_zones) if self.obstacle_zones else 'NONE'}"
+                # )
 
             # --- 3. Visualization ---
             # display_image = np.nan_to_num(cv_image, nan=0.0, posinf=10.0, neginf=0.0)
@@ -154,7 +216,7 @@ class RobotSupervisor(Node):
         return not self.obstacle_zones
 
     def middle_check(self, sup_data):
-        return 'CENTER' in self.obstacle_zones
+        return 'CORNER' in self.obstacle_zones
             
     def left_check(self, sup_data):
         return 'LEFT' in self.obstacle_zones
@@ -162,23 +224,90 @@ class RobotSupervisor(Node):
     def right_check(self, sup_data):
         return 'RIGHT' in self.obstacle_zones
             
-    
+    def navigate_to_goal(self):
+        if self.position is None:
+            return None  # Haven't received odometry yet
+
+        goal_x, goal_y = self.goal
+        x, y = self.position
+
+        dx = goal_x - x
+        dy = goal_y - y
+        distance = sqrt(dx**2 + dy**2)
+
+        # --- Progress tracking ---
+        if self.last_position is not None:
+            old_dx = goal_x - self.last_position[0]
+            old_dy = goal_y - self.last_position[1]
+            old_dist = sqrt(old_dx**2 + old_dy**2)
+
+            # if we didn't get closer to goal significantly
+            if abs(old_dist - distance) < 0.05:
+                if time.time() - self.last_progress_time > self.stuck_timeout:
+                    self.get_logger().warn("Robot stuck — triggering recovery rotation.")
+                    twist = Twist()
+                    twist.linear.x = 0.0
+                    twist.angular.z = 0.6  # spin in place
+                    time.sleep(0.3)
+                    self.last_progress_time = time.time()
+                    return twist
+            else:
+                self.last_progress_time = time.time()
+
+        self.last_position = (x, y)
+
+
+        if distance < 0.3:
+            self.goal_reached = True
+            twist = Twist()
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
+            self.cmd_pub.publish(twist)
+            self.get_logger().info("Goal reached!")
+            return None
+
+        # Desired heading to goal
+        desired_yaw = atan2(dy, dx)
+        yaw_error = desired_yaw - self.yaw
+        yaw_error = (yaw_error + pi) % (2 * pi) - pi  # normalize [-π, π]
+
+        twist = Twist()
+
+        # Simple proportional control
+        if abs(yaw_error) > 0.3:
+            twist.linear.x = 0.0
+            twist.angular.z = 0.5 * np.sign(yaw_error)
+        else:
+            # if obstacle detected, slow or stop
+            if self.obstacle_zones:
+                twist.linear.x = 0.0
+                twist.angular.z = 0.5 * random.choice([-1, 1])  # choose random escape
+            else:
+                twist.linear.x = 0.3
+                twist.angular.z = 0.0
+
+        return twist
+
+
     # -------------------------------
     # Robot motion
     # -------------------------------
     def publish_twist(self, ev_name: str):
         twist = Twist()
 
-        if ev_name == "EV_V0":       
+        if ev_name == "EV_V1":     
+            # self.get_logger().info("Supervisor decision: RANDOM WALK")
+            twist.linear.x = random.uniform(0.1, 1.0)
+            twist.angular.z = random.uniform(0.1, 1.0)
+            # twist_ = self.navigate_to_goal()
+            # if twist_ is not None:
+            #    twist = twist_      
+                
+        elif ev_name == "EV_V0":       
             # self.get_logger().info("Supervisor decision: CORNER")
             twist.linear.x = 0.0
             twist.angular.z = 1.0
-            time.sleep(0.3)
-
-
-        elif ev_name == "EV_V1":     
-            # self.get_logger().info("Supervisor decision: FORWARD")
-            twist.linear.x = 0.5
+            time.sleep(0.3) 
 
         elif ev_name == "EV_V2":     
             # self.get_logger().info("Supervisor decision: CW")
@@ -210,6 +339,7 @@ class RobotSupervisor(Node):
             event_name = [name for name, val in self.sct.EV.items() if val == ce][0]
             # self.get_logger().info(f"Controllable event chosen: {event_name}")
             self.publish_twist(event_name)
+   
 
 def main(args=None):
     rclpy.init(args=args)
