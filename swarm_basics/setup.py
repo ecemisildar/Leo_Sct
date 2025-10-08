@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name + '/launch', ['launch/leo_gz.launch.py']),
         ('share/' + package_name + '/config', ['config/supervisor.yaml']),
         ('share/' + package_name + '/config', ['config/supervisor2.yaml']),
+        ('share/' + package_name + '/config', ['config/cylinder_positions.json']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,7 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'robot_supervisor_3_movements = swarm_basics.robot_supervisor_3_movements:main',
-            'goal_navigator = swarm_basics.goal_navigator:main',
+            'coverage_plotter = swarm_basics.coverage_plotter:main',
         ],
     },
 )

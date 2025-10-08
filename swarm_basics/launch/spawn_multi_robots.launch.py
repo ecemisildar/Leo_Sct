@@ -12,7 +12,7 @@ def generate_launch_description():
     leo_description = get_package_share_directory("leo_description")
 
     # --- Total robots ---
-    total_robots = 6
+    total_robots = 10
 
     # --- Initial positions for each robot ---
     robot_positions = [
@@ -22,6 +22,10 @@ def generate_launch_description():
         (-1.0, 1.0),
         (-1.0, 0.0),
         (0.0, -1.0),
+        (2.0, 0.0),
+        (0.0, 2.0),
+        (-2.0, 2.0),
+        (-2.0, 0.0),
     ]
 
     robots_to_spawn = []
@@ -32,6 +36,14 @@ def generate_launch_description():
             "x": x,
             "y": y
         })
+
+    plot_node = Node(
+            package="swarm_basics",
+            executable="coverage_plotter",
+            name="coverage_plotter",
+            output="screen"
+    )       
+ 
 
     # --- Function to create all robot nodes ---
     def create_all_robot_nodes(context, robots):
@@ -49,6 +61,8 @@ def generate_launch_description():
                 f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo",
                 f"/{ns}/depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image",
             ]
+
+
 
         bridge_node = Node(
             package="ros_gz_bridge",
@@ -118,5 +132,6 @@ def generate_launch_description():
         return nodes
 
     return LaunchDescription([
+        plot_node,
         OpaqueFunction(function=lambda context: create_all_robot_nodes(context, robots_to_spawn))
     ])

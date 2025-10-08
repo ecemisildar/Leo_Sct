@@ -13,8 +13,7 @@ from ament_index_python.packages import get_package_share_directory
 import time, random, math
 
 from nav_msgs.msg import Odometry
-from math import atan2, sqrt, pi
-import json
+# from math import atan2, sqrt, pi
 
 
 class RobotSupervisor(Node):
@@ -37,21 +36,19 @@ class RobotSupervisor(Node):
         self.obstacle = False
         self.min_front_distance = float("inf")
         self.obstacle_zones = []
-        self.counter = 0
-        self.visited_waypoints = set()
 
-        self.goal = (-8.0, 0.0)
-        self.position = None
-        self.yaw = 0.0
-        self.goal_reached = False
+        # self.goal = (-8.0, 0.0)
+        # self.position = None
+        # self.yaw = 0.0
+        # self.goal_reached = False
 
-        self.last_position = None
-        self.last_progress_time = time.time()
-        self.stuck_timeout = 3.0  # seconds with no progress before we trigger recovery
+        # self.last_position = None
+        # self.last_progress_time = time.time()
+        # self.stuck_timeout = 3.0  # seconds with no progress before we trigger recovery
 
 
         # Subscribe to odometry
-        self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
+        # self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
 
 
         # Ensure all events have a callback entry
@@ -87,48 +84,18 @@ class RobotSupervisor(Node):
         self.sct.make_transition = logged_make_transition
 
         self.timer = self.create_timer(0.1, self.timer_callback)
-        self.waypoint_timer = self.create_timer(0.5, self.waypoint_checker)
-    
 
 
-    def odom_callback(self, msg: Odometry):
-        # Extract robot position and orientation (yaw)
-        pos = msg.pose.pose.position
-        self.position = (pos.x, pos.y)
+    # def odom_callback(self, msg: Odometry):
+    #     # Extract robot position and orientation (yaw)
+    #     pos = msg.pose.pose.position
+    #     self.position = (pos.x, pos.y)
 
-        # Convert quaternion to yaw
-        q = msg.pose.pose.orientation
-        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
-        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
-        self.yaw = atan2(siny_cosp, cosy_cosp)
-
-
-    def waypoint_checker(self):
-        if self.position is None: 
-            return
-
-        with open("/home/ecem/ros2_ws/src/swarm_basics/swarm_basics/cylinder_positions.json", "r") as f:
-            waypoint_positions = json.load(f)
-
-        for idx, wp in enumerate(waypoint_positions):
-            if idx in self.visited_waypoints:
-                continue  # Skip if already counted
-
-            # Compute 2D distance (x, y)
-            distance = math.sqrt(
-                (self.position[0] - wp[0])**2 + 
-                (self.position[1] - wp[1])**2
-            )
-
-            # Check if robot is close enough to waypoint
-            if distance < 0.3:
-                self.counter += 1
-                self.visited_waypoints.add(idx)
-                self.get_logger().info(f"Reached waypoint {idx}: {wp}")
-
-        self.get_logger().info(f"Total waypoints counted: {self.counter}")
-    
-
+    #     # Convert quaternion to yaw
+    #     q = msg.pose.pose.orientation
+    #     siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+    #     cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+    #     self.yaw = atan2(siny_cosp, cosy_cosp)
 
     # -------------------------------
     # Depth / obstacle
@@ -224,69 +191,69 @@ class RobotSupervisor(Node):
     def right_check(self, sup_data):
         return 'RIGHT' in self.obstacle_zones
             
-    def navigate_to_goal(self):
-        if self.position is None:
-            return None  # Haven't received odometry yet
+    # def navigate_to_goal(self):
+    #     if self.position is None:
+    #         return None  # Haven't received odometry yet
 
-        goal_x, goal_y = self.goal
-        x, y = self.position
+    #     goal_x, goal_y = self.goal
+    #     x, y = self.position
 
-        dx = goal_x - x
-        dy = goal_y - y
-        distance = sqrt(dx**2 + dy**2)
+    #     dx = goal_x - x
+    #     dy = goal_y - y
+    #     distance = sqrt(dx**2 + dy**2)
 
-        # --- Progress tracking ---
-        if self.last_position is not None:
-            old_dx = goal_x - self.last_position[0]
-            old_dy = goal_y - self.last_position[1]
-            old_dist = sqrt(old_dx**2 + old_dy**2)
+    #     # --- Progress tracking ---
+    #     if self.last_position is not None:
+    #         old_dx = goal_x - self.last_position[0]
+    #         old_dy = goal_y - self.last_position[1]
+    #         old_dist = sqrt(old_dx**2 + old_dy**2)
 
-            # if we didn't get closer to goal significantly
-            if abs(old_dist - distance) < 0.05:
-                if time.time() - self.last_progress_time > self.stuck_timeout:
-                    self.get_logger().warn("Robot stuck — triggering recovery rotation.")
-                    twist = Twist()
-                    twist.linear.x = 0.0
-                    twist.angular.z = 0.6  # spin in place
-                    time.sleep(0.3)
-                    self.last_progress_time = time.time()
-                    return twist
-            else:
-                self.last_progress_time = time.time()
+    #         # if we didn't get closer to goal significantly
+    #         if abs(old_dist - distance) < 0.05:
+    #             if time.time() - self.last_progress_time > self.stuck_timeout:
+    #                 self.get_logger().warn("Robot stuck — triggering recovery rotation.")
+    #                 twist = Twist()
+    #                 twist.linear.x = 0.0
+    #                 twist.angular.z = 0.6  # spin in place
+    #                 time.sleep(0.3)
+    #                 self.last_progress_time = time.time()
+    #                 return twist
+    #         else:
+    #             self.last_progress_time = time.time()
 
-        self.last_position = (x, y)
+    #     self.last_position = (x, y)
 
 
-        if distance < 0.3:
-            self.goal_reached = True
-            twist = Twist()
-            twist.linear.x = 0.0
-            twist.angular.z = 0.0
-            self.cmd_pub.publish(twist)
-            self.get_logger().info("Goal reached!")
-            return None
+    #     if distance < 0.3:
+    #         self.goal_reached = True
+    #         twist = Twist()
+    #         twist.linear.x = 0.0
+    #         twist.angular.z = 0.0
+    #         self.cmd_pub.publish(twist)
+    #         self.get_logger().info("Goal reached!")
+    #         return None
 
-        # Desired heading to goal
-        desired_yaw = atan2(dy, dx)
-        yaw_error = desired_yaw - self.yaw
-        yaw_error = (yaw_error + pi) % (2 * pi) - pi  # normalize [-π, π]
+    #     # Desired heading to goal
+    #     desired_yaw = atan2(dy, dx)
+    #     yaw_error = desired_yaw - self.yaw
+    #     yaw_error = (yaw_error + pi) % (2 * pi) - pi  # normalize [-π, π]
 
-        twist = Twist()
+    #     twist = Twist()
 
-        # Simple proportional control
-        if abs(yaw_error) > 0.3:
-            twist.linear.x = 0.0
-            twist.angular.z = 0.5 * np.sign(yaw_error)
-        else:
-            # if obstacle detected, slow or stop
-            if self.obstacle_zones:
-                twist.linear.x = 0.0
-                twist.angular.z = 0.5 * random.choice([-1, 1])  # choose random escape
-            else:
-                twist.linear.x = 0.3
-                twist.angular.z = 0.0
+    #     # Simple proportional control
+    #     if abs(yaw_error) > 0.3:
+    #         twist.linear.x = 0.0
+    #         twist.angular.z = 0.5 * np.sign(yaw_error)
+    #     else:
+    #         # if obstacle detected, slow or stop
+    #         if self.obstacle_zones:
+    #             twist.linear.x = 0.0
+    #             twist.angular.z = 0.5 * random.choice([-1, 1])  # choose random escape
+    #         else:
+    #             twist.linear.x = 0.3
+    #             twist.angular.z = 0.0
 
-        return twist
+    #     return twist
 
 
     # -------------------------------
