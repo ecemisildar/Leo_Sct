@@ -37,18 +37,11 @@ class RobotSupervisor(Node):
         self.min_front_distance = float("inf")
         self.obstacle_zones = []
 
-        # self.goal = (-8.0, 0.0)
-        # self.position = None
-        # self.yaw = 0.0
-        # self.goal_reached = False
-
-        # self.last_position = None
-        # self.last_progress_time = time.time()
-        # self.stuck_timeout = 3.0  # seconds with no progress before we trigger recovery
-
-
-        # Subscribe to odometry
-        # self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
+        # Levy Walk
+        self.levy_state = "choosing"
+        self.levy_heading = 0.0
+        self.levy_remaining = 0.0
+        self.dt = 0.1  # loop period, adjust if you know your timer rate
 
 
         # Ensure all events have a callback entry
@@ -86,16 +79,12 @@ class RobotSupervisor(Node):
         self.timer = self.create_timer(0.1, self.timer_callback)
 
 
-    # def odom_callback(self, msg: Odometry):
-    #     # Extract robot position and orientation (yaw)
-    #     pos = msg.pose.pose.position
-    #     self.position = (pos.x, pos.y)
 
-    #     # Convert quaternion to yaw
-    #     q = msg.pose.pose.orientation
-    #     siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
-    #     cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
-    #     self.yaw = atan2(siny_cosp, cosy_cosp)
+    # Levy Step Function 
+    def levy_step(self, mu=1.5, min_d=0.2, max_d=3.0):
+        u = np.random.uniform(0,1)
+        step = min_d * (1 - u)  ** (-1 / (mu - 1))
+        return float(np.clip(step, min_d, max_d))
 
     # -------------------------------
     # Depth / obstacle
@@ -139,7 +128,7 @@ class RobotSupervisor(Node):
             }
 
             # --- 2. Determine closest obstacle zone with corner fallback ---
-            OBSTACLE_THRESHOLD = 1.0  
+            OBSTACLE_THRESHOLD = 0.8  
             EPSILON = 0.05 # threshold for considering L ≈ R
 
             min_distance_overall = min(self.min_distances.values())
@@ -191,69 +180,6 @@ class RobotSupervisor(Node):
     def right_check(self, sup_data):
         return 'RIGHT' in self.obstacle_zones
             
-    # def navigate_to_goal(self):
-    #     if self.position is None:
-    #         return None  # Haven't received odometry yet
-
-    #     goal_x, goal_y = self.goal
-    #     x, y = self.position
-
-    #     dx = goal_x - x
-    #     dy = goal_y - y
-    #     distance = sqrt(dx**2 + dy**2)
-
-    #     # --- Progress tracking ---
-    #     if self.last_position is not None:
-    #         old_dx = goal_x - self.last_position[0]
-    #         old_dy = goal_y - self.last_position[1]
-    #         old_dist = sqrt(old_dx**2 + old_dy**2)
-
-    #         # if we didn't get closer to goal significantly
-    #         if abs(old_dist - distance) < 0.05:
-    #             if time.time() - self.last_progress_time > self.stuck_timeout:
-    #                 self.get_logger().warn("Robot stuck — triggering recovery rotation.")
-    #                 twist = Twist()
-    #                 twist.linear.x = 0.0
-    #                 twist.angular.z = 0.6  # spin in place
-    #                 time.sleep(0.3)
-    #                 self.last_progress_time = time.time()
-    #                 return twist
-    #         else:
-    #             self.last_progress_time = time.time()
-
-    #     self.last_position = (x, y)
-
-
-    #     if distance < 0.3:
-    #         self.goal_reached = True
-    #         twist = Twist()
-    #         twist.linear.x = 0.0
-    #         twist.angular.z = 0.0
-    #         self.cmd_pub.publish(twist)
-    #         self.get_logger().info("Goal reached!")
-    #         return None
-
-    #     # Desired heading to goal
-    #     desired_yaw = atan2(dy, dx)
-    #     yaw_error = desired_yaw - self.yaw
-    #     yaw_error = (yaw_error + pi) % (2 * pi) - pi  # normalize [-π, π]
-
-    #     twist = Twist()
-
-    #     # Simple proportional control
-    #     if abs(yaw_error) > 0.3:
-    #         twist.linear.x = 0.0
-    #         twist.angular.z = 0.5 * np.sign(yaw_error)
-    #     else:
-    #         # if obstacle detected, slow or stop
-    #         if self.obstacle_zones:
-    #             twist.linear.x = 0.0
-    #             twist.angular.z = 0.5 * random.choice([-1, 1])  # choose random escape
-    #         else:
-    #             twist.linear.x = 0.3
-    #             twist.angular.z = 0.0
-
-    #     return twist
 
 
     # -------------------------------
@@ -263,12 +189,29 @@ class RobotSupervisor(Node):
         twist = Twist()
 
         if ev_name == "EV_V1":     
-            # self.get_logger().info("Supervisor decision: RANDOM WALK")
-            twist.linear.x = random.uniform(0.1, 1.0)
-            twist.angular.z = random.uniform(0.1, 1.0)
-            # twist_ = self.navigate_to_goal()
-            # if twist_ is not None:
-            #    twist = twist_      
+            # self.get_logger().info("Supervisor decision: LEVY WALK")
+            # twist.linear.x = random.uniform(0.1, 1.0)
+            # twist.angular.z = random.uniform(0.1, 1.0)
+
+            if self.levy_state == "choosing":
+                self.levy_heading = random.uniform(-math.pi, math.pi)
+                self.levy_remaining = self.levy_step()
+                self.levy_state = "moving"
+
+            elif self.levy_state == "moving":
+                twist.linear.x = 0.3
+                twist.angular.z = 0.0
+
+                # Decrease remaining distance based on travel
+                self.levy_remaining -= twist.linear.x * self.dt
+
+                # Occasionally inject small angular noise (to avoid straight-line lock)
+                twist.angular.z = random.uniform(-0.05, 0.05)
+
+                # If reached target or obstacle triggers another event, reset
+                if self.levy_remaining <= 0:
+                    self.levy_state = "choosing"    
+                
                 
         elif ev_name == "EV_V0":       
             # self.get_logger().info("Supervisor decision: CORNER")
