@@ -14,7 +14,9 @@ setup(
         ('share/' + package_name + '/launch', ['launch/leo_gz.launch.py']),
         ('share/' + package_name + '/config', ['config/supervisor.yaml']),
         ('share/' + package_name + '/config', ['config/supervisor2.yaml']),
+        ('share/' + package_name + '/config', ['config/sup_new.yaml']),
         ('share/' + package_name + '/config', ['config/cylinder_positions.json']),
+        ('share/' + package_name + '/worlds', ['worlds/random_world.sdf']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,6 +29,7 @@ setup(
         'console_scripts': [
             'robot_supervisor_3_movements = swarm_basics.robot_supervisor_3_movements:main',
             'coverage_plotter = swarm_basics.coverage_plotter:main',
+            'bump_counter = swarm_basics.bump_counter:main',
         ],
     },
 )

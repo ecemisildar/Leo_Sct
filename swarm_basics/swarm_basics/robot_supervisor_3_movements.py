@@ -32,17 +32,9 @@ class RobotSupervisor(Node):
             return
 
         self.sct = SCT(config_path)
-        self.bridge = CvBridge()
-        self.obstacle = False
-        self.min_front_distance = float("inf")
+        self.target_offset = 0.0
+        self.target_distance = float('inf')
         self.obstacle_zones = []
-
-        # Levy Walk
-        self.levy_state = "choosing"
-        self.levy_heading = 0.0
-        self.levy_remaining = 0.0
-        self.dt = 0.1  # loop period, adjust if you know your timer rate
-
 
         # Ensure all events have a callback entry
         for ev_name, ev_id in self.sct.EV.items():
@@ -52,19 +44,17 @@ class RobotSupervisor(Node):
         # Publisher
         self.cmd_pub = self.create_publisher(Twist, 'cmd_vel', 10)
 
-        # Depth camera subscriber
-        self.depth_sub = self.create_subscription(
-            Image,
-            "depth_camera/depth_image",
-            self.depth_callback,
-            10
-        )
+        # Subscriber
+        self.sub = self.create_subscription(String, 'detected_zones', self.zone_callback, 10)
+
 
         # SCT callbacks for UCEs
         self.sct.add_callback(self.sct.EV['EV_S0'],None,self.middle_check,None)
         self.sct.add_callback(self.sct.EV['EV_S1'],None,self.clear_path_check,None)
         self.sct.add_callback(self.sct.EV['EV_S2'],None,self.left_check,None)
         self.sct.add_callback(self.sct.EV['EV_S3'],None,self.right_check,None)
+        # self.sct.add_callback(self.sct.EV['EV_S4'],None,self.red_check,None)
+        # self.sct.add_callback(self.sct.EV['EV_S5'],None,self.blue_check,None)
 
         # Patch make_transition to log supervisor transitions
         original_make_transition = self.sct.make_transition
@@ -79,97 +69,28 @@ class RobotSupervisor(Node):
         self.timer = self.create_timer(0.1, self.timer_callback)
 
 
+    def zone_callback(self, msg):
+        self.obstacle_zones = [z.strip() for z in msg.data.split(',') if z.strip()]
+        self.get_logger().info(f'ZONE: {self.obstacle_zones}')
 
-    # Levy Step Function 
-    def levy_step(self, mu=1.5, min_d=0.2, max_d=3.0):
-        u = np.random.uniform(0,1)
-        step = min_d * (1 - u)  ** (-1 / (mu - 1))
-        return float(np.clip(step, min_d, max_d))
+        for z in self.obstacle_zones:
+            parts = z.split(",")
+            if len(parts) == 3:
+                try:
+                    self.target_offset = float(parts[1])
+                    self.target_distance = float(parts[2])
+                    break
+                except ValueError:
+                    continue
 
-    # -------------------------------
-    # Depth / obstacle
-    # -------------------------------
-    def depth_callback(self, msg: Image):
-        try:
-            # Convert ROS Image to CV2
-            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="32FC1")
-            self.obstacle_zones = []
 
-            height, width = cv_image.shape
-
-            # --- Optional: crop bottom 10-20% to remove floor ---
-            roi_bottom = int(height * 0.9)
-            cv_image = cv_image[0:roi_bottom, :]
-
-            # --- 1. Split image into 3 main sections ---
-            w1 = width // 2
-            left_section = cv_image[:, 0:w1]
-            right_section = cv_image[:, w1:width]
-
-            # --- Helper: block-based min to detect small objects ---
-            def find_section_min(section, block_size=4, percentile=5):
-                min_vals = []
-                h, w = section.shape
-                for x in range(0, w, block_size):
-                    block = section[:, x:x+block_size]
-                    valid = block[(block > 0.1) & np.isfinite(block)]
-                    if valid.size > 0:
-                        # Use percentile for robustness
-                        min_vals.append(np.percentile(valid, percentile))
-                return min(min_vals) if min_vals else float("inf")
-
-            # Compute min distances per section
-            min_dist_left = find_section_min(left_section)
-            min_dist_right = find_section_min(right_section)
-
-            self.min_distances = {
-                'left': min_dist_left,
-                'right': min_dist_right
-            }
-
-            # --- 2. Determine closest obstacle zone with corner fallback ---
-            OBSTACLE_THRESHOLD = 0.8  
-            EPSILON = 0.05 # threshold for considering L ≈ R
-
-            min_distance_overall = min(self.min_distances.values())
-
-            if min_distance_overall < OBSTACLE_THRESHOLD:
-                # Check if left and right are very close → obstacle in corner
-                if abs(min_dist_left - min_dist_right) < EPSILON:
-                    self.closest_obstacle_zone = "corner"
-                    # Assign corner distance as the min of left/right for logging
-                    self.min_distances['corner'] = min(min_dist_left, min_dist_right)
-                    self.obstacle_zones.append("CORNER")
-                else:
-                    # Otherwise, pick the section with the absolute min distance
-                    closest_zone = min(self.min_distances, key=self.min_distances.get)
-                    self.closest_obstacle_zone = closest_zone.upper()
-                    self.obstacle_zones.append(closest_zone.upper())
-
-                # self.get_logger().info(
-                #     f"Dists: L:{min_dist_left:.2f}m | R:{min_dist_right:.2f}m. "
-                #     f"Obstacles in: {', '.join(self.obstacle_zones) if self.obstacle_zones else 'NONE'}"
-                # )
-
-            # --- 3. Visualization ---
-            # display_image = np.nan_to_num(cv_image, nan=0.0, posinf=10.0, neginf=0.0)
-            # clipped_image = np.clip(display_image, 0.1, 10.0)
-            # display_norm = cv2.normalize(clipped_image, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-            # depth_colormap = cv2.applyColorMap(display_norm, cv2.COLORMAP_JET)
-
-            # cv2.line(depth_colormap, (w1, 0), (w1, roi_bottom), (255, 255, 255), 2)
-            # cv2.imshow("Depth Camera (2-Way Split)", depth_colormap)
-            # cv2.waitKey(1)
-
-        except Exception as e:
-            self.get_logger().warn(f"Depth callback error: {e}")
 
     # -------------------------------
     # SCT input check functions
     # -------------------------------
     def clear_path_check(self, sup_data):
-        # self.get_logger().info(f"Obstacle: {self.obstacle}")
-        return not self.obstacle_zones
+        depth_obstacles = {'LEFT', 'RIGHT', 'CORNER', 'RED', 'BLUE'}
+        return not any(zone in depth_obstacles for zone in self.obstacle_zones)
 
     def middle_check(self, sup_data):
         return 'CORNER' in self.obstacle_zones
@@ -179,7 +100,12 @@ class RobotSupervisor(Node):
            
     def right_check(self, sup_data):
         return 'RIGHT' in self.obstacle_zones
-            
+
+    def red_check(self, sup_data):
+        return 'RED' in self.obstacle_zones
+
+    def blue_check(self, sup_data):
+        return 'BLUE' in self.obstacle_zones            
 
 
     # -------------------------------
@@ -189,46 +115,37 @@ class RobotSupervisor(Node):
         twist = Twist()
 
         if ev_name == "EV_V1":     
-            # self.get_logger().info("Supervisor decision: LEVY WALK")
-            # twist.linear.x = random.uniform(0.1, 1.0)
-            # twist.angular.z = random.uniform(0.1, 1.0)
-
-            if self.levy_state == "choosing":
-                self.levy_heading = random.uniform(-math.pi, math.pi)
-                self.levy_remaining = self.levy_step()
-                self.levy_state = "moving"
-
-            elif self.levy_state == "moving":
-                twist.linear.x = 0.3
-                twist.angular.z = 0.0
-
-                # Decrease remaining distance based on travel
-                self.levy_remaining -= twist.linear.x * self.dt
-
-                # Occasionally inject small angular noise (to avoid straight-line lock)
-                twist.angular.z = random.uniform(-0.05, 0.05)
-
-                # If reached target or obstacle triggers another event, reset
-                if self.levy_remaining <= 0:
-                    self.levy_state = "choosing"    
-                
+            # self.get_logger().info("Supervisor decision: RANDOM WALK")
+            twist.linear.x = random.uniform(0.1, 1.0)
+            twist.angular.z = random.uniform(-1.0, 1.0)
                 
         elif ev_name == "EV_V0":       
-            # self.get_logger().info("Supervisor decision: CORNER")
-            twist.linear.x = 0.0
-            twist.angular.z = 1.0
-            time.sleep(0.3) 
+            self.get_logger().info("Supervisor decision: OBSTACLE")
+            twist.linear.x = 1.0
+            twist.angular.z = 0.5
+            time.sleep(0.1) 
 
         elif ev_name == "EV_V2":     
-            # self.get_logger().info("Supervisor decision: CW")
-            twist.linear.x = 0.0
+            self.get_logger().info("Supervisor decision: CW")
+            twist.linear.x = 1.0
             twist.angular.z = -0.5
 
         elif ev_name == "EV_V3":    
-            # self.get_logger().info("Supervisor decision: CCW")
-            twist.linear.x = 0.0  
+            self.get_logger().info("Supervisor decision: CCW")
+            twist.linear.x = 1.0  
             twist.angular.z = 0.5
 
+        # elif ev_name == "EV_V4": # RED
+        #     if self.target_distance > 1.0 and self.target_distance < 0.5:
+        #         twist.linear.x = 0.2
+        #         twist.angular.z = -1.0 * self.target_offset
+        #         self.get_logger().info(f"Going toward: offset={self.target_offset:.2f}, dist={self.target_distance:.2f}")
+
+        # elif ev_name == "EV_V5": # BLUE  
+        #         twist.linear.x = 0.0
+        #         twist.angular.z = -1.0 * abs(self.target_offset)
+        #         self.get_logger().info(f"Escaping: offset={self.target_offset:.2f}, dist={self.target_distance:.2f}")
+           
         else:
             # Unknown or no event -> stop for safety
             twist.linear.x = 0.0

@@ -104,13 +104,12 @@
     </xacro:macro>
 
     <xacro:arg name="chassis_color" default="1.0 0.0 0.0 1"/>
+
+
     <!-- LINKS -->
     <xacro:if value="${footprint_link}">
       <link name="${link_prefix}base_footprint"/>
     </xacro:if>
-
-
-  
     <link name="${link_prefix}base_link">
       <inertial>
         <mass value="1.584994"/>
@@ -133,10 +132,10 @@
           <mesh filename="package://leo_description/models/Chassis_outline.stl"/>
         </geometry>
       </collision> -->
-      <collision>
+      <collision name="base_collision">
         <origin xyz="0 0 -0.05"/>
         <geometry>
-          <box size="0.35 0.25 0.12"/>
+          <box size="0.5 0.45 0.25"/>
         </geometry>
       </collision>
     </link>
@@ -171,12 +170,6 @@
             <mesh filename="package://leo_description/models/Antenna.dae"/>
           </geometry>
         </visual>
-        <!-- <collision>
-          <origin xyz="0 0 0.028"/>
-          <geometry>
-            <cylinder radius="0.0055" length="0.056"/>
-          </geometry>
-        </collision> -->
       </link>
     </xacro:if>
 
@@ -207,6 +200,7 @@
     <xacro:unless value="${rockers_fixed}">
       <xacro:property name="rockers_joint_type" value="revolute"/>
     </xacro:unless>
+
 
     <joint name="${joint_prefix}rocker_L_joint" type="${rockers_joint_type}">
       <origin xyz="0.00263 0.14167 -0.04731" rpy="0 0 ${pi}"/>
@@ -536,7 +530,7 @@
 
     <gazebo>
       <plugin
-        filename="libgz-sim-joint-state-publisher-system.so"
+        filename="libignition-gazebo-joint-state-publisher-system.so"
         name="gz::sim::systems::JointStatePublisher">
         <topic>${link_prefix}joint_states</topic>
       </plugin>
@@ -583,6 +577,19 @@
                mecanum_wheels="${mecanum_wheels}"/>
 
     <xacro:leo_gazebo robot_ns="${robot_ns}"/>
+
+    <gazebo reference="${link_prefix}base_footprint">
+      <sensor name="contact_sensor" type="contact">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <contact>
+          <collision>${link_prefix}base_footprint_fixed_joint_lump__base_collision_collision</collision>
+        </contact>
+        <visualize>true</visualize>
+        <plugin name="ignition::gazebo::systems::Contact"
+        filename="libignition-gazebo6-contact-system.so"/>
+      </sensor>
+    </gazebo>
 
     <xacro:if value="${fixed}">
       <link name="world"/>

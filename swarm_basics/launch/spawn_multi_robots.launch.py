@@ -12,7 +12,7 @@ def generate_launch_description():
     leo_description = get_package_share_directory("leo_description")
 
     # --- Total robots ---
-    total_robots = 10
+    total_robots = 4
 
     # --- Initial positions for each robot ---
     robot_positions = [
@@ -20,12 +20,12 @@ def generate_launch_description():
         (1.0, 0.0),
         (0.0, 1.0),
         (-1.0, 1.0),
-        (-1.0, 0.0),
-        (0.0, -1.0),
-        (2.0, 0.0),
-        (0.0, 2.0),
-        (-2.0, 2.0),
-        (-2.0, 0.0),
+        # (-1.0, 0.0),
+        # (0.0, -1.0),
+        # (2.0, 0.0),
+        # (0.0, 2.0),
+        # (-2.0, 2.0),
+        # (-2.0, 0.0),
     ]
 
     robots_to_spawn = []
@@ -60,9 +60,9 @@ def generate_launch_description():
                 f"/{ns}/depth_camera/depth_image@sensor_msgs/msg/Image@ignition.msgs.Image",
                 f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo",
                 f"/{ns}/depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image",
+                f"/world/random_world/model/{ns}/link/{ns}/base_footprint/sensor/contact_sensor/contact"
+                f"@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts",
             ]
-
-
 
         bridge_node = Node(
             package="ros_gz_bridge",
@@ -127,11 +127,22 @@ def generate_launch_description():
                 output="screen"
             )
 
-            nodes += [state_pub, spawn_node, behavior_node]
+            bump_node = Node(
+                package="swarm_basics",
+                executable="bump_counter",
+                name="bump_counter",
+                namespace=ns,
+                output="screen",
+                remappings=[
+                    ('contact', f"/world/random_world/model/{ns}/link/{ns}/base_footprint/sensor/contact_sensor/contact"),
+                ],
+            )
+
+            nodes += [state_pub, spawn_node, behavior_node, bump_node]
 
         return nodes
 
     return LaunchDescription([
-        plot_node,
+        # plot_node,
         OpaqueFunction(function=lambda context: create_all_robot_nodes(context, robots_to_spawn))
     ])
