@@ -87,6 +87,11 @@ with open(world_file, "w") as f:
       <include_entity_names>true</include_entity_names>
     </plugin>
     <plugin
+      filename="ignition-gazebo-sensors-system"
+      name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre</render_engine>
+    </plugin>
+    <plugin
       filename="ignition-gazebo-user-commands-system"
       name="ignition::gazebo::systems::UserCommands"> <!-- do no delete -->
     </plugin>

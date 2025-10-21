@@ -37,9 +37,19 @@ private:
         cv::Mat color, depth;
         try {
             // color = cv_bridge::toCvShare(rgb_msg, "bgr8")->image;
-            depth = cv_bridge::toCvShare(depth_msg, "32FC1")->image;
+            auto depth_ptr = cv_bridge::toCvShare(depth_msg);
+            depth = depth_ptr->image;
+
+            if (depth_ptr->encoding == "16UC1") {
+                depth.convertTo(depth, CV_32FC1, 0.001);  // mm → meters
+            }
         } catch (cv_bridge::Exception& e) {
             RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
+            return;
+        }
+
+        if (depth.empty()) {
+            RCLCPP_WARN(this->get_logger(), "Empty depth image!");
             return;
         }
 
@@ -73,13 +83,13 @@ private:
         //     final_zone = "BLUE," + std::to_string(blue_offset) + "," + std::to_string(blue_dist);
         //     RCLCPP_INFO(this->get_logger(), "ZONE: BLUE | offset=%.2f | dist=%.2f", blue_offset, blue_dist);
         // } 
-        if (!obstacle_zone.empty()) {
-            final_zone = obstacle_zone;
-            RCLCPP_INFO(this->get_logger(), "ZONE: %s", obstacle_zone.c_str());
-        } else {
-            final_zone = "CLEAR";
-            RCLCPP_INFO(this->get_logger(), "ZONE: CLEAR");
-        }
+        // if (!obstacle_zone.empty()) {
+        //     final_zone = obstacle_zone;
+        //     RCLCPP_INFO(this->get_logger(), "ZONE: %s", obstacle_zone.c_str());
+        // } else {
+        //     final_zone = "CLEAR";
+        //     RCLCPP_INFO(this->get_logger(), "ZONE: CLEAR");
+        // }
 
         std_msgs::msg::String msg;
         msg.data = final_zone;
@@ -91,7 +101,7 @@ private:
         // depth_vis.convertTo(depth_vis, CV_8U);
         // cv::applyColorMap(depth_vis, depth_vis, cv::COLORMAP_JET);
         // cv::imshow("Depth", depth_vis);
-        // cv::imshow("Color", color);
+        // // cv::imshow("Color", color);
         // cv::waitKey(1);
     }
 
@@ -114,9 +124,9 @@ private:
         cv::Mat mask_front = (d_front>0.05) & (d_front<10.0);
         cv::Mat mask_right = (d_right>0.05) & (d_right<10.0);
 
-        dist_left = (cv::countNonZero(mask_left)>0) ? static_cast<float>(cv::mean(d_left, mask_left)[0]) : -1.0f;
-        dist_front = (cv::countNonZero(mask_front)>0) ? static_cast<float>(cv::mean(d_front, mask_front)[0]) : -1.0f;
-        dist_right = (cv::countNonZero(mask_right)>0) ? static_cast<float>(cv::mean(d_right, mask_right)[0]) : -1.0f;
+        dist_left = (cv::countNonZero(mask_left)>0) ? static_cast<float>(cv::mean(d_left, mask_left)[0]) : -0.1f;
+        dist_front = (cv::countNonZero(mask_front)>0) ? static_cast<float>(cv::mean(d_front, mask_front)[0]) : -0.1f;
+        dist_right = (cv::countNonZero(mask_right)>0) ? static_cast<float>(cv::mean(d_right, mask_right)[0]) : -0.1f;
     }
 
     std::string determine_obstacle_zone(float dist_left, float dist_front, float dist_right)

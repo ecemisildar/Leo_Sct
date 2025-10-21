@@ -12,7 +12,7 @@ def generate_launch_description():
     leo_description = get_package_share_directory("leo_description")
 
     # --- Total robots ---
-    total_robots = 4
+    total_robots = 10
 
     # --- Initial positions for each robot ---
     robot_positions = [
@@ -20,12 +20,12 @@ def generate_launch_description():
         (1.0, 0.0),
         (0.0, 1.0),
         (-1.0, 1.0),
-        # (-1.0, 0.0),
-        # (0.0, -1.0),
-        # (2.0, 0.0),
-        # (0.0, 2.0),
-        # (-2.0, 2.0),
-        # (-2.0, 0.0),
+        (-1.0, 0.0),
+        (0.0, -1.0),
+        (2.0, 0.0),
+        (0.0, 2.0),
+        (-2.0, 2.0),
+        (-2.0, 0.0),
     ]
 
     robots_to_spawn = []
@@ -64,6 +64,10 @@ def generate_launch_description():
                 f"@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts",
             ]
 
+        bridge_args += [
+            "/world/random_world/dynamic_pose/info@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+        ]    
+
         bridge_node = Node(
             package="ros_gz_bridge",
             executable="parameter_bridge",
@@ -92,8 +96,7 @@ def generate_launch_description():
                 namespace=ns,
                 parameters=[{
                     "use_sim_time": True,
-                    "robot_description": robot_description,
-                    "tf_prefix": ns
+                    "robot_description": robot_description
                 }],
                 remappings=[("/joint_states", f"{ns}/joint_states")],
                 output="screen"
@@ -127,6 +130,14 @@ def generate_launch_description():
                 output="screen"
             )
 
+            cpp_node = Node(
+                package="leo_image",
+                executable="image_processor",
+                name="image_processor",
+                namespace=ns,
+                output="screen"
+            )
+
             bump_node = Node(
                 package="swarm_basics",
                 executable="bump_counter",
@@ -138,11 +149,11 @@ def generate_launch_description():
                 ],
             )
 
-            nodes += [state_pub, spawn_node, behavior_node, bump_node]
+            nodes += [state_pub, spawn_node, behavior_node, cpp_node, bump_node]
 
         return nodes
 
     return LaunchDescription([
-        # plot_node,
+        plot_node,
         OpaqueFunction(function=lambda context: create_all_robot_nodes(context, robots_to_spawn))
     ])

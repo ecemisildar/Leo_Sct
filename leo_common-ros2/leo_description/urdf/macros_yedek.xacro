@@ -25,9 +25,15 @@
             <mesh filename="package://leo_description/models/Rocker.dae"/>
           </geometry>
         </visual>
-        <collision>
+        <!-- <collision>
           <geometry>
             <mesh filename="package://leo_description/models/Rocker_outline.stl"/>
+          </geometry>
+        </collision> -->
+        <collision>
+          <origin xyz="0 0 -0.05"/>
+          <geometry>
+            <box size="0.25 0.05 0.05"/>
           </geometry>
         </collision>
       </link>
@@ -48,23 +54,23 @@
             <mesh filename="package://leo_description/models/Wheel${model}.dae"/>
           </geometry>
         </visual>
-        <collision>
+        <!-- <collision>
           <origin xyz="0 0.04485 0" rpy="${pi/2} 0 0"/>
           <geometry>
             <cylinder radius="0.057" length="0.07"/>
           </geometry>
-        </collision>
+        </collision> -->
         <collision>
           <origin xyz="0 0.04485 0" rpy="${pi/2} 0 0"/>
           <geometry>
             <cylinder radius="0.0625" length="0.04"/>
           </geometry>
         </collision>
-        <collision>
+        <!-- <collision>
           <geometry>
             <mesh filename="package://leo_description/models/Wheel_outline.stl"/>
           </geometry>
-        </collision>
+        </collision> -->
       </link>
     </xacro:macro>
 
@@ -89,22 +95,21 @@
             <cylinder radius="0.0635" length="0.0515"/>
           </geometry>
         </collision>
-        <collision>
+        <!-- <collision>
           <geometry>
             <mesh filename="package://leo_description/models/Mecanum_wheel_outline.stl"/>
           </geometry>
-        </collision>
+        </collision> -->
       </link>
     </xacro:macro>
 
     <xacro:arg name="chassis_color" default="1.0 0.0 0.0 1"/>
+
+
     <!-- LINKS -->
     <xacro:if value="${footprint_link}">
       <link name="${link_prefix}base_footprint"/>
     </xacro:if>
-
-
-
     <link name="${link_prefix}base_link">
       <inertial>
         <mass value="1.584994"/>
@@ -122,9 +127,15 @@
           <color rgba="$(arg chassis_color)"/>
         </material>
       </visual>
-      <collision>
+      <!-- <collision>
         <geometry>
           <mesh filename="package://leo_description/models/Chassis_outline.stl"/>
+        </geometry>
+      </collision> -->
+      <collision name="base_collision">
+        <origin xyz="0 0 -0.05"/>
+        <geometry>
+          <box size="0.5 0.45 0.25"/>
         </geometry>
       </collision>
     </link>
@@ -159,47 +170,22 @@
             <mesh filename="package://leo_description/models/Antenna.dae"/>
           </geometry>
         </visual>
-        <collision>
-          <origin xyz="0 0 0.028"/>
-          <geometry>
-            <cylinder radius="0.0055" length="0.056"/>
-          </geometry>
-        </collision>
       </link>
     </xacro:if>
 
-    <!-- <link name="${link_prefix}d435i_link"/>
-    <link name="${link_prefix}d435i_optical_link"/> -->
 
 
-    <!-- <link name="${link_prefix}camera_frame"/>
-    <link name="${link_prefix}camera_optical_frame"/>
-    <link name="${link_prefix}imu_frame"/> -->
-
-      <!-- LIDAR link and frame -->
-  <!-- <link name="${link_prefix}lidar_frame">
-    <inertial>
-      <mass value="0.05"/>
-      <origin xyz="0 0 0"/>
-      <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
-    </inertial>
-    <visual>
-      <geometry>
-        <cylinder radius="0.025" length="0.02"/>
-      </geometry>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-    </visual>
-    <collision>
-      <geometry>
-        <cylinder radius="0.025" length="0.02"/>
-      </geometry>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-    </collision>
-  </link> -->
+    <!-- REALSENSE CAMERA LINK -->
+    <link name="${link_prefix}realsense_link">
+      <visual>
+        <geometry>
+          <mesh filename="package://leo_description/models/d435.dae"/>
+        </geometry>
+      </visual>
+    </link>
 
 
     <!-- JOINTS -->
-
     <xacro:if value="${footprint_link}">
       <joint name="${joint_prefix}base_joint" type="fixed">
         <origin xyz="0 0 0.19783" rpy="0 0 0"/>
@@ -214,6 +200,7 @@
     <xacro:unless value="${rockers_fixed}">
       <xacro:property name="rockers_joint_type" value="revolute"/>
     </xacro:unless>
+
 
     <joint name="${joint_prefix}rocker_L_joint" type="${rockers_joint_type}">
       <origin xyz="0.00263 0.14167 -0.04731" rpy="0 0 ${pi}"/>
@@ -298,47 +285,14 @@
       </joint>
     </xacro:if>
 
-    <joint name="${joint_prefix}rgbd_camera_joint" type="fixed">
-        <origin xyz="0.05 0 0.06" rpy="0 0 0"/>
+    <joint name="${joint_prefix}realsense_joint" type="fixed">
       <parent link="${link_prefix}base_link"/>
-      <child link="${link_prefix}rgbd_camera_frame"/>
-    </joint>
-    <link name="${link_prefix}rgbd_camera_frame">
-      <visual>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <mesh filename="package://leo_description/models/d435.dae"/>
-        </geometry>
-        <material name="white">
-          <color rgba="0.9 0.9 0.9 1.0"/>
-        </material>
-      </visual>
-    </link>
-
-
-    <!-- <joint name="${joint_prefix}camera_joint" type="fixed">
-      <origin xyz="0.0971 0 -0.0427" rpy="0 0.2094 0"/>
-      <parent link="${link_prefix}base_link"/>
-      <child link="${link_prefix}camera_frame"/>
-    </joint> -->
-
-    <!-- <joint name="${joint_prefix}camera_optical_joint" type="fixed">
-      <origin xyz="0 0 0" rpy="-${pi/2} 0.0 -${pi/2}"/>
-      <parent link="${link_prefix}camera_frame"/>
-      <child link="${link_prefix}camera_optical_frame"/>
+      <child link="${link_prefix}realsense_link"/>
+      <origin xyz="0.1 0 0.03" rpy="0 -0.3 0"/>
     </joint>
 
-    <joint name="${joint_prefix}imu_joint" type="fixed">
-      <origin xyz="${imu_translation}" rpy="0 0 0"/>
-      <parent link="${link_prefix}base_link"/>
-      <child link="${link_prefix}imu_frame"/>
-    </joint> -->
 
-    <!-- <joint name="${joint_prefix}lidar_joint" type="fixed">
-      <origin xyz="0.097 0 0.01" rpy="0 0 0"/>
-      <parent link="${link_prefix}base_link"/>
-      <child  link="${link_prefix}lidar_frame"/>
-    </joint> -->
+
 
   </xacro:macro>
 
@@ -510,158 +464,60 @@
       </collision>
     </gazebo>
 
-  <!-- LIDAR -->
-  <joint name="${link_prefix}lidar_joint" type="fixed">
-    <parent link="${link_prefix}base_link"/>
-    <child link="${link_prefix}lidar_link"/>
-    <origin xyz="-0.04 0 0.07" rpy="0 0 0"/>
-  </joint>
-  <link name="${link_prefix}lidar_link">
-    <visual>
-      <origin xyz="-0.0275 -0.0275 -0.02" rpy="0 0 0"/>
-      <geometry>
-        <mesh filename="package://leo_description/models/Lidar_pacecat.stl" scale="0.001 0.001 0.001"/>
-      </geometry>
-      <material name="black">
-        <color rgba="0.1 0.1 0.1 1.0"/>
-      </material>
-    </visual>
-  </link>
-
-  <gazebo reference="${link_prefix}lidar_link">
-    <sensor name='gpu_lidar' type='gpu_lidar'>"
-      <!-- <ignition_frame_id>${link_prefix}lidar_link</ignition_frame_id>  -->
-      <update_rate>10</update_rate>
-      <ray>
-        <scan>
-          <horizontal>
-            <samples>360</samples>
-            <resolution>1</resolution>
-            <min_angle>-3.14159</min_angle>
-            <max_angle>3.14159</max_angle>
-          </horizontal>
-          <vertical>
-            <samples>1</samples> <!--1 for 2D lidar / 16 for 3D-->
-            <resolution>1</resolution>
-            <min_angle>-0.261799</min_angle>
-            <max_angle>0.261799</max_angle>
-          </vertical>
-        </scan>
-        <range>
-          <min>0.1</min>
-          <max>20.0</max>
-          <resolution>0.017453</resolution>
-        </range>
-        <noise>
-          <type>gaussian</type>
-          <mean>0.0</mean>
-          <stddev>0.01</stddev>
-        </noise>
-      </ray>
+    <gazebo reference="${link_prefix}realsense_link">
+      <sensor name="depth_camera" type="rgbd_camera">
       <always_on>1</always_on>
-      <visualize>0</visualize>
-      <topic>${link_prefix}lidar</topic>
-    </sensor>
-  </gazebo>
-
-  <!-- RGBD CAMERA-->
-  <!-- <gazebo reference="${link_prefix}rgbd_camera_frame">
-      <sensor name="rgbd_camera" type="rgbd_camera">
-      <ignition_frame_id>${link_prefix}rgbd_camera_frame</ignition_frame_id>
-
-      <camera name="rgbd_camera_frame">
-        <horizontal_fov>1.3962634</horizontal_fov>
-        <lens>
-          <intrinsics>
-            <fx>277.1</fx>
-            <fy>277.1</fy>
-            <cx>160.5</cx>
-            <cy>120.5</cy>
-            <s>0</s>
-          </intrinsics>
-        </lens>
-        <distortion>
-          <k1>0.104207</k1>
-          <k2>-0.255558</k2>
-          <k3>0.128694</k3>
-          <p1>0.000512</p1>
-          <p2>0.000319</p2>
-          <center>0.5 0.5</center>
-        </distortion>
-
-        <image>
-          <width>640</width>
-          <height>480</height>
-          <format>R8G8B8</format>
-        </image>
-
-        <clip>
-          <near>0.01</near>
-          <far>300</far>
-        </clip>
-
-        <depth_camera>
+        <update_rate>5</update_rate>
+        <camera name="depth_camera">
+          <horizontal_fov>1.51844</horizontal_fov> <!--87 degrees-->
+          <lens>
+            <intrinsics>
+              <!-- fx = fy = width / ( 2 * tan (hfov / 2 ) ) -->
+              <fx>554.25469</fx>
+              <fy>554.25469</fy>
+              <!-- cx = ( width + 1 ) / 2 -->
+              <cx>320.5</cx>
+              <!-- cy = ( height + 1 ) / 2 -->
+              <cy>240.5</cy>
+              <s>0</s>
+            </intrinsics>
+          </lens>
+          <distortion>
+            <k1>0.0</k1>
+            <k2>0.0</k2>
+            <k3>0.0</k3>
+            <p1>0.0</p1>
+            <p2>0.0</p2>
+            <center>0.5 0.5</center>
+          </distortion>
+          <image>
+            <width>64</width>
+            <height>48</height>
+            <format>R8G8B8</format>
+          </image>
           <clip>
-            <near>0.1</near>
-            <far>10</far> 
+            <near>0.01</near>
+            <far>300</far>
           </clip>
-          <min_range>0.1</min_range> 
-          <max_range>10</max_range>
-        </depth_camera>
-
-        <noise>
-          <type>gaussian</type>
-          <mean>0</mean>
-          <stddev>0.003</stddev>
-        </noise>
-      </camera>
-
-      <always_on>1</always_on>
-      <update_rate>30</update_rate> 
-      <visualize>0</visualize>
-      <topic>${link_prefix}depth_camera</topic>
-    </sensor>
-
-  </gazebo> -->
-
-
-
-
-    <!-- camera -->
-    <!-- <gazebo reference="${link_prefix}camera_frame">
-      <sensor name="camera" type="camera">
-          <camera name="leo_camera">
-              <horizontal_fov>1.9</horizontal_fov>
-              <image>
-                  <width>640</width>
-                  <height>480</height>
-                  <format>R8G8B8</format>
-              </image>
-              <clip>
-                  <near>0.05</near>
-                  <far>300</far>
-              </clip>
-              <noise>
-                <type>gaussian</type>
-                <mean>0.0</mean>
-                <stddev>0.007</stddev>
-              </noise>
-              <distortion>
-                <k1>-0.279817</k1>
-                <k2>0.060321</k2>
-                <k3>0.000487</k3>
-                <p1>0.000310</p1>
-                <p2>0.000000</p2>
-                <center>0.5 0.5</center>
-              </distortion>              
-          </camera>
-          <always_on>1</always_on>
-          <update_rate>30</update_rate>
-          <visualize>true</visualize>
-          <topic>${link_prefix}camera/image_raw</topic>
-          <gz_frame_id>${link_prefix}camera_optical_frame</gz_frame_id>
+          <depth_camera>
+            <clip>
+              <near>0.1</near>
+              <far>10</far>
+            </clip>
+          </depth_camera>
+          <noise>
+            <type>gaussian</type>
+            <mean>0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+        </camera>
+        <topic>${link_prefix}depth_camera</topic>
       </sensor>
-    </gazebo> -->
+    </gazebo>
+
+
+
+  
 
     <!-- rocker differential -->
     <gazebo>
@@ -674,69 +530,11 @@
 
     <gazebo>
       <plugin
-        filename="libgz-sim-joint-state-publisher-system.so"
+        filename="libignition-gazebo-joint-state-publisher-system.so"
         name="gz::sim::systems::JointStatePublisher">
         <topic>${link_prefix}joint_states</topic>
       </plugin>
     </gazebo>
-
-
-    <!-- <gazebo>
-      <plugin
-        filename="gz-sim-pose-publisher-system"
-        name="gz::sim::systems::PosePublisher">
-        <publish_model_pose>true</publish_model_pose>
-        <use_pose_vector_msg>true</use_pose_vector_msg>
-        <update_frequency>50</update_frequency>
-      </plugin>
-    </gazebo> -->
-
-    <!-- <gazebo reference="${link_prefix}imu_frame">
-      <sensor type="imu" name="leo_imu_sensor">
-        <update_rate>100</update_rate>
-        <visualize>true</visualize>
-        <topic>${link_prefix}imu/data_raw</topic>
-        <always_on>1</always_on>
-        <gz_frame_id>${link_prefix}imu_frame</gz_frame_id>
-      </sensor>
-    </gazebo>
-    <gazebo> -->
-
-    <!-- LIDAR (ray) -->
-    <!-- <gazebo reference="${link_prefix}lidar_frame">
-      <sensor name="lidar" type="ray">
-        <always_on>true</always_on>
-        <visualize>true</visualize>
-        <update_rate>10.0</update_rate>
-        <ray>
-          <scan>
-            <horizontal>
-              <samples>720</samples>
-              <resolution>1</resolution>
-              <min_angle>-1.5708</min_angle>
-              <max_angle>1.5708</max_angle>
-            </horizontal>
-          </scan>
-          <range>
-            <min>0.05</min>
-            <max>30.0</max>
-            <resolution>0.01</resolution>
-          </range>
-          <noise>
-            <type>gaussian</type>
-            <mean>0.0</mean>
-            <stddev>0.01</stddev>
-          </noise>
-        </ray>
-        <plugin name="gazebo_ros_laser" filename="libgazebo_ros_ray_sensor.so">
-          <ros>
-            <namespace>${link_prefix}</namespace>
-            <remapping>scan:=lidar/scan</remapping>
-          </ros>
-          <frameName>${link_prefix}lidar_frame</frameName>
-        </plugin>
-      </sensor>
-    </gazebo> -->
 
     <gazebo>
       <plugin
@@ -780,12 +578,25 @@
 
     <xacro:leo_gazebo robot_ns="${robot_ns}"/>
 
+    <gazebo reference="${link_prefix}base_footprint">
+      <sensor name="contact_sensor" type="contact">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <contact>
+          <collision>${link_prefix}base_footprint_fixed_joint_lump__base_collision_collision</collision>
+        </contact>
+        <visualize>true</visualize>
+        <plugin name="ignition::gazebo::systems::Contact"
+        filename="libignition-gazebo6-contact-system.so"/>
+      </sensor>
+    </gazebo>
+
     <xacro:if value="${fixed}">
       <link name="world"/>
       <joint name="fixed" type="fixed">
         <parent link="world"/>
         <child link="${link_prefix}base_footprint"/>
-        <origin xyz="0.0 0.0 1.0"/>
+        <origin xyz="0.0 0.0 0.0"/>
       </joint>
     </xacro:if>
   

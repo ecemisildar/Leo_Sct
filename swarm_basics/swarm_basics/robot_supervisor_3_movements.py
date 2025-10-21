@@ -120,19 +120,19 @@ class RobotSupervisor(Node):
             twist.angular.z = random.uniform(-1.0, 1.0)
                 
         elif ev_name == "EV_V0":       
-            self.get_logger().info("Supervisor decision: OBSTACLE")
-            twist.linear.x = 1.0
-            twist.angular.z = 0.5
+            # self.get_logger().info("Supervisor decision: OBSTACLE")
+            twist.linear.x = 0.0
+            twist.angular.z = 1.0
             time.sleep(0.1) 
 
         elif ev_name == "EV_V2":     
-            self.get_logger().info("Supervisor decision: CW")
-            twist.linear.x = 1.0
+            # self.get_logger().info("Supervisor decision: CW")
+            twist.linear.x = 0.0
             twist.angular.z = -0.5
 
         elif ev_name == "EV_V3":    
-            self.get_logger().info("Supervisor decision: CCW")
-            twist.linear.x = 1.0  
+            # self.get_logger().info("Supervisor decision: CCW")
+            twist.linear.x = 0.0  
             twist.angular.z = 0.5
 
         # elif ev_name == "EV_V4": # RED
