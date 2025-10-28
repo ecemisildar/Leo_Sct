@@ -57,9 +57,9 @@ private:
         float dist_left, dist_front, dist_right;
         compute_obstacle_distances(depth, dist_left, dist_front, dist_right);
 
-        RCLCPP_INFO(this->get_logger(),
-            "Obstacle distances | Left: %.2f m | Front: %.2f m | Right: %.2f m",
-            dist_left, dist_front, dist_right);
+        // RCLCPP_INFO(this->get_logger(),
+        //     "Obstacle distances | Left: %.2f m | Front: %.2f m | Right: %.2f m",
+        //     dist_left, dist_front, dist_right);
 
         std::string obstacle_zone = determine_obstacle_zone(dist_left, dist_front, dist_right);
 
@@ -83,26 +83,26 @@ private:
         //     final_zone = "BLUE," + std::to_string(blue_offset) + "," + std::to_string(blue_dist);
         //     RCLCPP_INFO(this->get_logger(), "ZONE: BLUE | offset=%.2f | dist=%.2f", blue_offset, blue_dist);
         // } 
-        // if (!obstacle_zone.empty()) {
-        //     final_zone = obstacle_zone;
-        //     RCLCPP_INFO(this->get_logger(), "ZONE: %s", obstacle_zone.c_str());
-        // } else {
-        //     final_zone = "CLEAR";
-        //     RCLCPP_INFO(this->get_logger(), "ZONE: CLEAR");
-        // }
+        if (!obstacle_zone.empty()) {
+            final_zone = obstacle_zone;
+            RCLCPP_INFO(this->get_logger(), "ZONE: %s", obstacle_zone.c_str());
+        } else {
+            final_zone = "CLEAR";
+            RCLCPP_INFO(this->get_logger(), "ZONE: CLEAR");
+        }
 
         std_msgs::msg::String msg;
         msg.data = final_zone;
         zones_pub_->publish(msg);
 
         // --- Visualization ---
-        // cv::Mat depth_vis;
-        // cv::normalize(depth, depth_vis, 0, 255, cv::NORM_MINMAX);
-        // depth_vis.convertTo(depth_vis, CV_8U);
-        // cv::applyColorMap(depth_vis, depth_vis, cv::COLORMAP_JET);
-        // cv::imshow("Depth", depth_vis);
-        // // cv::imshow("Color", color);
-        // cv::waitKey(1);
+        cv::Mat depth_vis;
+        cv::normalize(depth, depth_vis, 0, 255, cv::NORM_MINMAX);
+        depth_vis.convertTo(depth_vis, CV_8U);
+        cv::applyColorMap(depth_vis, depth_vis, cv::COLORMAP_JET);
+        cv::imshow("Depth", depth_vis);
+        // cv::imshow("Color", color);
+        cv::waitKey(1);
     }
 
     void compute_obstacle_distances(const cv::Mat& depth,

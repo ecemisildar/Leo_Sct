@@ -12,20 +12,20 @@ def generate_launch_description():
     leo_description = get_package_share_directory("leo_description")
 
     # --- Total robots ---
-    total_robots = 10
+    total_robots = 1
 
     # --- Initial positions for each robot ---
     robot_positions = [
         (0.0, 0.0),
-        (1.0, 0.0),
-        (0.0, 1.0),
-        (-1.0, 1.0),
-        (-1.0, 0.0),
-        (0.0, -1.0),
-        (2.0, 0.0),
-        (0.0, 2.0),
-        (-2.0, 2.0),
-        (-2.0, 0.0),
+        # (1.0, 0.0),
+        # (0.0, 1.0),
+        # (-1.0, 1.0),
+        # (-1.0, 0.0),
+        # (0.0, -1.0),
+        # (2.0, 0.0),
+        # (0.0, 2.0),
+        # (-2.0, 2.0),
+        # (-2.0, 0.0),
     ]
 
     robots_to_spawn = []

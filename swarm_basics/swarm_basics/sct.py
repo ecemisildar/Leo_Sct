@@ -19,6 +19,9 @@ class SCT:
         except yaml.YAMLError as e:
             print(e) 
 
+        if not self.f:
+            raise ValueError(f"Supervisor YAML '{filename}' is empty or invalid.")
+
         self.num_events = self.f['num_events']
         self.num_supervisors = self.f['num_supervisors']
         self.EV = {}

@@ -14,7 +14,7 @@ setup(
         ('share/' + package_name + '/launch', ['launch/leo_gz.launch.py']),
         ('share/' + package_name + '/config', ['config/supervisor.yaml']),
         ('share/' + package_name + '/config', ['config/supervisor2.yaml']),
-        ('share/' + package_name + '/config', ['config/sup_new.yaml']),
+        ('share/' + package_name + '/config', ['config/sup_gpt.yaml']),
         ('share/' + package_name + '/config', ['config/cylinder_positions.json']),
         ('share/' + package_name + '/worlds', ['worlds/random_world.sdf']),
     ],

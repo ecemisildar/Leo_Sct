@@ -24,7 +24,7 @@ class RobotSupervisor(Node):
         config_path = os.path.join(
             get_package_share_directory('swarm_basics'),
             'config',
-            'supervisor2.yaml'
+            'sup_gpt.yaml'
         )
         if not os.path.exists(config_path):
             self.get_logger().error(f"YAML file not found: {config_path}")
@@ -49,10 +49,10 @@ class RobotSupervisor(Node):
 
 
         # SCT callbacks for UCEs
-        self.sct.add_callback(self.sct.EV['EV_S0'],None,self.middle_check,None)
-        self.sct.add_callback(self.sct.EV['EV_S1'],None,self.clear_path_check,None)
-        self.sct.add_callback(self.sct.EV['EV_S2'],None,self.left_check,None)
-        self.sct.add_callback(self.sct.EV['EV_S3'],None,self.right_check,None)
+        self.sct.add_callback(self.sct.EV['EV_obstacle_front'],None,self.middle_check,None) # EV_S0
+        self.sct.add_callback(self.sct.EV['EV_path_clear'],None,self.clear_path_check,None) # EV_S1
+        self.sct.add_callback(self.sct.EV['EV_obstacle_left'],None,self.left_check,None)    # EV_S2
+        self.sct.add_callback(self.sct.EV['EV_obstacle_right'],None,self.right_check,None) # EV_S3
         # self.sct.add_callback(self.sct.EV['EV_S4'],None,self.red_check,None)
         # self.sct.add_callback(self.sct.EV['EV_S5'],None,self.blue_check,None)
 
@@ -89,7 +89,7 @@ class RobotSupervisor(Node):
     # SCT input check functions
     # -------------------------------
     def clear_path_check(self, sup_data):
-        depth_obstacles = {'LEFT', 'RIGHT', 'CORNER', 'RED', 'BLUE'}
+        depth_obstacles = {'LEFT', 'RIGHT', 'CORNER'}
         return not any(zone in depth_obstacles for zone in self.obstacle_zones)
 
     def middle_check(self, sup_data):
@@ -101,11 +101,11 @@ class RobotSupervisor(Node):
     def right_check(self, sup_data):
         return 'RIGHT' in self.obstacle_zones
 
-    def red_check(self, sup_data):
-        return 'RED' in self.obstacle_zones
+    # def red_check(self, sup_data):
+    #     return 'RED' in self.obstacle_zones
 
-    def blue_check(self, sup_data):
-        return 'BLUE' in self.obstacle_zones            
+    # def blue_check(self, sup_data):
+    #     return 'BLUE' in self.obstacle_zones            
 
 
     # -------------------------------
@@ -114,26 +114,37 @@ class RobotSupervisor(Node):
     def publish_twist(self, ev_name: str):
         twist = Twist()
 
-        if ev_name == "EV_V1":     
-            # self.get_logger().info("Supervisor decision: RANDOM WALK")
-            twist.linear.x = random.uniform(0.1, 1.0)
+        if ev_name == "EV_random_walk": # EV_V1      
+            self.get_logger().info("Supervisor decision: RANDOM WALK")
+            twist.linear.x = random.uniform(0.01, 1.0)
             twist.angular.z = random.uniform(-1.0, 1.0)
                 
-        elif ev_name == "EV_V0":       
-            # self.get_logger().info("Supervisor decision: OBSTACLE")
+        elif ev_name == "EV_full_rotate": # EV_V0      
+            self.get_logger().info("Supervisor decision: OBSTACLE")
             twist.linear.x = 0.0
             twist.angular.z = 1.0
             time.sleep(0.1) 
 
-        elif ev_name == "EV_V2":     
-            # self.get_logger().info("Supervisor decision: CW")
+        elif ev_name == "EV_clockwise_turn": # EV_V2    
+            self.get_logger().info("Supervisor decision: CW")
             twist.linear.x = 0.0
             twist.angular.z = -0.5
 
-        elif ev_name == "EV_V3":    
-            # self.get_logger().info("Supervisor decision: CCW")
+        elif ev_name == "EV_counterclockwise_turn":  # EV_V3  
+            self.get_logger().info("Supervisor decision: CCW")
             twist.linear.x = 0.0  
             twist.angular.z = 0.5
+        
+        elif ev_name == "EV_move_forward":   # EV_V4  
+            self.get_logger().info("Supervisor decision: FORWARD")
+            twist.linear.x = 0.5
+            twist.angular.z = 0.0  
+
+        elif ev_name == "EV_move_backward":  # EV_V5   
+            self.get_logger().info("Supervisor decision: BACKWARD")
+            twist.linear.x = -0.5
+            twist.angular.z = 0.0      
+
 
         # elif ev_name == "EV_V4": # RED
         #     if self.target_distance > 1.0 and self.target_distance < 0.5:
