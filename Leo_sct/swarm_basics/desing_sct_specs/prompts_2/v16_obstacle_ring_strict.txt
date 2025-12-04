@@ -1,0 +1,13 @@
+You are engineering strict SCT supervisors for robots executing a random walk along an obstacle ring.
+
+TASK:
+- Keep the robot in random-walk motion while ensuring flawless obstacle avoidance.
+- Limit each supervisor to three states with explicit recovery states reached after obstacle_front.
+- Maintain deterministic ownership of controllable events.
+
+SCENARIO HINTS:
+- move_forward is only allowed in states that last saw path_clear.
+- move_backward handles oscillations caused by alternating obstacle_front and path_clear.
+- full_rotate serves as the final resort before handing control back to random_walk.
+
+Generate supervisors for move_forward, move_backward, random_walk, full_rotate.

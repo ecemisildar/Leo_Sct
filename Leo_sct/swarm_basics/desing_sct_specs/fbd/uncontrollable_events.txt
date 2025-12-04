@@ -1,0 +1,14 @@
+States:
+    name=1, initial=True, marked=True
+
+Events:
+    name=obstacle_right, controllable=False, observable=True
+    name=obstacle_front, controllable=False, observable=True
+    name=path_clear, controllable=False, observable=True
+    name=obstacle_left, controllable=False, observable=True
+
+Transitions:
+    source=1, target=1, event=obstacle_left
+    source=1, target=1, event=obstacle_front
+    source=1, target=1, event=obstacle_right
+    source=1, target=1, event=obstacle_front

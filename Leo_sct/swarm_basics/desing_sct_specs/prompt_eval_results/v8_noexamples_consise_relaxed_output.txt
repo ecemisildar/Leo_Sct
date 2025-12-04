@@ -1,0 +1,40 @@
+### Supervisor for move_forward
+States:
+    name=Idle, initial=True, marked=True
+    name=MovingForward, initial=False, marked=True
+Transitions:
+    source=Idle, target=MovingForward, event=move_forward
+    source=MovingForward, target=Idle, event=obstacle_front
+    source=MovingForward, target=MovingForward, event=path_clear
+    source=Idle, target=Idle, event=obstacle_front
+    source=Idle, target=Idle, event=path_clear
+
+---
+
+### Supervisor for move_backward
+States:
+    name=Idle, initial=True, marked=True
+    name=MovingBackward, initial=False, marked=True
+Transitions:
+    source=Idle, target=MovingBackward, event=move_backward
+    source=MovingBackward, target=Idle, event=obstacle_back
+    source=MovingBackward, target=MovingBackward, event=path_clear
+    source=Idle, target=Idle, event=obstacle_front
+    source=Idle, target=Idle, event=path_clear
+
+---
+
+### Supervisor for random_walk
+States:
+    name=Idle, initial=True, marked=True
+    name=RandomWalking, initial=False, marked=True
+Transitions:
+    source=Idle, target=RandomWalking, event=random_walk
+    source=RandomWalking, target=Idle, event=obstacle_front
+    source=RandomWalking, target=Idle, event=obstacle_left
+    source=RandomWalking, target=Idle, event=obstacle_right
+    source=RandomWalking, target=RandomWalking, event=path_clear
+    source=Idle, target=Idle, event=obstacle_front
+    source=Idle, target=Idle, event=obstacle_left
+    source=Idle, target=Idle, event=obstacle_right
+    source=Idle, target=Idle, event=path_clear

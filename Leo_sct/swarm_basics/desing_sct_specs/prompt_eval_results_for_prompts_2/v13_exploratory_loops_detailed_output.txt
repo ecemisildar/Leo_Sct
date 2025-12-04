@@ -1,0 +1,83 @@
+### Supervisor for random_walk
+States:
+    name=0, initial=True, marked=True   # Ready to pick a new direction
+    name=1, initial=False, marked=False # Waiting for sensing result after random_walk
+
+Transitions:
+    source=0, target=1, event=random_walk
+
+    source=0, target=0, event=obstacle_front
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=0, event=path_clear
+    source=0, target=0, event=1
+
+    source=1, target=0, event=path_clear
+    source=1, target=0, event=obstacle_left
+    source=1, target=0, event=obstacle_right
+    source=1, target=0, event=obstacle_front
+    source=1, target=0, event=1
+
+---
+
+### Supervisor for move_forward
+States:
+    name=0, initial=True, marked=False  # Awaiting path_clear after random_walk
+    name=1, initial=False, marked=True  # Probe complete, ready for next random_walk
+
+Transitions:
+    source=0, target=1, event=move_forward
+
+    source=0, target=0, event=obstacle_front
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=0, event=1
+
+    source=1, target=1, event=path_clear
+    source=1, target=1, event=obstacle_front
+    source=1, target=1, event=obstacle_left
+    source=1, target=1, event=obstacle_right
+    source=1, target=1, event=1
+
+---
+
+### Supervisor for move_backward
+States:
+    name=0, initial=True, marked=False  # First obstacle_front detected
+    name=1, initial=False, marked=True  # Backed up, ready to resume random_walk
+
+Transitions:
+    source=0, target=1, event=move_backward
+
+    source=0, target=0, event=path_clear
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=0, event=1
+
+    source=1, target=1, event=path_clear
+    source=1, target=1, event=obstacle_front
+    source=1, target=1, event=obstacle_left
+    source=1, target=1, event=obstacle_right
+    source=1, target=1, event=1
+
+---
+
+### Supervisor for full_rotate
+States:
+    name=0, initial=True, marked=False  # Blocked on all sides, need new heading
+    name=1, initial=False, marked=True  # Heading reset, ready for random_walk
+
+Transitions:
+    source=0, target=1, event=full_rotate
+
+    source=0, target=0, event=obstacle_front
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=0, event=1
+    source=0, target=0, event=path_clear
+
+    source=1, target=1, event=path_clear
+    source=1, target=1, event=obstacle_front
+    source=1, target=1, event=obstacle_left
+    source=1, target=1, event=obstacle_right
+    source=1, target=1, event=1

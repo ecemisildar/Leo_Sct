@@ -1,0 +1,65 @@
+### Supervisor for move_forward
+States:
+    name=0, initial=True, marked=True
+    name=1, initial=False, marked=True
+    name=2, initial=False, marked=True
+
+Events:
+    name=obstacle_front, controllable=False
+    name=path_clear, controllable=False
+    name=move_forward, controllable=True
+    name=random_walk, controllable=True
+
+Transitions:
+    source=0, target=0, event=path_clear
+    source=0, target=1, event=obstacle_front
+
+    source=1, target=1, event=obstacle_front
+    source=1, target=2, event=path_clear
+
+    source=2, target=0, event=move_forward
+    source=2, target=0, event=random_walk
+
+
+### Supervisor for move_backward
+States:
+    name=0, initial=True, marked=True
+    name=1, initial=False, marked=True
+    name=2, initial=False, marked=True
+
+Events:
+    name=obstacle_right, controllable=False
+    name=obstacle_left, controllable=False
+    name=move_backward, controllable=True
+    name=random_walk, controllable=True
+
+Transitions:
+    source=0, target=0, event=obstacle_right
+    source=0, target=1, event=obstacle_left
+
+    source=1, target=1, event=obstacle_left
+    source=1, target=2, event=obstacle_right
+
+    source=2, target=0, event=move_backward
+    source=2, target=0, event=random_walk
+
+
+### Supervisor for random_walk
+States:
+    name=0, initial=True, marked=True
+    name=1, initial=False, marked=True
+    name=2, initial=False, marked=True
+
+Events:
+    name=obstacle_front, controllable=False
+    name=path_clear, controllable=False
+    name=random_walk, controllable=True
+
+Transitions:
+    source=0, target=0, event=path_clear
+    source=0, target=1, event=obstacle_front
+
+    source=1, target=1, event=obstacle_front
+    source=1, target=2, event=path_clear
+
+    source=2, target=0, event=random_walk

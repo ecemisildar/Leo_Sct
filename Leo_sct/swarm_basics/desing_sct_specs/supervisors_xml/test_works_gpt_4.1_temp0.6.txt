@@ -1,0 +1,59 @@
+THIS ONE WORKS THE ONLY PROBLEM IS BACWARDS AND RANDOM WALK ARE OTALLY SAME
+
+
+
+### Supervisor for move_forward
+States:
+    name=0, initial=True, marked=True
+    name=1, initial=False, marked=True
+
+Transitions:
+    source=0, target=0, event=path_clear
+    source=0, target=1, event=obstacle_front
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=0, event=move_forward
+
+    source=1, target=1, event=obstacle_front
+    source=1, target=1, event=obstacle_left
+    source=1, target=1, event=obstacle_right
+    source=1, target=1, event=path_clear
+    source=1, target=0, event=move_forward
+
+
+### Supervisor for move_backward
+States:
+    name=0, initial=True, marked=True
+    name=1, initial=False, marked=True
+
+Transitions:
+    source=0, target=0, event=path_clear
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=1, event=obstacle_front
+    source=0, target=0, event=move_backward
+
+    source=1, target=1, event=obstacle_front
+    source=1, target=1, event=obstacle_left
+    source=1, target=1, event=obstacle_right
+    source=1, target=1, event=path_clear
+    source=1, target=0, event=move_backward
+
+
+### Supervisor for random_walk
+States:
+    name=0, initial=True, marked=True
+    name=1, initial=False, marked=True
+
+Transitions:
+    source=0, target=0, event=path_clear
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=1, event=obstacle_front
+    source=0, target=0, event=random_walk
+
+    source=1, target=1, event=obstacle_front
+    source=1, target=1, event=obstacle_left
+    source=1, target=1, event=obstacle_right
+    source=1, target=1, event=path_clear
+    source=1, target=0, event=random_walk

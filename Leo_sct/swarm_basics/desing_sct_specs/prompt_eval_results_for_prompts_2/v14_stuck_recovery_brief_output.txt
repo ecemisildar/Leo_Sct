@@ -1,0 +1,82 @@
+### Supervisor for move_forward
+States:
+    name=0, initial=True, marked=True  # Free to move
+    name=1, initial=False, marked=True # Blocked ahead (waiting for clearance)
+
+Transitions:
+    source=0, target=1, event=obstacle_front
+    source=0, target=0, event=path_clear
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=0, event=1
+
+    source=1, target=1, event=obstacle_front
+    source=1, target=0, event=path_clear
+    source=1, target=0, event=move_forward
+    source=1, target=1, event=obstacle_left
+    source=1, target=1, event=obstacle_right
+    source=1, target=1, event=1
+
+---
+
+### Supervisor for move_backward
+States:
+    name=0, initial=True, marked=True   # Not stuck
+    name=1, initial=False, marked=True  # First obstacle_front seen
+
+Transitions:
+    source=0, target=1, event=obstacle_front
+    source=0, target=0, event=path_clear
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=0, event=1
+
+    source=1, target=1, event=obstacle_front
+    source=1, target=0, event=move_backward
+    source=1, target=0, event=path_clear
+    source=1, target=0, event=obstacle_left
+    source=1, target=0, event=obstacle_right
+    source=1, target=0, event=1
+
+---
+
+### Supervisor for random_walk
+States:
+    name=0, initial=True, marked=True   # Ready to explore
+    name=1, initial=False, marked=True  # Just completed full_rotate
+
+Transitions:
+    source=0, target=0, event=path_clear
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=0, event=obstacle_front
+    source=0, target=0, event=1
+    source=0, target=1, event=full_rotate
+
+    source=1, target=0, event=random_walk
+    source=1, target=0, event=path_clear
+    source=1, target=0, event=obstacle_left
+    source=1, target=0, event=obstacle_right
+    source=1, target=0, event=obstacle_front
+    source=1, target=0, event=1
+
+---
+
+### Supervisor for full_rotate
+States:
+    name=0, initial=True, marked=True   # Not surrounded
+    name=1, initial=False, marked=True  # Surrounded (all three obstacles detected)
+
+Transitions:
+    source=0, target=1, event=obstacle_front
+    source=0, target=0, event=path_clear
+    source=0, target=0, event=obstacle_left
+    source=0, target=0, event=obstacle_right
+    source=0, target=0, event=1
+
+    source=1, target=1, event=obstacle_left
+    source=1, target=1, event=obstacle_right
+    source=1, target=1, event=obstacle_front
+    source=1, target=0, event=full_rotate
+    source=1, target=0, event=path_clear
+    source=1, target=0, event=1

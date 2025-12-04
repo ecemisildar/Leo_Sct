@@ -1,0 +1,116 @@
+### Supervisor for move_forward
+States:
+    name=exploring, initial=True, marked=True
+    name=wall_follow, initial=False, marked=True
+    name=retreat, initial=False, marked=True
+    name=reorient, initial=False, marked=True
+
+Events:
+    name=obstacle_front, controllable=False
+    name=obstacle_left, controllable=False
+    name=obstacle_right, controllable=False
+    name=path_clear, controllable=False
+    name=move_forward, controllable=True
+    name=turn_cw, controllable=True
+    name=turn_ccw, controllable=True
+
+Transitions:
+    # Exploring open area
+    source=exploring, target=exploring, event=path_clear
+    source=exploring, target=wall_follow, event=obstacle_left
+    source=exploring, target=wall_follow, event=obstacle_right
+    source=exploring, target=retreat, event=obstacle_front
+
+    # Following wall when near left or right
+    source=wall_follow, target=wall_follow, event=obstacle_left
+    source=wall_follow, target=wall_follow, event=obstacle_right
+    source=wall_follow, target=retreat, event=obstacle_front
+    source=wall_follow, target=exploring, event=path_clear
+
+    # Retreat when blocked ahead
+    source=retreat, target=reorient, event=move_forward
+    source=retreat, target=reorient, event=obstacle_front
+
+    # Reorient after retreat, try to turn away from obstacle
+    source=reorient, target=exploring, event=turn_cw
+    source=reorient, target=exploring, event=turn_ccw
+    source=reorient, target=exploring, event=path_clear
+    source=reorient, target=wall_follow, event=obstacle_left
+    source=reorient, target=wall_follow, event=obstacle_right
+
+---
+
+### Supervisor for move_backward
+States:
+    name=normal, initial=True, marked=True
+    name=cornered, initial=False, marked=True
+    name=escape, initial=False, marked=True
+
+Events:
+    name=obstacle_front, controllable=False
+    name=obstacle_left, controllable=False
+    name=obstacle_right, controllable=False
+    name=path_clear, controllable=False
+    name=move_backward, controllable=True
+    name=full_rotate, controllable=True
+
+Transitions:
+    # Normal operation, monitor for being trapped
+    source=normal, target=normal, event=path_clear
+    source=normal, target=cornered, event=obstacle_front
+    source=normal, target=cornered, event=obstacle_left
+    source=normal, target=cornered, event=obstacle_right
+
+    # If surrounded on multiple sides, trigger escape
+    source=cornered, target=escape, event=obstacle_front
+    source=cornered, target=escape, event=obstacle_left
+    source=cornered, target=escape, event=obstacle_right
+
+    # Escape: move backward and try a full rotate
+    source=escape, target=normal, event=move_backward
+    source=escape, target=normal, event=full_rotate
+    source=escape, target=normal, event=path_clear
+
+---
+
+### Supervisor for random_walk
+States:
+    name=roaming, initial=True, marked=True
+    name=near_wall, initial=False, marked=True
+    name=center_seek, initial=False, marked=True
+    name=recovery, initial=False, marked=True
+    name=change_direction, initial=False, marked=True
+
+Events:
+    name=obstacle_front, controllable=False
+    name=obstacle_left, controllable=False
+    name=obstacle_right, controllable=False
+    name=path_clear, controllable=False
+    name=random_walk, controllable=True
+    name=full_rotate, controllable=True
+    name=move_forward, controllable=True
+    name=turn_cw, controllable=True
+
+Transitions:
+    # General roaming in open areas
+    source=roaming, target=roaming, event=path_clear
+    source=roaming, target=near_wall, event=obstacle_left
+    source=roaming, target=near_wall, event=obstacle_right
+    source=roaming, target=recovery, event=obstacle_front
+
+    # Near wall: occasionally switch to seek center
+    source=near_wall, target=near_wall, event=obstacle_left
+    source=near_wall, target=near_wall, event=obstacle_right
+    source=near_wall, target=center_seek, event=path_clear
+
+    # Center seek: bias random_walk and move_forward
+    source=center_seek, target=roaming, event=random_walk
+    source=center_seek, target=roaming, event=move_forward
+
+    # If blocked at front, attempt to recover
+    source=recovery, target=change_direction, event=full_rotate
+    source=recovery, target=change_direction, event=turn_cw
+
+    # After changing direction, resume roaming
+    source=change_direction, target=roaming, event=path_clear
+    source=change_direction, target=roaming, event=random_walk

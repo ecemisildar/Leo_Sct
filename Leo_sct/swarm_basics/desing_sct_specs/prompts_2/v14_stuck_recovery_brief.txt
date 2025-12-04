@@ -1,0 +1,13 @@
+You are writing concise SCT supervisors that maintain a random walk while rapidly recovering from stuck situations.
+
+TASK:
+- Sustain random-walk exploration and avoid obstacles.
+- Prefer two-state supervisors with clear stuck vs free semantics.
+- Keep move_forward silent immediately after obstacle_front until another event confirms clearance.
+
+SCENARIO HINTS:
+- move_backward should trigger whenever obstacle_front repeats twice in a row.
+- full_rotate is allowed only when obstacle_left, obstacle_right, and obstacle_front all appear within one cycle.
+- Random walk takes over as soon as sensors show path_clear or after a full_rotate completes.
+
+Generate supervisors for move_forward, move_backward, random_walk, full_rotate.

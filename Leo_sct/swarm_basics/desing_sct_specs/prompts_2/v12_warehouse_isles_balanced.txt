@@ -1,0 +1,13 @@
+You are synthesizing SCT supervisors that run a balanced random walk through wide warehouse aisles.
+
+TASK:
+- Maintain random-walk exploration while guaranteeing obstacle avoidance.
+- Maintain symmetry between left/right reactions where possible.
+- Allow up to three states per supervisor to encode "survey" vs "travel" phases.
+
+SCENARIO HINTS:
+- move_forward handles long straight stretches once both side sensors read path_clear.
+- move_backward helps recenter after obstacle_front, before random_walk resumes.
+- full_rotate represents a scanning pose the robot reaches when surrounded before reentering random_walk.
+
+Generate supervisors for move_forward, move_backward, random_walk, full_rotate.

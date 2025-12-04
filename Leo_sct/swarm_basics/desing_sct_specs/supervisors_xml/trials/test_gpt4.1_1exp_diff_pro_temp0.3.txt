@@ -1,0 +1,129 @@
+### Supervisor for move_forward
+States:
+    name=exploring, initial=True, marked=True
+    name=near_wall, initial=False, marked=True
+    name=retreating, initial=False, marked=True
+    name=redirecting, initial=False, marked=True
+
+Events:
+    name=obstacle_front, controllable=False
+    name=obstacle_left, controllable=False
+    name=obstacle_right, controllable=False
+    name=path_clear, controllable=False
+    name=move_forward, controllable=True
+    name=turn_cw, controllable=True
+    name=turn_ccw, controllable=True
+    name=move_backward, controllable=True
+
+Transitions:
+    # Exploring open area
+    source=exploring, target=exploring, event=path_clear
+    source=exploring, target=near_wall, event=obstacle_front
+    source=exploring, target=near_wall, event=obstacle_left
+    source=exploring, target=near_wall, event=obstacle_right
+
+    # Near wall: keep moving forward if possible, else retreat or redirect
+    source=near_wall, target=near_wall, event=obstacle_left
+    source=near_wall, target=near_wall, event=obstacle_right
+    source=near_wall, target=retreating, event=obstacle_front
+    source=near_wall, target=exploring, event=path_clear
+
+    # Retreating: move backward, then try to redirect
+    source=retreating, target=redirecting, event=move_backward
+    source=retreating, target=redirecting, event=obstacle_left
+    source=retreating, target=redirecting, event=obstacle_right
+    source=retreating, target=exploring, event=path_clear
+
+    # Redirecting: turn to re-enter open area
+    source=redirecting, target=exploring, event=turn_cw
+    source=redirecting, target=exploring, event=turn_ccw
+    source=redirecting, target=exploring, event=path_clear
+
+    # Move forward in open area
+    source=exploring, target=exploring, event=move_forward
+    source=near_wall, target=exploring, event=move_forward
+
+
+---
+
+### Supervisor for move_backward
+States:
+    name=normal, initial=True, marked=True
+    name=blocked, initial=False, marked=True
+    name=surrounded, initial=False, marked=True
+
+Events:
+    name=obstacle_front, controllable=False
+    name=obstacle_left, controllable=False
+    name=obstacle_right, controllable=False
+    name=path_clear, controllable=False
+    name=move_backward, controllable=True
+    name=full_rotate, controllable=True
+    name=turn_cw, controllable=True
+
+Transitions:
+    # Normal: move backward only if blocked ahead
+    source=normal, target=blocked, event=obstacle_front
+    source=normal, target=normal, event=path_clear
+    source=normal, target=normal, event=obstacle_left
+    source=normal, target=normal, event=obstacle_right
+
+    # Blocked: try to move backward, but if surrounded, rotate
+    source=blocked, target=blocked, event=obstacle_left
+    source=blocked, target=blocked, event=obstacle_right
+    source=blocked, target=surrounded, event=obstacle_front
+    source=blocked, target=normal, event=move_backward
+    source=blocked, target=normal, event=path_clear
+
+    # Surrounded: escape with full rotate or turn
+    source=surrounded, target=normal, event=full_rotate
+    source=surrounded, target=normal, event=turn_cw
+    source=surrounded, target=normal, event=path_clear
+
+---
+
+### Supervisor for random_walk
+States:
+    name=wandering, initial=True, marked=True
+    name=stuck, initial=False, marked=True
+    name=edge_follow, initial=False, marked=True
+    name=center_seek, initial=False, marked=True
+    name=recovering, initial=False, marked=True
+
+Events:
+    name=obstacle_front, controllable=False
+    name=obstacle_left, controllable=False
+    name=obstacle_right, controllable=False
+    name=path_clear, controllable=False
+    name=random_walk, controllable=True
+    name=full_rotate, controllable=True
+    name=move_forward, controllable=True
+    name=turn_ccw, controllable=True
+
+Transitions:
+    # Wandering: random walk in open area, but if near wall, follow edge or seek center
+    source=wandering, target=wandering, event=path_clear
+    source=wandering, target=wandering, event=random_walk
+    source=wandering, target=edge_follow, event=obstacle_left
+    source=wandering, target=edge_follow, event=obstacle_right
+    source=wandering, target=stuck, event=obstacle_front
+
+    # Edge follow: if path clears, seek center; else, keep following edge
+    source=edge_follow, target=edge_follow, event=obstacle_left
+    source=edge_follow, target=edge_follow, event=obstacle_right
+    source=edge_follow, target=center_seek, event=path_clear
+    source=edge_follow, target=stuck, event=obstacle_front
+
+    # Center seek: move forward or random walk to re-enter open area
+    source=center_seek, target=wandering, event=move_forward
+    source=center_seek, target=wandering, event=random_walk
+    source=center_seek, target=wandering, event=path_clear
+    source=center_seek, target=stuck, event=obstacle_front
+
+    # Stuck: try to recover with full rotate or turn
+    source=stuck, target=recovering, event=full_rotate
+    source=stuck, target=recovering, event=turn_ccw
+
+    # Recovering: after rotate, resume wandering
+    source=recovering, target=wandering, event=path_clear
+    source=recovering, target=wandering, event=random_walk
