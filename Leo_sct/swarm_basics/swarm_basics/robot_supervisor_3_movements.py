@@ -31,10 +31,21 @@ class RobotSupervisor(Node):
             rclpy.shutdown()
             return
 
+        self.zone_update_min_dt = self.declare_parameter(
+            'zone_update_min_dt', 0.3
+        ).value
+        self.motion_hold_duration = self.declare_parameter(
+            'motion_hold_duration', 0.6
+        ).value
+
         self.sct = SCT(config_path)
         self.target_offset = 0.0
         self.target_distance = float('inf')
         self.obstacle_zones = []
+        self.last_zone_update = 0.0
+        self.motion_until = 0.0
+        self.active_event = None
+        self.active_twist = Twist()
 
         # Ensure all events have a callback entry
         for ev_name, ev_id in self.sct.EV.items():
@@ -70,6 +81,10 @@ class RobotSupervisor(Node):
 
 
     def zone_callback(self, msg):
+        now = time.time()
+        if now - self.last_zone_update < self.zone_update_min_dt:
+            return
+        self.last_zone_update = now
         self.obstacle_zones = [z.strip() for z in msg.data.split(',') if z.strip()]
         self.get_logger().info(f'ZONE: {self.obstacle_zones}')
 
@@ -120,9 +135,9 @@ class RobotSupervisor(Node):
             twist.angular.z = random.uniform(-1.0, 1.0)
                 
         elif ev_name == "EV_full_rotate": # EV_V0      
-            self.get_logger().info("Supervisor decision: OBSTACLE")
+            self.get_logger().info("Supervisor decision: FULL ROTATE")
             twist.linear.x = 0.0
-            twist.angular.z = 1.0
+            twist.angular.z = 2.0
             time.sleep(0.1) 
 
         elif ev_name == "EV_clockwise_turn": # EV_V2    
@@ -162,13 +177,23 @@ class RobotSupervisor(Node):
             twist.linear.x = 0.0
             # self.get_logger().debug(f"Unknown or None event: {ev_name}")
 
-        self.cmd_pub.publish(twist)
+        self.active_event = ev_name
+        self.active_twist = twist
+        self.motion_until = time.time() + self.motion_hold_duration
+        self.cmd_pub.publish(self.active_twist)
 
 
     # -------------------------------
     # Timer callback
     # -------------------------------
     def timer_callback(self):
+        # Continue executing the current command until its hold time expires
+        now = time.time()
+        if self.active_event and now < self.motion_until:
+            self.cmd_pub.publish(self.active_twist)
+            return
+
+        self.active_event = None
         # Run supervisor logic
         self.sct.input_buffer = []
         ce_exists, ce = self.sct.run_step()

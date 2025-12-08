@@ -1,0 +1,67 @@
+<Generator name="K_reactive_motion">
+
+% 
+%  Statistics for K_reactive_motion
+% 
+%  States:        5
+%  Init/Marked:   1/5
+%  Events:        10
+%  Transitions:   32
+%  StateSymbols:  5
+%  Attrib. E/S/T: 0/0/0
+% 
+
+<Alphabet>
+move_forward  move_backward  rotate_clockwise  rotate_counterclockwise  full_rotate   random_walk  
+path_clear    obstacle_front  obstacle_left  obstacle_right 
+</Alphabet>
+
+<States>
+clear         obs_left      obs_right     obs_front     scan         
+</States>
+
+<TransRel>
+clear         move_forward  clear        
+clear         move_backward  clear        
+clear         random_walk   clear        
+clear         path_clear    clear        
+clear         obstacle_front  obs_front    
+clear         obstacle_left  obs_left     
+clear         obstacle_right  obs_right    
+obs_left      move_backward  obs_left     
+obs_left      rotate_clockwise  clear        
+obs_left      path_clear    scan         
+obs_left      obstacle_front  obs_front    
+obs_left      obstacle_left  obs_left     
+obs_left      obstacle_right  obs_right    
+obs_right     move_backward  obs_right    
+obs_right     rotate_counterclockwise  clear        
+obs_right     path_clear    scan         
+obs_right     obstacle_front  obs_front    
+obs_right     obstacle_left  obs_left     
+obs_right     obstacle_right  obs_right    
+obs_front     move_backward  obs_front    
+obs_front     full_rotate   scan         
+obs_front     path_clear    clear        
+obs_front     obstacle_front  obs_front    
+obs_front     obstacle_left  obs_left     
+obs_front     obstacle_right  obs_right    
+scan          move_forward  clear        
+scan          move_backward  clear        
+scan          full_rotate   clear        
+scan          random_walk   clear        
+scan          obstacle_front  obs_front    
+scan          obstacle_left  obs_left     
+scan          obstacle_right  obs_right    
+</TransRel>
+
+<InitStates>
+clear        
+</InitStates>
+
+<MarkedStates>
+clear         obs_left      obs_right     obs_front     scan         
+</MarkedStates>
+
+
+</Generator>

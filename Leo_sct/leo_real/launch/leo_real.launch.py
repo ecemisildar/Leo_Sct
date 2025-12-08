@@ -6,9 +6,7 @@ def generate_launch_description():
 
     # List your real robots here
     robots = [
-        {"ns": "robot_0", "spawn_x": 0.0, "spawn_y": 0.0},
-        {"ns": "robot_1", "spawn_x": 0.0, "spawn_y": 0.0},
-        {"ns": "robot_2", "spawn_x": 0.0, "spawn_y": 0.0},
+        {"ns": "rob_2", "spawn_x": 0.0, "spawn_y": 0.0},
     ]
 
     nodes = []
@@ -17,6 +15,8 @@ def generate_launch_description():
         ns = robot["ns"]
         sx = robot["spawn_x"]
         sy = robot["spawn_y"]
+        cmd_vel_topic = robot.get("cmd_vel_topic", f"/{ns}/cmd_vel")
+
 
         # --- Supervisor node (publishes cmd_vel) ---
         supervisor_node = Node(
@@ -38,9 +38,10 @@ def generate_launch_description():
             # Only if it publishes just '/cmd_vel' *without* namespace,
             # you’d need something like:
             #
-            # remappings=[
-            #     ("/cmd_vel", f"/{ns}/cmd_vel"),
-            # ],
+            remappings=[
+                # ("cmd_vel", f"{ns}/cmd_vel"),
+                ("cmd_vel", cmd_vel_topic),
+            ],
             output="screen",
         )
 
