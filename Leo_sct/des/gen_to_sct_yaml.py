@@ -14,6 +14,9 @@ EVENTS_ORDER = [
     "EV_counterclockwise_turn",
     "EV_path_clear",
     "EV_move_forward",
+    "EV_speed_up",
+    "EV_slow_down",
+    "EV_sense_crowd",
 ]
 
 # Map FAUDES event names (from .gen) -> EV_* names
@@ -28,6 +31,9 @@ FAUDES_TO_EV = {
     "rotate_counterclockwise": "EV_counterclockwise_turn",
     "path_clear":              "EV_path_clear",
     "move_forward":            "EV_move_forward",
+    "speed_up":                "EV_speed_up",
+    "slow_down":               "EV_slow_down",
+    "crowd_detected":          "EV_sense_crowd", 
 }
 
 # Controllability pattern in this fixed order
@@ -42,6 +48,9 @@ EV_CONTROLLABLE = [
     1,  # EV_counterclockwise_turn
     0,  # EV_path_clear
     1,  # EV_move_forward
+    1,  # EV_speed_up
+    1,  # EV_slow_down
+    0,  # EV_sense_crowd
 ]
 
 

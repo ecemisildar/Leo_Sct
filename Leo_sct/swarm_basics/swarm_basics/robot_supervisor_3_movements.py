@@ -64,6 +64,8 @@ class RobotSupervisor(Node):
         self.sct.add_callback(self.sct.EV['EV_path_clear'],None,self.clear_path_check,None) # EV_S1
         self.sct.add_callback(self.sct.EV['EV_obstacle_left'],None,self.left_check,None)    # EV_S2
         self.sct.add_callback(self.sct.EV['EV_obstacle_right'],None,self.right_check,None) # EV_S3
+        self.sct.add_callback(self.sct.EV['EV_sense_crowd'],None,self.crowd_check,None) # EV_S4
+
         # self.sct.add_callback(self.sct.EV['EV_S4'],None,self.red_check,None)
         # self.sct.add_callback(self.sct.EV['EV_S5'],None,self.blue_check,None)
 
@@ -116,6 +118,12 @@ class RobotSupervisor(Node):
     def right_check(self, sup_data):
         return 'RIGHT' in self.obstacle_zones
 
+    def crowd_check(self, sup_data):
+        sensed = random.random() < 0.05
+        self.get_logger().info(f"crowd_sense invoked -> {'trigger' if sensed else 'idle'}")
+        return sensed
+
+
     # def red_check(self, sup_data):
     #     return 'RED' in self.obstacle_zones
 
@@ -159,6 +167,16 @@ class RobotSupervisor(Node):
             self.get_logger().info("Supervisor decision: BACKWARD")
             twist.linear.x = -0.5
             twist.angular.z = 0.0      
+
+        elif ev_name == "EV_slow_down":  # EV_V6   
+            self.get_logger().info("Supervisor decision: SLOW DOWN")
+            twist.linear.x = 0.1
+            twist.angular.z = 0.0     
+
+        elif ev_name == "EV_speed_up":  # EV_V7   
+            self.get_logger().info("Supervisor decision: SPEED UP")
+            twist.linear.x = 1.0
+            twist.angular.z = 0.0           
 
 
         # elif ev_name == "EV_V4": # RED

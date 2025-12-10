@@ -15,14 +15,17 @@ static const std::vector<std::string> kControllableEvents = {
     "rotate_clockwise",
     "rotate_counterclockwise",
     "full_rotate",
-    "random_walk"
+    "random_walk",
+    "slow_down",
+    "speed_up"
 };
 
 static const std::vector<std::string> kUncontrollableEvents = {
     "path_clear",
     "obstacle_front",
     "obstacle_left",
-    "obstacle_right"
+    "obstacle_right",
+    "crowd_detected"
 };
 
 // Helper: add all events to a generator (no attributes, just names)
@@ -69,45 +72,70 @@ Generator MakeSpecReactiveMotion() {
     K.InsState("obs_left");
     K.InsState("obs_right");
     K.InsState("obs_front");
-    K.InsState("rotating");
+    K.InsState("stuck");
+    K.InsState("crowded");
 
     K.SetInitState("clear");
     K.SetMarkedState("clear");
     K.SetMarkedState("obs_left");
     K.SetMarkedState("obs_right");
     K.SetMarkedState("obs_front");
-    K.SetMarkedState("rotating");
+    K.SetMarkedState("stuck");
+    K.SetMarkedState("crowded");
 
     // --- Sensor transitions (mode switching) ---
 K.SetTransition("clear", "move_forward", "clear");
 K.SetTransition("clear", "random_walk", "clear");
+K.SetTransition("clear", "rotate_clockwise", "clear");
+K.SetTransition("clear", "rotate_counterclockwise", "clear");
+K.SetTransition("clear", "speed_up", "clear");
+K.SetTransition("clear", "slow_down", "clear");
 K.SetTransition("clear", "obstacle_front", "obs_front");
 K.SetTransition("clear", "obstacle_left", "obs_left");
 K.SetTransition("clear", "obstacle_right", "obs_right");
+K.SetTransition("clear", "crowd_detected", "crowded");
 K.SetTransition("clear", "path_clear", "clear");
+K.SetTransition("obs_front", "rotate_clockwise", "obs_right");
+K.SetTransition("obs_front", "rotate_counterclockwise", "obs_left");
 K.SetTransition("obs_front", "full_rotate", "clear");
-K.SetTransition("obs_front", "move_backward", "obs_front");
-K.SetTransition("obs_front", "obstacle_front", "obs_front");
+K.SetTransition("obs_front", "random_walk", "obs_front");
+K.SetTransition("obs_front", "crowd_detected", "crowded");
+K.SetTransition("obs_front", "path_clear", "clear");
 K.SetTransition("obs_front", "obstacle_left", "obs_left");
 K.SetTransition("obs_front", "obstacle_right", "obs_right");
-K.SetTransition("obs_front", "path_clear", "clear");
-K.SetTransition("obs_left", "rotate_clockwise", "rotating");
-K.SetTransition("obs_left", "move_backward", "obs_left");
+K.SetTransition("obs_front", "obstacle_front", "obs_front");
+K.SetTransition("obs_front", "move_backward", "stuck");
+K.SetTransition("obs_left", "rotate_clockwise", "clear");
+K.SetTransition("obs_left", "move_forward", "clear");
+K.SetTransition("obs_left", "random_walk", "obs_left");
+K.SetTransition("obs_left", "crowd_detected", "crowded");
 K.SetTransition("obs_left", "obstacle_front", "obs_front");
-K.SetTransition("obs_left", "obstacle_left", "obs_left");
 K.SetTransition("obs_left", "obstacle_right", "obs_right");
+K.SetTransition("obs_left", "obstacle_left", "obs_left");
 K.SetTransition("obs_left", "path_clear", "clear");
-K.SetTransition("obs_right", "rotate_counterclockwise", "rotating");
-K.SetTransition("obs_right", "move_backward", "obs_right");
+K.SetTransition("obs_left", "move_backward", "stuck");
+K.SetTransition("obs_right", "rotate_counterclockwise", "clear");
+K.SetTransition("obs_right", "move_forward", "clear");
+K.SetTransition("obs_right", "random_walk", "obs_right");
+K.SetTransition("obs_right", "crowd_detected", "crowded");
 K.SetTransition("obs_right", "obstacle_front", "obs_front");
 K.SetTransition("obs_right", "obstacle_left", "obs_left");
 K.SetTransition("obs_right", "obstacle_right", "obs_right");
 K.SetTransition("obs_right", "path_clear", "clear");
-K.SetTransition("rotating", "full_rotate", "clear");
-K.SetTransition("rotating", "path_clear", "rotating");
-K.SetTransition("rotating", "obstacle_front", "obs_front");
-K.SetTransition("rotating", "obstacle_left", "obs_left");
-K.SetTransition("rotating", "obstacle_right", "obs_right");
+K.SetTransition("obs_right", "move_backward", "stuck");
+K.SetTransition("crowded", "slow_down", "crowded");
+K.SetTransition("crowded", "random_walk", "crowded");
+K.SetTransition("crowded", "full_rotate", "crowded");
+K.SetTransition("crowded", "crowd_detected", "crowded");
+K.SetTransition("crowded", "obstacle_front", "crowded");
+K.SetTransition("crowded", "obstacle_left", "crowded");
+K.SetTransition("crowded", "obstacle_right", "crowded");
+K.SetTransition("crowded", "path_clear", "clear");
+K.SetTransition("stuck", "full_rotate", "clear");
+K.SetTransition("stuck", "random_walk", "stuck");
+K.SetTransition("stuck", "crowd_detected", "crowded");
+K.SetTransition("stuck", "path_clear", "clear");
+
 
     return K;
 }
@@ -132,10 +160,10 @@ int main() {
         Sup.Name("Sup_reactive_motion");
 
         // 4) Write models to files
-        G.Write("G_robot_free_gen5.gen");
-        K.Write("K_reactive_motion_gen5.gen");
-        Sup.Write("Sup_reactive_motion_gen5.gen");
-        Sup.DotWrite("Sup_reactive_motion_gen5.dot");
+        G.Write("G_robot_free_gen8.gen");
+        K.Write("K_reactive_motion_gen8.gen");
+        Sup.Write("Sup_reactive_motion_gen8.gen");
+        Sup.DotWrite("Sup_reactive_motion_gen8.dot");
 
         std::cout << "Supervisor synthesis completed.\n";
     }

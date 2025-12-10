@@ -71,6 +71,16 @@ def parse_states(source: str) -> List[str]:
     return states
 
 
+def extend_unique(base: List[str], additions: List[str]) -> List[str]:
+    """Append new items to base without duplicates while preserving order."""
+    seen = set(base)
+    for item in additions:
+        if item not in seen:
+            base.append(item)
+            seen.add(item)
+    return base
+
+
 def build_prompt(
     goal: str,
     states: List[str],
@@ -78,8 +88,10 @@ def build_prompt(
     uncontrollable: List[str],
     transitions: Dict[str, Dict[str, str]],
     include_existing: bool,
+    scenario: str | None = None,
+    guidance: List[str] | None = None,
 ) -> str:
-    """Assemble the coverage/supervisor design prompt."""
+    """Assemble the coverage/supervisor design prompt with optional context."""
     states = sorted(states)
     lines: List[str] = []
     lines.append(
@@ -92,6 +104,15 @@ def build_prompt(
     lines.append("Uncontrollable events: " + ", ".join(uncontrollable))
     lines.append("Current states: " + ", ".join(states))
     lines.append("")
+    if scenario:
+        lines.append("Scenario context: " + scenario)
+        lines.append("")
+    if guidance:
+        lines.append("Behaviour guidance:")
+        for item in guidance:
+            lines.append(f"- {item}")
+        lines.append("")
+
     if include_existing and transitions:
         lines.append("Existing transitions:")
         for state in states:
@@ -164,7 +185,37 @@ def call_chat_completion(
     )
     response.raise_for_status()
     content = response.json()["choices"][0]["message"]["content"]
-    return json.loads(content)
+    return parse_json_response(content)
+
+
+def parse_json_response(content: str) -> Dict[str, str]:
+    """
+    Best-effort parsing of JSON replies that might be wrapped in Markdown fences
+    or contain extra commentary.
+    """
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, re.DOTALL)
+    if fence_match:
+        snippet = fence_match.group(1)
+        try:
+            return json.loads(snippet)
+        except json.JSONDecodeError:
+            pass
+
+    start = content.find("{")
+    end = content.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        snippet = content[start : end + 1]
+        try:
+            return json.loads(snippet)
+        except json.JSONDecodeError:
+            pass
+
+    raise ValueError("Unable to parse JSON response from API:\n" + content)
 
 
 def main(argv: List[str]) -> int:
@@ -202,6 +253,33 @@ def main(argv: List[str]) -> int:
         type=float,
         default=0.55,
         help="Sampling temperature for the API call.",
+    )
+    parser.add_argument(
+        "--scenario",
+        help="Optional description of the environment context (e.g., crowded hallway).",
+    )
+    parser.add_argument(
+        "--constraint",
+        action="append",
+        help=(
+            "Add behavioural constraints or social hints (repeat flag for multiple entries)."
+        ),
+    )
+    parser.add_argument(
+        "--extra-controllable",
+        nargs="+",
+        default=[],
+        help=(
+            "Append extra controllable events for prompting only, e.g. slow_down speed_up."
+        ),
+    )
+    parser.add_argument(
+        "--extra-uncontrollable",
+        nargs="+",
+        default=[],
+        help=(
+            "Append extra uncontrollable events for prompting only (crowd alerts, etc.)."
+        ),
     )
     parser.add_argument(
         "--no-current",
@@ -244,6 +322,27 @@ def main(argv: List[str]) -> int:
     if not states:
         raise SystemExit("No DES states found in the source file.")
 
+    if args.extra_controllable:
+        controllable = extend_unique(controllable, args.extra_controllable)
+    if args.extra_uncontrollable:
+        uncontrollable = extend_unique(uncontrollable, args.extra_uncontrollable)
+
+    guidance_lines: List[str] = []
+    if args.constraint:
+        guidance_lines.extend(args.constraint)
+    if args.extra_controllable:
+        guidance_lines.append(
+            "Additional controllable events are available for nuanced control: "
+            + ", ".join(args.extra_controllable)
+            + "."
+        )
+    if args.extra_uncontrollable:
+        guidance_lines.append(
+            "Additional uncontrollable cues may trigger context-aware reactions: "
+            + ", ".join(args.extra_uncontrollable)
+            + "."
+        )
+
     prompt = build_prompt(
         goal=args.goal,
         states=states,
@@ -251,6 +350,8 @@ def main(argv: List[str]) -> int:
         uncontrollable=uncontrollable,
         transitions=transitions,
         include_existing=not args.no_current,
+        scenario=args.scenario,
+        guidance=guidance_lines or None,
     )
 
     if args.dry_run:

@@ -15,14 +15,17 @@ static const std::vector<std::string> kControllableEvents = {
     "rotate_clockwise",
     "rotate_counterclockwise",
     "full_rotate",
-    "random_walk"
+    "random_walk",
+    "slow_down",
+    "speed_up"
 };
 
 static const std::vector<std::string> kUncontrollableEvents = {
     "path_clear",
     "obstacle_front",
     "obstacle_left",
-    "obstacle_right"
+    "obstacle_right",
+    "crowd_detected"
 };
 
 // Helper: add all events to a generator (no attributes, just names)
