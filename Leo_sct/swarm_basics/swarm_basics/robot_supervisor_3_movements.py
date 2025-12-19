@@ -31,9 +31,14 @@ class RobotSupervisor(Node):
             rclpy.shutdown()
             return
 
-        self.zone_update_min_dt = self.declare_parameter(
-            'zone_update_min_dt', 0.3
+        self.supervisor_period = self.declare_parameter(
+            'supervisor_period', 0.3
         ).value
+        self.zone_update_min_dt = self.declare_parameter(
+            'zone_update_min_dt', self.supervisor_period
+        ).value
+        # Ensure zone throttling matches the cmd_vel timer cadence
+        self.zone_update_min_dt = self.supervisor_period
         self.motion_hold_duration = self.declare_parameter(
             'motion_hold_duration', 0.6
         ).value
@@ -64,7 +69,7 @@ class RobotSupervisor(Node):
         self.sct.add_callback(self.sct.EV['EV_path_clear'],None,self.clear_path_check,None) # EV_S1
         self.sct.add_callback(self.sct.EV['EV_obstacle_left'],None,self.left_check,None)    # EV_S2
         self.sct.add_callback(self.sct.EV['EV_obstacle_right'],None,self.right_check,None) # EV_S3
-        self.sct.add_callback(self.sct.EV['EV_sense_crowd'],None,self.crowd_check,None) # EV_S4
+        # self.sct.add_callback(self.sct.EV['EV_sense_crowd'],None,self.crowd_check,None) # EV_S4
 
         # self.sct.add_callback(self.sct.EV['EV_S4'],None,self.red_check,None)
         # self.sct.add_callback(self.sct.EV['EV_S5'],None,self.blue_check,None)
@@ -79,7 +84,7 @@ class RobotSupervisor(Node):
 
         self.sct.make_transition = logged_make_transition
 
-        self.timer = self.create_timer(0.1, self.timer_callback)
+        self.timer = self.create_timer(self.supervisor_period, self.timer_callback)
 
 
     def zone_callback(self, msg):
@@ -118,10 +123,10 @@ class RobotSupervisor(Node):
     def right_check(self, sup_data):
         return 'RIGHT' in self.obstacle_zones
 
-    def crowd_check(self, sup_data):
-        sensed = random.random() < 0.05
-        self.get_logger().info(f"crowd_sense invoked -> {'trigger' if sensed else 'idle'}")
-        return sensed
+    # def crowd_check(self, sup_data):
+    #     sensed = random.random() < 0.05
+    #     self.get_logger().info(f"crowd_sense invoked -> {'trigger' if sensed else 'idle'}")
+    #     return sensed
 
 
     # def red_check(self, sup_data):
@@ -137,23 +142,23 @@ class RobotSupervisor(Node):
     def publish_twist(self, ev_name: str):
         twist = Twist()
 
-        if ev_name == "EV_random_walk": # EV_V1      
-            self.get_logger().info("Supervisor decision: RANDOM WALK")
-            twist.linear.x = random.uniform(0.01, 1.0)
-            twist.angular.z = random.uniform(-1.0, 1.0)
+        # if ev_name == "EV_random_walk": # EV_V1      
+        #     self.get_logger().info("Supervisor decision: RANDOM WALK")
+        #     twist.linear.x = random.uniform(0.1, 1.0)
+        #     twist.angular.z = random.uniform(-1.0, 1.0)
                 
-        elif ev_name == "EV_full_rotate": # EV_V0      
+        if ev_name == "EV_full_rotate": # EV_V0      
             self.get_logger().info("Supervisor decision: FULL ROTATE")
             twist.linear.x = 0.0
             twist.angular.z = 2.0
             time.sleep(0.1) 
 
-        elif ev_name == "EV_clockwise_turn": # EV_V2    
+        elif ev_name == "EV_rotate_clockwise": # EV_V2    
             self.get_logger().info("Supervisor decision: CW")
             twist.linear.x = 0.0
             twist.angular.z = -0.5
 
-        elif ev_name == "EV_counterclockwise_turn":  # EV_V3  
+        elif ev_name == "EV_rotate_counterclockwise":  # EV_V3  
             self.get_logger().info("Supervisor decision: CCW")
             twist.linear.x = 0.0  
             twist.angular.z = 0.5
@@ -168,15 +173,15 @@ class RobotSupervisor(Node):
             twist.linear.x = -0.5
             twist.angular.z = 0.0      
 
-        elif ev_name == "EV_slow_down":  # EV_V6   
-            self.get_logger().info("Supervisor decision: SLOW DOWN")
-            twist.linear.x = 0.1
-            twist.angular.z = 0.0     
+        # elif ev_name == "EV_slow_down":  # EV_V6   
+        #     self.get_logger().info("Supervisor decision: SLOW DOWN")
+        #     twist.linear.x = 0.1
+        #     twist.angular.z = 0.0     
 
-        elif ev_name == "EV_speed_up":  # EV_V7   
-            self.get_logger().info("Supervisor decision: SPEED UP")
-            twist.linear.x = 1.0
-            twist.angular.z = 0.0           
+        # elif ev_name == "EV_speed_up":  # EV_V7   
+        #     self.get_logger().info("Supervisor decision: SPEED UP")
+        #     twist.linear.x = 1.0
+        #     twist.angular.z = 0.0           
 
 
         # elif ev_name == "EV_V4": # RED

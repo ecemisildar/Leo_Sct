@@ -19,9 +19,6 @@ class SCT:
         except yaml.YAMLError as e:
             print(e) 
 
-        if not self.f:
-            raise ValueError(f"Supervisor YAML '{filename}' is empty or invalid.")
-
         self.num_events = self.f['num_events']
         self.num_supervisors = self.f['num_supervisors']
         self.EV = {}
@@ -45,7 +42,7 @@ class SCT:
 
 
     def run_step(self):
-        # self.input_buffer = [] # clear buffer
+        self.input_buffer = [] # clear buffer
         self.update_input()
 
         # Get all uncontrollable events
@@ -64,7 +61,6 @@ class SCT:
             self.make_transition(ce)
             self.exec_callback(ce)
 
-        return ce_exists, ce
 
     def input_read(self, ev):
         if ev < self.num_events and self.callback[ev]:
@@ -165,21 +161,11 @@ class SCT:
                 ev_disable[value] = 0
                 position += 3
 
-            # print(f"Supervisor {i}, state {self.sup_current_state[i]}, transitions: {value}", flush=True)
-
             # Remove the controllable events to disable, leaving an array of enabled controllable events
             for j in range(0, self.num_events):
                 if ev_disable[j] == 1 and events[j]:
                     events[j] = 0
 
-        # print(f"Supervisor {i}, state {self.sup_current_state[i]}, enabled controllables: {events}", flush=True)
-        #print("Enabled controllables after supervisors:", events, flush=True)
-        if any(events):
-            ordered_names = [None] * len(self.EV)
-            for name, idx in self.EV.items():
-                ordered_names[idx] = name
-            active_names = [ordered_names[i] for i, flag in enumerate(events) if flag]
-            # print(f"[SCT] Enabled controllable events: {active_names}", flush=True)
         return events
 
 

@@ -1,8 +1,10 @@
 import os
+import math
 import xacro
 
 from launch import LaunchDescription
-from launch.actions import OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
@@ -11,31 +13,7 @@ def generate_launch_description():
 
     leo_description = get_package_share_directory("leo_description")
 
-    # --- Total robots ---
-    total_robots = 1
-
-    # --- Initial positions for each robot ---
-    robot_positions = [
-        (0.0, 0.0),
-        # (1.0, 0.0),
-        # (0.0, 1.0),
-        # (-1.0, 1.0),
-        # (-1.0, 0.0),
-        # (0.0, -1.0),
-        # (2.0, 0.0),
-        # (0.0, 2.0),
-        # (-2.0, 2.0),
-        # (-2.0, 0.0),
-    ]
-
-    robots_to_spawn = []
-    for i in range(total_robots):
-        x, y = robot_positions[i]
-        robots_to_spawn.append({
-            "ns": f"robot_{i}",
-            "x": x,
-            "y": y
-        })
+    # total_robots_arg = LaunchConfiguration("total_robots")
 
     plot_node = Node(
             package="swarm_basics",
@@ -46,7 +24,23 @@ def generate_launch_description():
  
 
     # --- Function to create all robot nodes ---
-    def create_all_robot_nodes(context, robots):
+    def create_all_robot_nodes(context):
+        total_robots_value = 10
+        total_robots = max(1, total_robots_value)
+
+        center_x = 0.0
+        center_y = 0.0
+        formation_radius = 1.0
+        robots = []
+        for i in range(total_robots):
+            yaw = (2 * math.pi / total_robots) * i
+            robots.append({
+                "ns": f"robot_{i}",
+                "x": center_x + formation_radius * math.cos(yaw),
+                "y": center_y + formation_radius * math.sin(yaw),
+                "yaw": yaw
+            })
+
         nodes = []
 
         # --- One bridge for all robots ---
@@ -83,6 +77,7 @@ def generate_launch_description():
             ns = robot["ns"]
             x = robot["x"]
             y = robot["y"]
+            yaw = robot["yaw"]
 
             # URDF with per-robot namespace mapping
             xacro_file = os.path.join(leo_description, 'urdf', 'leo_sim.urdf.xacro')
@@ -112,6 +107,7 @@ def generate_launch_description():
                     "-x", str(x),
                     "-y", str(y),
                     "-z", "0.1",
+                    "-Y", str(yaw),
                     "-topic", f"/{ns}/robot_description"
                 ],
                 output="screen"
@@ -154,6 +150,11 @@ def generate_launch_description():
         return nodes
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            "total_robots",
+            default_value="5",
+            description="Number of robots to spawn in the star formation"
+        ),
         plot_node,
-        OpaqueFunction(function=lambda context: create_all_robot_nodes(context, robots_to_spawn))
+        OpaqueFunction(function=create_all_robot_nodes)
     ])

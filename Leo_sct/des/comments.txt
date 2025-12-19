@@ -326,7 +326,7 @@ K.SetTransition("scan", "obstacle_right", "obs_right")
 
 **********************************************************************
 
-trial 8: 
+trial 8: slows down or fully rotates when crowd is sensed 
 --scenario "Crowded Hallway" --constraint "Avoid moving backward unless absolutely necessary
 rationale": "The revised supervisor prioritizes forward movement and systematic obstacle avoidance, minimizes backward movement (only allowed when surrounded), and introduces new states to handle crowd detection and stuck situations. This ensures efficient coverage and safe navigation in a crowded hallway.",
   "new_states": [
@@ -341,5 +341,57 @@ coverage_strategy":
     "Introduce a 'crowded' state to slow down and avoid collisions when crowds are detected.",
     "Introduce a 'stuck' state as a last-resort fallback, using full_rotate and random_walk to escape.",
     "Always return to 'clear' state when path_clear is detected, resuming systematic coverage."
+
+
+K.SetTransition("clear", "move_forward", "clear")
+K.SetTransition("clear", "random_walk", "clear")
+K.SetTransition("clear", "rotate_clockwise", "clear")
+K.SetTransition("clear", "rotate_counterclockwise", "clear")
+K.SetTransition("clear", "speed_up", "clear")
+K.SetTransition("clear", "slow_down", "clear")
+K.SetTransition("clear", "obstacle_front", "obs_front")
+K.SetTransition("clear", "obstacle_left", "obs_left")
+K.SetTransition("clear", "obstacle_right", "obs_right")
+K.SetTransition("clear", "crowd_detected", "crowded")
+K.SetTransition("clear", "path_clear", "clear")
+K.SetTransition("obs_front", "rotate_clockwise", "obs_right")
+K.SetTransition("obs_front", "rotate_counterclockwise", "obs_left")
+K.SetTransition("obs_front", "full_rotate", "clear")
+K.SetTransition("obs_front", "random_walk", "obs_front")
+K.SetTransition("obs_front", "crowd_detected", "crowded")
+K.SetTransition("obs_front", "path_clear", "clear")
+K.SetTransition("obs_front", "obstacle_left", "obs_left")
+K.SetTransition("obs_front", "obstacle_right", "obs_right")
+K.SetTransition("obs_front", "obstacle_front", "obs_front")
+K.SetTransition("obs_front", "move_backward", "stuck")
+K.SetTransition("obs_left", "rotate_clockwise", "clear")
+K.SetTransition("obs_left", "move_forward", "clear")
+K.SetTransition("obs_left", "random_walk", "obs_left")
+K.SetTransition("obs_left", "crowd_detected", "crowded")
+K.SetTransition("obs_left", "obstacle_front", "obs_front")
+K.SetTransition("obs_left", "obstacle_right", "obs_right")
+K.SetTransition("obs_left", "obstacle_left", "obs_left")
+K.SetTransition("obs_left", "path_clear", "clear")
+K.SetTransition("obs_left", "move_backward", "stuck")
+K.SetTransition("obs_right", "rotate_counterclockwise", "clear")
+K.SetTransition("obs_right", "move_forward", "clear")
+K.SetTransition("obs_right", "random_walk", "obs_right")
+K.SetTransition("obs_right", "crowd_detected", "crowded")
+K.SetTransition("obs_right", "obstacle_front", "obs_front")
+K.SetTransition("obs_right", "obstacle_left", "obs_left")
+K.SetTransition("obs_right", "obstacle_right", "obs_right")
+K.SetTransition("obs_right", "path_clear", "clear")
+K.SetTransition("obs_right", "move_backward", "stuck")
+K.SetTransition("crowded", "slow_down", "crowded")
+K.SetTransition("crowded", "random_walk", "crowded")
+K.SetTransition("crowded", "full_rotate", "crowded")
+K.SetTransition("crowded", "obstacle_front", "crowded")
+K.SetTransition("crowded", "obstacle_left", "crowded")
+K.SetTransition("crowded", "obstacle_right", "crowded")
+K.SetTransition("crowded", "path_clear", "clear")
+K.SetTransition("stuck", "full_rotate", "clear")
+K.SetTransition("stuck", "random_walk", "stuck")
+K.SetTransition("stuck", "crowd_detected", "crowded")
+K.SetTransition("stuck", "path_clear", "clear")
 
 
