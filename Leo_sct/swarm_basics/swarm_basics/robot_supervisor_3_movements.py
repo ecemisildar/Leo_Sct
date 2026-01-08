@@ -13,6 +13,7 @@ from ament_index_python.packages import get_package_share_directory
 import time, random, math
 
 from nav_msgs.msg import Odometry
+from tf2_msgs.msg import TFMessage
 # from math import atan2, sqrt, pi
 
 
@@ -42,6 +43,15 @@ class RobotSupervisor(Node):
         self.motion_hold_duration = self.declare_parameter(
             'motion_hold_duration', 0.6
         ).value
+        self.neighbor_timeout = self.declare_parameter(
+            'neighbor_timeout', 1.0
+        ).value
+        self.separation_radius = self.declare_parameter(
+            'separation_radius', 1.2
+        ).value
+        self.separation_gain = self.declare_parameter(
+            'separation_gain', 0.8
+        ).value
 
         self.sct = SCT(config_path)
         self.target_offset = 0.0
@@ -51,6 +61,9 @@ class RobotSupervisor(Node):
         self.motion_until = 0.0
         self.active_event = None
         self.active_twist = Twist()
+        self.ns = self.get_namespace().strip('/') or 'root'
+        self.self_pose = None  # (x, y, yaw, t)
+        self.neighbors = {}    # ns -> (x, y, t)
 
         # Ensure all events have a callback entry
         for ev_name, ev_id in self.sct.EV.items():
@@ -62,6 +75,12 @@ class RobotSupervisor(Node):
 
         # Subscriber
         self.sub = self.create_subscription(String, 'detected_zones', self.zone_callback, 10)
+        self.create_subscription(
+            TFMessage,
+            '/world/random_world/dynamic_pose/info',
+            self.tf_callback,
+            10,
+        )
 
 
         # SCT callbacks for UCEs
@@ -216,6 +235,10 @@ class RobotSupervisor(Node):
             self.cmd_pub.publish(self.active_twist)
             return
 
+        # Neighbor avoidance using shared TF (no extra sensors)
+        if self.avoid_neighbors():
+            return
+
         self.active_event = None
         # Run supervisor logic
         self.sct.input_buffer = []
@@ -225,6 +248,70 @@ class RobotSupervisor(Node):
             event_name = [name for name, val in self.sct.EV.items() if val == ce][0]
             # self.get_logger().info(f"Controllable event chosen: {event_name}")
             self.publish_twist(event_name)
+
+    def tf_callback(self, msg: TFMessage):
+        """Track self and neighbor poses from the global TF stream."""
+        now = time.time()
+        for t in msg.transforms:
+            name = t.child_frame_id
+            if not name.startswith('robot_') or '/' in name:
+                continue
+
+            x = t.transform.translation.x
+            y = t.transform.translation.y
+            q = t.transform.rotation
+            yaw = math.atan2(
+                2.0 * (q.w * q.z + q.x * q.y),
+                1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+            )
+
+            if name == self.ns:
+                self.self_pose = (x, y, yaw, now)
+            else:
+                self.neighbors[name] = (x, y, now)
+
+    def avoid_neighbors(self) -> bool:
+        """Steer or slow down when another robot is too close."""
+        if not self.self_pose:
+            return False
+
+        now = time.time()
+        # Drop stale neighbor data
+        self.neighbors = {
+            k: v for k, v in self.neighbors.items() if now - v[2] <= self.neighbor_timeout
+        }
+        if not self.neighbors:
+            return False
+
+        sx, sy, syaw, _ = self.self_pose
+        closest = None
+        closest_d = float('inf')
+        for ns, (nx, ny, _) in self.neighbors.items():
+            d = math.hypot(nx - sx, ny - sy)
+            if d < closest_d:
+                closest_d = d
+                closest = (ns, nx, ny)
+
+        if closest is None or closest_d > self.separation_radius:
+            return False
+
+        _, nx, ny = closest
+        angle_to_neighbor = math.atan2(ny - sy, nx - sx)
+        heading_error = math.atan2(
+            math.sin(angle_to_neighbor - syaw),
+            math.cos(angle_to_neighbor - syaw)
+        )
+
+        twist = Twist()
+        # Turn away from the neighbor; back up if very close
+        twist.angular.z = -self.separation_gain * math.copysign(1.0, heading_error)
+        twist.linear.x = -0.2 if closest_d < (self.separation_radius * 0.7) else 0.0
+
+        self.active_event = "EV_neighbor_avoid"
+        self.active_twist = twist
+        self.motion_until = now + self.motion_hold_duration
+        self.cmd_pub.publish(self.active_twist)
+        return True
    
 
 def main(args=None):

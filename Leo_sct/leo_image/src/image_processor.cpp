@@ -96,13 +96,13 @@ private:
         zones_pub_->publish(msg);
 
         // --- Visualization ---
-        cv::Mat depth_vis;
-        cv::normalize(depth, depth_vis, 0, 255, cv::NORM_MINMAX);
-        depth_vis.convertTo(depth_vis, CV_8U);
-        cv::applyColorMap(depth_vis, depth_vis, cv::COLORMAP_JET);
-        cv::imshow("Depth", depth_vis);
-        // cv::imshow("Color", color);
-        cv::waitKey(1);
+        // cv::Mat depth_vis;
+        // cv::normalize(depth, depth_vis, 0, 255, cv::NORM_MINMAX);
+        // depth_vis.convertTo(depth_vis, CV_8U);
+        // cv::applyColorMap(depth_vis, depth_vis, cv::COLORMAP_JET);
+        // cv::imshow("Depth", depth_vis);
+        // // cv::imshow("Color", color);
+        // cv::waitKey(1);
     }
 
     void compute_obstacle_distances(const cv::Mat& depth,

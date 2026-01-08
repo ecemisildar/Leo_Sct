@@ -19,6 +19,9 @@ def generate_launch_description():
             package="swarm_basics",
             executable="coverage_plotter",
             name="coverage_plotter",
+            parameters=[
+                {"run_duration": 1000.0},
+            ],
             output="screen"
     )       
  
@@ -30,7 +33,7 @@ def generate_launch_description():
 
         center_x = 0.0
         center_y = 0.0
-        formation_radius = 1.0
+        formation_radius = 2.0
         robots = []
         for i in range(total_robots):
             yaw = (2 * math.pi / total_robots) * i
