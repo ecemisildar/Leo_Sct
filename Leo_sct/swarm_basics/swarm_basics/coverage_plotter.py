@@ -43,6 +43,8 @@ class CoveragePlotter(Node):
         self.run_dir = self.results_dir / str(self.run_id)
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.metrics_save_path = self.run_dir / "coverage_vs_time.png"
+        self._saved = False
+        self._wall_start = time.time()
 
         # === GRID SETUP ===
         self.env_min = -7
@@ -55,6 +57,18 @@ class CoveragePlotter(Node):
 
         # === ROBOT TRAJECTORIES ===
         self.trajectories = defaultdict(list)
+        self.robot_colors = {
+            "robot_0": "tab:blue",
+            "robot_1": "tab:orange",
+            "robot_2": "tab:green",
+            "robot_3": "tab:red",
+            "robot_4": "tab:purple",
+            "robot_5": "tab:brown",
+            "robot_6": "tab:pink",
+            "robot_7": "tab:gray",
+            "robot_8": "gold",
+            "robot_9": "tab:cyan",
+        }
 
         # === COLLISION TRACKING & COVERAGE METRICS ===
         self.start_time = self.get_clock().now()
@@ -103,7 +117,7 @@ class CoveragePlotter(Node):
             if not name.startswith('robot_'):
                 continue  # skip non-robot entities
             if '/' in name:  # skip any sublink like robot_0/base_link
-                continue    
+                continue
 
             # extract position (global)
             x = t.transform.translation.x
@@ -169,14 +183,19 @@ class CoveragePlotter(Node):
             else:
                 color = 'green' if idx in self.visited else 'red'
             rect = Rectangle((cx, cy), self.grid_size, self.grid_size,
-                             facecolor=color, edgecolor='black', alpha=0.5)
+                             facecolor=color, edgecolor='black', alpha=0.3)
             self.ax_map.add_patch(rect)
 
         # Plot trajectories
-        for ns, traj in self.trajectories.items():
+        for ns in self.robot_namespaces:
+            traj = self.trajectories.get(ns, [])
             if len(traj) > 1:
                 xs, ys = zip(*traj)
-                self.ax_map.plot(xs, ys, label=ns)
+                self.ax_map.plot(
+                    xs, ys,
+                    label=ns,
+                    color=self.robot_colors.get(ns),
+                )
 
         self.ax_map.legend(loc="upper right", fontsize="small")
         self.ax_map.text(
@@ -225,6 +244,9 @@ class CoveragePlotter(Node):
 
     def save_final_plot(self):
         """Save final coverage plot."""
+        if self._saved:
+            return
+        self._saved = True
         self.update_plot(skip_pause=True)
         self.fig_metrics.savefig(self.metrics_save_path)
         self._save_coverage_map()
@@ -249,13 +271,18 @@ class CoveragePlotter(Node):
             else:
                 color = 'green' if idx in self.visited else 'red'
             rect = Rectangle((cx, cy), self.grid_size, self.grid_size,
-                             facecolor=color, edgecolor='black', alpha=0.5)
+                             facecolor=color, edgecolor='black', alpha=0.3)
             ax.add_patch(rect)
 
-        for ns, traj in self.trajectories.items():
+        for ns in self.robot_namespaces:
+            traj = self.trajectories.get(ns, [])
             if len(traj) > 1:
                 xs, ys = zip(*traj)
-                ax.plot(xs, ys, label=ns)
+                ax.plot(
+                    xs, ys,
+                    label=ns,
+                    color=self.robot_colors.get(ns),
+                )
 
         ax.legend(loc="upper right", fontsize="small")
         ax.text(
@@ -433,7 +460,7 @@ class CoveragePlotter(Node):
     def check_run_timeout(self):
         if self.run_duration <= 0:
             return
-        elapsed = (self.get_clock().now() - self.start_time).nanoseconds / 1e9
+        elapsed = time.time() - self._wall_start
         if elapsed >= self.run_duration:
             self.get_logger().info(
                 f"Run duration reached ({self.run_duration}s). Saving results."

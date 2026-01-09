@@ -24,10 +24,10 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, Shutdown, TimerAction
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -43,26 +43,53 @@ def generate_launch_description():
         # default_value=os.path.join(pkg_project_worlds, "worlds", "leo_empty.sdf"),
         description="Path to the Gazebo world file",
     )
+    headless = DeclareLaunchArgument(
+        "headless",
+        default_value="false",
+        description="Run Gazebo headless (no GUI)",
+    )
+    auto_start = DeclareLaunchArgument(
+        "auto_start",
+        default_value="true",
+        description="Start physics immediately (run without manual play)",
+    )
 
     robot_ns = DeclareLaunchArgument(
         "robot_ns",
         default_value="",
         description="Robot namespace",
     )
+    run_duration = DeclareLaunchArgument(
+        "run_duration",
+        default_value="500.0",
+        description="Seconds before shutting down the launch",
+    )
 
     # Setup to launch the simulator and Gazebo world
+    gz_args = PythonExpression([
+        "'",
+        LaunchConfiguration("sim_world"),
+        "' + (' -s' if '",
+        LaunchConfiguration("headless"),
+        "' == 'true' else '') + (' -r' if '",
+        LaunchConfiguration("auto_start"),
+        "' == 'true' else '')",
+    ])
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_ros_gz_sim, "launch", "gz_sim.launch.py")
         ),
-        launch_arguments={"gz_args": LaunchConfiguration("sim_world")}.items(),
+        launch_arguments={"gz_args": gz_args}.items(),
     )
 
     spawn_robot = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_project_gazebo, "launch", "spawn_multi_robots.launch.py")
         ),
-        launch_arguments={"robot_ns": LaunchConfiguration("robot_ns")}.items(),
+        launch_arguments={
+            "robot_ns": LaunchConfiguration("robot_ns"),
+            "run_duration": LaunchConfiguration("run_duration"),
+        }.items(),
     )
 
     # Bridge ROS topics and Gazebo messages for establishing communication
@@ -84,9 +111,30 @@ def generate_launch_description():
     return LaunchDescription(
         [
             sim_world,
+            headless,
+            auto_start,
             robot_ns,
+            run_duration,
             gz_sim,
             spawn_robot,
             topic_bridge,
+            TimerAction(
+                period=LaunchConfiguration("run_duration"),
+                actions=[
+                    ExecuteProcess(
+                        cmd=[
+                            "bash",
+                            "-lc",
+                            "pkill -9 -f 'ruby .*gz sim' || true; "
+                            "pkill -9 -f 'gz sim' || true; "
+                            "pkill -9 -f 'ign gazebo' || true; "
+                            "pkill -9 -f 'gzserver' || true; "
+                            "pkill -9 -f 'gzclient' || true",
+                        ],
+                        output="screen",
+                    ),
+                    Shutdown(reason="Run duration reached"),
+                ],
+            ),
         ]
     )

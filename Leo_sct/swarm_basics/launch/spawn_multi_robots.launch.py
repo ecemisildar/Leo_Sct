@@ -20,10 +20,10 @@ def generate_launch_description():
             executable="coverage_plotter",
             name="coverage_plotter",
             parameters=[
-                {"run_duration": 1000.0},
+                {"run_duration": LaunchConfiguration("run_duration")},
             ],
             output="screen"
-    )       
+    )
  
 
     # --- Function to create all robot nodes ---
@@ -157,6 +157,11 @@ def generate_launch_description():
             "total_robots",
             default_value="5",
             description="Number of robots to spawn in the star formation"
+        ),
+        DeclareLaunchArgument(
+            "run_duration",
+            default_value="500.0",
+            description="Seconds before coverage plotter exits",
         ),
         plot_node,
         OpaqueFunction(function=create_all_robot_nodes)
