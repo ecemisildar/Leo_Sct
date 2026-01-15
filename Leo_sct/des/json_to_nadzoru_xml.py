@@ -37,12 +37,12 @@ DEFAULT_UNCONTROLLABLE = [
 
 
 def _parse_transition_line(line: str) -> Dict[str, str]:
-    pattern = r'SetTransition\("([^"]+)",\s*"([^"]+)",\s*"([^"]+)"\)'
+    pattern = r'\("([^"]+)",\s*"([^"]+)",\s*"([^"]+)"\)'
     match = re.search(pattern, line.strip())
     if not match:
         raise ValueError(f"Unable to parse transition line: {line}")
     src, event, dst = match.groups()
-    return {"source": src, "event": event, "target": dst}
+    return {"source": src, "event": event, "target": dst} 
 
 
 def _collect_states(

@@ -66,7 +66,7 @@ def generate_launch_description():
         ]    
 
         bridge_node = Node(
-            package="ros_gz_bridge",
+            package="ros_ign_bridge", # ros_gz_bridge
             executable="parameter_bridge",
             name="all_robots_bridge",
             arguments=bridge_args,
@@ -134,21 +134,11 @@ def generate_launch_description():
                 executable="image_processor",
                 name="image_processor",
                 namespace=ns,
+                parameters=[{"use_sim_time": True}],
                 output="screen"
             )
 
-            bump_node = Node(
-                package="swarm_basics",
-                executable="bump_counter",
-                name="bump_counter",
-                namespace=ns,
-                output="screen",
-                remappings=[
-                    ('contact', f"/world/random_world/model/{ns}/link/{ns}/base_footprint/sensor/contact_sensor/contact"),
-                ],
-            )
-
-            nodes += [state_pub, spawn_node, behavior_node, cpp_node, bump_node]
+            nodes += [state_pub, spawn_node, behavior_node, cpp_node]
 
         return nodes
 
@@ -164,5 +154,12 @@ def generate_launch_description():
             description="Seconds before coverage plotter exits",
         ),
         plot_node,
+        Node(
+            package="swarm_basics",
+            executable="bump_counter",
+            name="bump_counter",
+            parameters=[{"global_mode": True}],
+            output="screen",
+        ),
         OpaqueFunction(function=create_all_robot_nodes)
     ])

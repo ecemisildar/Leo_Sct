@@ -59,14 +59,14 @@ def parse_transition_line(line: str) -> Tuple[str, str, str]:
     line = line.strip()
     if not line:
         raise ValueError("Empty transition line.")
-    match = re.search(r'K\.SetTransition\("([^"]+)",\s*"([^"]+)",\s*"([^"]+)"\)', line)
+    match = re.search(r'("([^"]+)",\s*"([^"]+)",\s*"([^"]+)"\)', line)
     if match:
         return match.group(1), match.group(2), match.group(3)
     csv = [token.strip() for token in re.split(r"[,\s]+", line) if token.strip()]
     if len(csv) == 3:
         return csv[0], csv[1], csv[2]
     raise ValueError(
-        "Transition line must be either SetTransition(...) or "
+        "Transition line must be either (...) or "
         '"state event next" with three tokens.'
     )
 
@@ -116,7 +116,7 @@ def build_prompt(
     lines: List[str] = []
     lines.append(
         "We operate a DES-based supervisor for a mobile robot with multiple "
-        "sensing modes. Each SetTransition entry describes a sensor switch "
+        "sensing modes. Each entry describes a sensor switch "
         "(uncontrollable event) or an allowed control action."
     )
     lines.append("")
@@ -158,7 +158,7 @@ def build_prompt(
         '  "rationale": "<short reasoning>",\n'
         '  "new_states": ["optional", "state", "names"],\n'
         '  "transitions": [\n'
-        '     "SetTransition(\\"state\\", \\"event\\", \\"next\\")",\n'
+        '     "(\\"state\\", \\"event\\", \\"next\\")",\n'
         '     "... additional lines ..."\n'
         '  ],\n'
         '  "coverage_strategy": ["bullet list of coverage ideas"]\n'
@@ -207,6 +207,38 @@ def call_chat_completion(
 
 
 def parse_json_response(content: str) -> Dict[str, str]:
+    def strip_line_comments(text: str) -> str:
+        # Remove // comments while respecting string literals.
+        out = []
+        in_string = False
+        escape = False
+        i = 0
+        while i < len(text):
+            ch = text[i]
+            if in_string:
+                out.append(ch)
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_string = False
+                i += 1
+                continue
+            if ch == '"':
+                in_string = True
+                out.append(ch)
+                i += 1
+                continue
+            if ch == "/" and i + 1 < len(text) and text[i + 1] == "/":
+                # Skip to end of line.
+                while i < len(text) and text[i] != "\n":
+                    i += 1
+                continue
+            out.append(ch)
+            i += 1
+        return "".join(out)
+
     try:
         return json.loads(content)
     except json.JSONDecodeError:
@@ -215,7 +247,7 @@ def parse_json_response(content: str) -> Dict[str, str]:
     if fence_match:
         snippet = fence_match.group(1)
         try:
-            return json.loads(snippet)
+            return json.loads(strip_line_comments(snippet))
         except json.JSONDecodeError:
             pass
     start = content.find("{")
@@ -223,7 +255,7 @@ def parse_json_response(content: str) -> Dict[str, str]:
     if start != -1 and end != -1 and end > start:
         snippet = content[start : end + 1]
         try:
-            return json.loads(snippet)
+            return json.loads(strip_line_comments(snippet))
         except json.JSONDecodeError:
             pass
     raise ValueError("Unable to parse JSON response from API:\n" + content)
@@ -254,7 +286,7 @@ def main(argv: List[str]) -> int:
         default=[],
         help=(
             "Existing transition line, e.g. "
-            '"SetTransition(\\"clear\\", \\"path_clear\\", \\"clear\\")" '
+            '"(\\"clear\\", \\"path_clear\\", \\"clear\\")" '
             'or "clear path_clear clear".  Repeat for multiple lines.'
         ),
     )
@@ -357,7 +389,7 @@ def main(argv: List[str]) -> int:
     print(json.dumps(result, indent=2))
     transitions_out = result.get("transitions")
     if transitions_out:
-        print("\nSuggested SetTransition lines:\n")
+        print("\nSuggested lines:\n")
         for line in transitions_out:
             print(line)
     if args.save:

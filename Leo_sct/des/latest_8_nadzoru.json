@@ -1,0 +1,53 @@
+{
+  "rationale": "Systematic coverage and collision avoidance are ensured by enforcing safe responses to obstacles, encouraging systematic turning, and introducing a 'scanning' helper state to handle ambiguous or blocked situations. No forward movement is allowed in obstacle states. The supervisor prefers clockwise turns to avoid oscillation and uses full rotations to escape deadlocks.",
+  "new_states": [
+    "clear",
+    "obs_front",
+    "obs_left",
+    "obs_right",
+    "scanning"
+  ],
+  "transitions": [
+    "(\"clear\", \"path_clear\", \"clear\")",
+    "(\"clear\", \"obstacle_front\", \"obs_front\")",
+    "(\"clear\", \"obstacle_left\", \"obs_left\")",
+    "(\"clear\", \"obstacle_right\", \"obs_right\")",
+    "(\"clear\", \"move_forward\", \"clear\")",
+    "(\"clear\", \"rotate_clockwise\", \"clear\")",
+    "(\"clear\", \"rotate_counterclockwise\", \"clear\")",
+    "(\"clear\", \"full_rotate\", \"scanning\")",
+    "(\"obs_front\", \"path_clear\", \"clear\")",
+    "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_front\", \"rotate_clockwise\", \"obs_right\")",
+    "(\"obs_front\", \"rotate_counterclockwise\", \"obs_left\")",
+    "(\"obs_front\", \"full_rotate\", \"scanning\")",
+    "(\"obs_left\", \"path_clear\", \"clear\")",
+    "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_left\", \"rotate_clockwise\", \"clear\")",
+    "(\"obs_left\", \"full_rotate\", \"scanning\")",
+    "(\"obs_right\", \"path_clear\", \"clear\")",
+    "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_right\", \"rotate_counterclockwise\", \"clear\")",
+    "(\"obs_right\", \"full_rotate\", \"scanning\")",
+    "(\"scanning\", \"path_clear\", \"clear\")",
+    "(\"scanning\", \"obstacle_front\", \"obs_front\")",
+    "(\"scanning\", \"obstacle_left\", \"obs_left\")",
+    "(\"scanning\", \"obstacle_right\", \"obs_right\")",
+    "(\"scanning\", \"rotate_clockwise\", \"scanning\")",
+    "(\"scanning\", \"full_rotate\", \"scanning\")"
+  ],
+  "coverage_strategy": [
+    "Allow forward motion only in 'clear' state to avoid collisions.",
+    "Upon obstacle detection, prioritize systematic turning (clockwise or counterclockwise) to avoid oscillatory behavior.",
+    "Introduce 'scanning' state for ambiguous or deadlock situations, allowing the robot to perform a full rotation to find a clear path.",
+    "Transitions between obstacle states allow the robot to adapt to dynamic changes in the environment.",
+    "Discourage repeated back-and-forth (oscillation) by preferring clockwise turns and using a helper state to break deadlocks.",
+    "Full rotation is used as an escape when surrounded or after several failed turns."
+  ]
+}

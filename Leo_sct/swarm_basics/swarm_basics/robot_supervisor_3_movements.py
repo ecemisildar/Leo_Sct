@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 from swarm_basics.sct import SCT
 from ament_index_python.packages import get_package_share_directory
-import time, random
+import time
 
 from nav_msgs.msg import Odometry
 # from math import atan2, sqrt, pi
@@ -32,7 +32,7 @@ class RobotSupervisor(Node):
             return
 
         self.supervisor_period = self.declare_parameter(
-            'supervisor_period', 0.3
+            'supervisor_period', 0.5
         ).value
         self.zone_update_min_dt = self.declare_parameter(
             'zone_update_min_dt', self.supervisor_period
@@ -40,7 +40,7 @@ class RobotSupervisor(Node):
         # Ensure zone throttling matches the cmd_vel timer cadence
         self.zone_update_min_dt = self.supervisor_period
         self.motion_hold_duration = self.declare_parameter(
-            'motion_hold_duration', 0.6
+            'motion_hold_duration', 0.2
         ).value
 
         self.sct = SCT(config_path)
@@ -52,6 +52,8 @@ class RobotSupervisor(Node):
         self.active_event = None
         self.active_twist = Twist()
         self.ns = self.get_namespace().strip('/') or 'root'
+        base_seed = int(self.declare_parameter('random_seed', 12345).value)
+        self.rng = random.Random(base_seed + self._namespace_index())
 
         # Ensure all events have a callback entry
         for ev_name, ev_id in self.sct.EV.items():
@@ -94,7 +96,7 @@ class RobotSupervisor(Node):
             return
         self.last_zone_update = now
         self.obstacle_zones = [z.strip() for z in msg.data.split(',') if z.strip()]
-        self.get_logger().info(f'ZONE: {self.obstacle_zones}')
+        # self.get_logger().info(f'ZONE: {self.obstacle_zones}')
 
         for z in self.obstacle_zones:
             parts = z.split(",")
@@ -143,34 +145,33 @@ class RobotSupervisor(Node):
     def publish_twist(self, ev_name: str):
         twist = Twist()
 
-        # if ev_name == "EV_random_walk": # EV_V1      
-        #     self.get_logger().info("Supervisor decision: RANDOM WALK")
-        #     twist.linear.x = random.uniform(0.1, 1.0)
-        #     twist.angular.z = random.uniform(-1.0, 1.0)
-                
-        if ev_name == "EV_full_rotate": # EV_V0      
-            self.get_logger().info("Supervisor decision: FULL ROTATE")
+        if ev_name == "EV_random_walk": # EV_V1
+            # self.get_logger().info("Supervisor decision: RANDOM WALK")
+            twist.linear.x = self.rng.uniform(0.1, 0.2)
+            twist.angular.z = self.rng.uniform(-1.0, 1.0)
+
+        elif ev_name == "EV_full_rotate": # EV_V0
+            # self.get_logger().info("Supervisor decision: FULL ROTATE")
             twist.linear.x = 0.0
             twist.angular.z = 2.0
-            time.sleep(0.1) 
 
         elif ev_name == "EV_rotate_clockwise": # EV_V2    
-            self.get_logger().info("Supervisor decision: CW")
+            # self.get_logger().info("Supervisor decision: CW")
             twist.linear.x = 0.0
             twist.angular.z = -0.5
 
         elif ev_name == "EV_rotate_counterclockwise":  # EV_V3  
-            self.get_logger().info("Supervisor decision: CCW")
+            # self.get_logger().info("Supervisor decision: CCW")
             twist.linear.x = 0.0  
             twist.angular.z = 0.5
         
         elif ev_name == "EV_move_forward":   # EV_V4  
-            self.get_logger().info("Supervisor decision: FORWARD")
-            twist.linear.x = 0.5
+            # self.get_logger().info("Supervisor decision: FORWARD")
+            twist.linear.x = 0.2
             twist.angular.z = 0.0  
 
         elif ev_name == "EV_move_backward":  # EV_V5   
-            self.get_logger().info("Supervisor decision: BACKWARD")
+            # self.get_logger().info("Supervisor decision: BACKWARD")
             twist.linear.x = -0.5
             twist.angular.z = 0.0      
 
@@ -205,6 +206,14 @@ class RobotSupervisor(Node):
         self.active_twist = twist
         self.motion_until = time.time() + self.motion_hold_duration
         self.cmd_pub.publish(self.active_twist)
+
+    def _namespace_index(self) -> int:
+        if self.ns.startswith("robot_"):
+            try:
+                return int(self.ns.split("_")[-1])
+            except ValueError:
+                return 0
+        return 0
 
 
     # -------------------------------

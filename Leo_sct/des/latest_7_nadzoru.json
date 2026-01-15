@@ -1,0 +1,53 @@
+{
+  "rationale": "The supervisor prioritizes safety by forbidding forward movement in the presence of obstacles, uses systematic turns to avoid oscillations, and introduces a helper state to handle full rotations when the robot is boxed in. Coverage is maximized by resuming forward movement when paths clear, and by preferring systematic area exploration over random walk.",
+  "new_states": [
+    "clear",
+    "obs_front",
+    "obs_left",
+    "obs_right",
+    "boxed_in"
+  ],
+  "transitions": [
+    "SetTransition(\"clear\", \"move_forward\", \"clear\")",
+    "SetTransition(\"clear\", \"move_backward\", \"clear\")",
+    "SetTransition(\"clear\", \"rotate_clockwise\", \"clear\")",
+    "SetTransition(\"clear\", \"rotate_counterclockwise\", \"clear\")",
+    "SetTransition(\"clear\", \"path_clear\", \"clear\")",
+    "SetTransition(\"clear\", \"obstacle_front\", \"obs_front\")",
+    "SetTransition(\"clear\", \"obstacle_left\", \"obs_left\")",
+    "SetTransition(\"clear\", \"obstacle_right\", \"obs_right\")",
+    "SetTransition(\"obs_front\", \"move_backward\", \"clear\")",
+    "SetTransition(\"obs_front\", \"rotate_clockwise\", \"obs_right\")",
+    "SetTransition(\"obs_front\", \"rotate_counterclockwise\", \"obs_left\")",
+    "SetTransition(\"obs_front\", \"path_clear\", \"clear\")",
+    "SetTransition(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+    "SetTransition(\"obs_front\", \"obstacle_left\", \"boxed_in\")",
+    "SetTransition(\"obs_front\", \"obstacle_right\", \"boxed_in\")",
+    "SetTransition(\"obs_left\", \"move_backward\", \"clear\")",
+    "SetTransition(\"obs_left\", \"rotate_clockwise\", \"clear\")",
+    "SetTransition(\"obs_left\", \"rotate_counterclockwise\", \"obs_left\")",
+    "SetTransition(\"obs_left\", \"path_clear\", \"clear\")",
+    "SetTransition(\"obs_left\", \"obstacle_front\", \"boxed_in\")",
+    "SetTransition(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+    "SetTransition(\"obs_left\", \"obstacle_right\", \"boxed_in\")",
+    "SetTransition(\"obs_right\", \"move_backward\", \"clear\")",
+    "SetTransition(\"obs_right\", \"rotate_counterclockwise\", \"clear\")",
+    "SetTransition(\"obs_right\", \"rotate_clockwise\", \"obs_right\")",
+    "SetTransition(\"obs_right\", \"path_clear\", \"clear\")",
+    "SetTransition(\"obs_right\", \"obstacle_front\", \"boxed_in\")",
+    "SetTransition(\"obs_right\", \"obstacle_left\", \"boxed_in\")",
+    "SetTransition(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+    "SetTransition(\"boxed_in\", \"full_rotate\", \"clear\")",
+    "SetTransition(\"boxed_in\", \"path_clear\", \"clear\")",
+    "SetTransition(\"boxed_in\", \"obstacle_front\", \"boxed_in\")",
+    "SetTransition(\"boxed_in\", \"obstacle_left\", \"boxed_in\")",
+    "SetTransition(\"boxed_in\", \"obstacle_right\", \"boxed_in\")"
+  ],
+  "coverage_strategy": [
+    "Always move forward when path is clear.",
+    "Rotate to avoid obstacles rather than random walk.",
+    "If blocked on multiple sides, perform a full rotation to seek an exit (boxed_in state).",
+    "Resume systematic exploration as soon as an obstacle clears.",
+    "Avoid oscillating between left/right rotations by preferring direction based on obstacle location."
+  ]
+}
