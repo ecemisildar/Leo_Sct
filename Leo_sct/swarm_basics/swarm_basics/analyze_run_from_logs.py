@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import csv
+import math
 import os
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import matplotlib
 if not os.environ.get("DISPLAY"):
     matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import xml.etree.ElementTree as ET
 
 
 # ----------------------------
@@ -14,12 +16,12 @@ import matplotlib.pyplot as plt
 # ----------------------------
 PACKAGE_ROOT = Path.home() / "ros2_ws/src/Leo_sct/swarm_basics"
 RESULTS_DIR = PACKAGE_ROOT / "results"
-BUMP_LOG_DIR = Path.home() / "ros_bump_logs"
-BUMP_LABEL = "global"  # bumps_global_*.csv  (TSV in your case)
+WORLD_SDF = PACKAGE_ROOT / "worlds" / "random_world.sdf"
 
-# Optional offline “episode debouncing”
-MIN_RECOUNT_SEC_ROBOT = 0.0   # e.g. 8.0
-MIN_RECOUNT_SEC_OBS   = 0.0   # e.g. 1.0
+ENV_MIN = -7
+ENV_MAX = 7
+GRID_SIZE = 1.0
+OBSTACLE_OCCUPANCY_THRESHOLD = 0.4
 # ----------------------------
 
 
@@ -31,32 +33,11 @@ def pick_latest_run_dir(results_dir: Path) -> Path:
     return runs[-1]
 
 
-def read_coverage_timeseries(path: Path):
-    times, covs = [], []
-    with path.open("r", newline="") as f:
-        r = csv.DictReader(f)
-        for row in r:
-            t = row.get("time_s", "")
-            c = row.get("coverage_pct", "")
-            if not t or not c:
-                continue
-            times.append(float(t))
-            covs.append(float(c))
-    return times, covs
-
-
-def pick_latest_bump_file(bump_dir: Path, label: str) -> Path | None:
-    if not bump_dir.exists():
+def pick_latest_bump_file(run_dir: Path) -> Path | None:
+    if not run_dir.exists():
         return None
-    files = sorted(bump_dir.glob(f"bumps_{label}_*.csv"), key=lambda p: p.stat().st_mtime)
+    files = sorted(run_dir.glob("bumps_*.csv"), key=lambda p: p.stat().st_mtime)
     return files[-1] if files else None
-
-
-def detect_delimiter(header_line: str) -> str:
-    # Your logs are TSV, but let’s autodetect
-    if "\t" in header_line and header_line.count("\t") >= header_line.count(","):
-        return "\t"
-    return ","
 
 
 def read_bump_rows(path: Path):
@@ -66,257 +47,357 @@ def read_bump_rows(path: Path):
     Requires at least: stamp_sec, stamp_nsec, bump_type, total_index (or can still work without).
     """
     with path.open("r", encoding="utf-8", newline="") as f:
-        header = f.readline()
-        if not header:
-            return [], None
-        delim = detect_delimiter(header)
-        fieldnames = [h.strip() for h in header.rstrip("\n").split(delim)]
-        reader = csv.DictReader(f, fieldnames=fieldnames, delimiter=delim)
-        rows = []
-        for row in reader:
-            # skip empty
-            if not row:
+        reader = csv.DictReader(f)
+        rows = [row for row in reader if row]
+    return rows
+
+
+def read_coverage_timeseries(path: Path):
+    times, covs = [], []
+    with path.open("r", newline="") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            t = row.get("time_s", "")
+            c = row.get("coverage_pct", "")
+            if not t or not c:
                 continue
-            # skip if this is an accidental repeated header line
-            if (row.get(fieldnames[0]) or "").strip() == fieldnames[0]:
-                continue
-            rows.append(row)
-    return rows, fieldnames
-
-
-def split_into_segments(rows):
-    """
-    The bump file contains multiple runs appended.
-    We split into segments using 'total_index' resets/decreases.
-    If total_index is missing, fallback to stamp going backwards.
-
-    Returns: list of segments, each is list of parsed events:
-      (t_sec_float, bump_type, key)
-    """
-    segments = []
-    current = []
-
-    prev_total_idx = None
-    prev_t = None
-
-    def flush():
-        nonlocal current
-        if current:
-            segments.append(current)
-            current = []
-
-    for row in rows:
-        # parse time
-        try:
-            sec = int(row.get("stamp_sec", ""))
-            nsec = int(row.get("stamp_nsec", "0"))
-            t = float(sec) + float(nsec) * 1e-9
-        except Exception:
-            continue
-
-        bump_type = (row.get("bump_type") or "").strip().lower()
-        key = (row.get("key") or "").strip()
-
-        # determine if new segment starts
-        new_segment = False
-
-        total_idx_raw = row.get("total_index", None)
-        if total_idx_raw is not None and total_idx_raw != "":
             try:
-                total_idx = int(total_idx_raw)
-            except Exception:
-                total_idx = None
-
-            if total_idx is not None and prev_total_idx is not None:
-                # reset or backward => new run in same file
-                if total_idx <= 1 and prev_total_idx > 1:
-                    new_segment = True
-                elif total_idx < prev_total_idx:
-                    new_segment = True
-            prev_total_idx = total_idx
-        else:
-            # fallback: time went backwards a lot => new segment
-            if prev_t is not None and (t + 0.001) < prev_t:
-                new_segment = True
-
-        if new_segment:
-            flush()
-
-        current.append((t, bump_type, key))
-        prev_t = t
-
-    flush()
-    return segments
+                times.append(float(t))
+                covs.append(float(c))
+            except ValueError:
+                continue
+    return times, covs
 
 
-def debounce_events(events, min_robot, min_obs):
-    if min_robot <= 0.0 and min_obs <= 0.0:
-        return events
-    last = {}
-    out = []
-    for t, typ, key in events:
-        thr = min_robot if typ == "robot" else min_obs
-        if thr <= 0.0 or not key:
-            out.append((t, typ, key))
+def read_visited_cells(path: Path):
+    visited = set()
+    with path.open("r", newline="") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            idx = row.get("cell_index", "")
+            if idx == "":
+                continue
+            try:
+                visited.add(int(idx))
+            except ValueError:
+                continue
+    return visited
+
+
+def read_robot_paths(path: Path):
+    paths = {}
+    with path.open("r", newline="") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            robot = (row.get("robot") or "").strip()
+            x = row.get("x", "")
+            y = row.get("y", "")
+            if not robot or x == "" or y == "":
+                continue
+            try:
+                px = float(x)
+                py = float(y)
+            except ValueError:
+                continue
+            paths.setdefault(robot, []).append((px, py))
+    return paths
+
+
+def build_cells(env_min, env_max):
+    return [(x, y) for x in range(env_min, env_max) for y in range(env_min, env_max)]
+
+
+def parse_pose(pose_text):
+    if not pose_text:
+        return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    vals = [float(v) for v in pose_text.split()]
+    while len(vals) < 6:
+        vals.append(0.0)
+    return tuple(vals[:6])
+
+
+def load_obstacle_rectangles(world_sdf: Path):
+    if not world_sdf.exists():
+        return []
+    try:
+        root = ET.parse(world_sdf).getroot()
+    except ET.ParseError:
+        return []
+    world = root.find("world")
+    if world is None:
+        return []
+    obstacles = []
+    for model in world.findall("model"):
+        name = model.get("name", "")
+        if name == "ground_plane":
             continue
-        prev = last.get((typ, key))
-        if prev is None or (t - prev) >= thr:
-            out.append((t, typ, key))
-            last[(typ, key)] = t
-    return out
+        model_pose = parse_pose(model.findtext("pose"))
+        for link in model.findall("link"):
+            link_pose = parse_pose(link.findtext("pose"))
+            for collision in link.findall("collision"):
+                collision_pose = parse_pose(collision.findtext("pose"))
+                size_text = collision.findtext("geometry/box/size")
+                if not size_text:
+                    continue
+                sx, sy, _ = (float(v) for v in size_text.split())
+                x = model_pose[0] + link_pose[0] + collision_pose[0]
+                y = model_pose[1] + link_pose[1] + collision_pose[1]
+                yaw = model_pose[5] + link_pose[5] + collision_pose[5]
+                obstacles.append((x, y, sx, sy, yaw))
+    return obstacles
 
 
-def build_collision_timeseries(coverage_times, events_abs):
-    """
-    coverage_times: [0..T] (relative)
-    events_abs: [(t_abs, typ, key)] where t_abs is "sim seconds" like 41.88, 97.89, ...
-    We do NOT shift time; we treat bump timestamps as already in the same time base as coverage plotter.
-    """
-    robot = 0
-    obs = 0
-    i = 0
-    out = []
-
-    events_abs = sorted(events_abs, key=lambda x: x[0])
-
-    for t in coverage_times:
-        while i < len(events_abs) and events_abs[i][0] <= t + 1e-9:
-            _, typ, _ = events_abs[i]
-            if typ == "robot":
-                robot += 1
-            elif typ == "obstacle":
-                obs += 1
-            i += 1
-        out.append((t, robot + obs, robot, obs))
-    return out
+def rect_corners(cx, cy, sx, sy, yaw):
+    hx = sx / 2.0
+    hy = sy / 2.0
+    c = math.cos(yaw)
+    s = math.sin(yaw)
+    corners = []
+    for dx, dy in ((-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy)):
+        x = cx + (dx * c - dy * s)
+        y = cy + (dx * s + dy * c)
+        corners.append((x, y))
+    return corners
 
 
-def save_collision_csv(path: Path, rows):
-    with path.open("w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["time_s", "collisions_total", "collisions_robot", "collisions_obstacle"])
-        for t, tot, rob, obs in rows:
-            w.writerow([f"{t:.3f}", int(tot), int(rob), int(obs)])
+def clip_polygon(poly, edge_fn, intersect_fn):
+    if not poly:
+        return []
+    output = []
+    prev = poly[-1]
+    prev_inside = edge_fn(prev)
+    for curr in poly:
+        curr_inside = edge_fn(curr)
+        if curr_inside:
+            if not prev_inside:
+                output.append(intersect_fn(prev, curr))
+            output.append(curr)
+        elif prev_inside:
+            output.append(intersect_fn(prev, curr))
+        prev, prev_inside = curr, curr_inside
+    return output
 
 
-def plot_coverage(times, covs, out_png: Path, title: str):
-    fig, ax = plt.subplots(figsize=(9, 4))
-    ax.plot(times, covs)
-    ax.set_title(title)
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Coverage (%)")
-    ax.set_ylim(0, 105)
-    ax.grid(True, linestyle="--", alpha=0.4)
+def polygon_area(poly):
+    if len(poly) < 3:
+        return 0.0
+    area = 0.0
+    for i in range(len(poly)):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % len(poly)]
+        area += x1 * y2 - x2 * y1
+    return abs(area) * 0.5
+
+
+def overlap_area_rect_cell(obstacle, min_x, min_y, max_x, max_y):
+    cx, cy, sx, sy, yaw = obstacle
+    poly = rect_corners(cx, cy, sx, sy, yaw)
+
+    def clip_left(p):   return p[0] >= min_x
+    def clip_right(p):  return p[0] <= max_x
+    def clip_bottom(p): return p[1] >= min_y
+    def clip_top(p):    return p[1] <= max_y
+
+    def intersect_x(p1, p2, xk):
+        x1, y1 = p1
+        x2, y2 = p2
+        if x1 == x2:
+            return (xk, y1)
+        t = (xk - x1) / (x2 - x1)
+        return (xk, y1 + t * (y2 - y1))
+
+    def intersect_y(p1, p2, yk):
+        x1, y1 = p1
+        x2, y2 = p2
+        if y1 == y2:
+            return (x1, yk)
+        t = (yk - y1) / (y2 - y1)
+        return (x1 + t * (x2 - x1), yk)
+
+    poly = clip_polygon(poly, clip_left,   lambda a, b: intersect_x(a, b, min_x))
+    poly = clip_polygon(poly, clip_right,  lambda a, b: intersect_x(a, b, max_x))
+    poly = clip_polygon(poly, clip_bottom, lambda a, b: intersect_y(a, b, min_y))
+    poly = clip_polygon(poly, clip_top,    lambda a, b: intersect_y(a, b, max_y))
+    return polygon_area(poly)
+
+
+def compute_blocked_cells(cells, obstacles, grid_size, occupancy_threshold):
+    if not obstacles:
+        return set()
+    blocked = set()
+    cell_area = grid_size * grid_size
+    for idx, (cx, cy) in enumerate(cells):
+        cell_min_x = cx
+        cell_min_y = cy
+        cell_max_x = cx + grid_size
+        cell_max_y = cy + grid_size
+        for obs in obstacles:
+            overlap = overlap_area_rect_cell(obs, cell_min_x, cell_min_y, cell_max_x, cell_max_y)
+            if (overlap / cell_area) >= occupancy_threshold:
+                blocked.add(idx)
+                break
+    return blocked
+
+
+def plot_coverage_map(cells, visited, blocked, paths, out_png: Path):
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.set_xlabel("X (m)", fontsize=16)
+    ax.set_ylabel("Y (m)", fontsize=16)
+    ax.set_aspect("equal")
+    ax.set_xlim(ENV_MIN, ENV_MAX)
+    ax.set_ylim(ENV_MIN, ENV_MAX)
+    fig.subplots_adjust(right=0.78)
+
+    for idx, (cx, cy) in enumerate(cells):
+        if idx in blocked:
+            color = "blue"
+        else:
+            color = "green" if idx in visited else "red"
+        rect = plt.Rectangle(
+            (cx, cy), GRID_SIZE, GRID_SIZE,
+            facecolor=color, edgecolor="black", alpha=0.3
+        )
+        ax.add_patch(rect)
+
+    for robot, pts in sorted(paths.items()):
+        if len(pts) < 2:
+            continue
+        xs, ys = zip(*pts)
+        ax.plot(xs, ys, label=robot, linewidth=1.0)
+
+    if paths:
+        ax.legend(
+            loc="center left",
+            bbox_to_anchor=(1.02, 0.5),
+            borderaxespad=0.0,
+            fontsize=12,
+        )
+
+    ax.text(
+        0.05, 0.95,
+        f"Visited {len(visited)}/{len(cells) - len(blocked)} free cells",
+        transform=ax.transAxes,
+        fontsize=16,
+        verticalalignment="top",
+        bbox=dict(facecolor="white", alpha=0.6, edgecolor="none"),
+    )
+
     fig.tight_layout()
     fig.savefig(out_png, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 
-def plot_collisions(rows, out_png: Path, title: str):
-    t = [r[0] for r in rows]
-    rob = [r[2] for r in rows]
-    obs = [r[3] for r in rows]
+def plot_collisions(rows, cov_times, covs, out_png: Path):
+    t = []
+    rob = []
+    obs = []
+    if not rows and cov_times:
+        t = list(cov_times)
+        rob = [0] * len(t)
+        obs = [0] * len(t)
+    else:
+        for row in rows:
+            try:
+                sec = int(row.get("stamp_sec", ""))
+                nsec = int(row.get("stamp_nsec", "0"))
+                t.append(float(sec) + float(nsec) * 1e-9)
+            except Exception:
+                continue
+            try:
+                rob.append(int(row.get("robot_index", "0")))
+                obs.append(int(row.get("obstacle_index", "0")))
+            except Exception:
+                rob.append(rob[-1] if rob else 0)
+                obs.append(obs[-1] if obs else 0)
+
+    if not t:
+        return False
+
+    if t[0] > 0.0:
+        t = [0.0] + t
+        rob = [0] + rob
+        obs = [0] + obs
+
+    if cov_times:
+        end_t = cov_times[-1]
+        if t[-1] < end_t:
+            t.append(end_t)
+            rob.append(rob[-1])
+            obs.append(obs[-1])
 
     fig, ax = plt.subplots(figsize=(9, 4))
-    ax.step(t, rob, where="post", label="Robot collisions")
-    ax.step(t, obs, where="post", label="Obstacle collisions")
-    ax.set_title(title)
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Collisions (cumulative)")
+    ax_cov = ax.twinx()
+
+    ax.plot(t, rob, label="Robot collisions")
+    ax.plot(t, obs, label="Obstacle collisions")
+    ax.set_xlabel("Time (s)", fontsize=16)
+    ax.set_ylabel("Collisions (cumulative)", fontsize=16)
     ax.grid(True, linestyle="--", alpha=0.4)
-    ax.legend(loc="upper left", fontsize="small")
-    fig.tight_layout()
-    fig.savefig(out_png, dpi=200, bbox_inches="tight")
-    plt.close(fig)
 
-
-def plot_combined(times, covs, rows, out_png: Path, title: str):
-    t = [r[0] for r in rows]
-    rob = [r[2] for r in rows]
-    obs = [r[3] for r in rows]
-
-    fig, ax_cov = plt.subplots(figsize=(10, 4.8))
-    ax_col = ax_cov.twinx()
-
-    ax_cov.plot(times, covs, label="Coverage (%)")
-    ax_cov.set_xlabel("Time (s)")
-    ax_cov.set_ylabel("Coverage (%)")
-    ax_cov.set_ylim(0, 105)
-    ax_cov.grid(True, linestyle="--", alpha=0.4)
-
-    ax_col.step(t, rob, where="post", label="Robot collisions")
-    ax_col.step(t, obs, where="post", label="Obstacle collisions")
-    ax_col.set_ylabel("Collisions (cumulative)")
+    if cov_times and covs:
+        ax_cov.plot(cov_times, covs, color="tab:green", label="Coverage (%)")
+        ax_cov.set_ylabel("Coverage (%)", fontsize=16)
+        ax_cov.set_ylim(0, 105)
 
     handles, labels = [], []
-    for ax in (ax_cov, ax_col):
-        h, l = ax.get_legend_handles_labels()
+    for axis in (ax, ax_cov):
+        h, l = axis.get_legend_handles_labels()
         handles += h
         labels += l
     if handles:
-        ax_cov.legend(handles, labels, loc="upper left", fontsize="small")
-
-    fig.suptitle(title)
+        ax.legend(handles, labels, loc="upper left", fontsize=12)
     fig.tight_layout()
     fig.savefig(out_png, dpi=200, bbox_inches="tight")
     plt.close(fig)
+    return True
 
 
 def main():
     run_dir = pick_latest_run_dir(RESULTS_DIR)
+    visited_csv = run_dir / "coverage_visited_cells.csv"
+    if not visited_csv.exists():
+        raise SystemExit(f"Missing {visited_csv}")
+
+    visited = read_visited_cells(visited_csv)
+    if not visited:
+        raise SystemExit(f"Empty visited cells in {visited_csv}")
+
+    paths_csv = run_dir / "coverage_paths.csv"
+    paths = read_robot_paths(paths_csv) if paths_csv.exists() else {}
+
+    cells = build_cells(ENV_MIN, ENV_MAX)
+    obstacles = load_obstacle_rectangles(WORLD_SDF)
+    blocked = compute_blocked_cells(
+        cells, obstacles, GRID_SIZE, OBSTACLE_OCCUPANCY_THRESHOLD
+    )
+
+    map_out = run_dir / "coverage_map_offline.png"
+    plot_coverage_map(cells, visited, blocked, paths, map_out)
+
     cov_csv = run_dir / "coverage_timeseries.csv"
-    if not cov_csv.exists():
-        raise SystemExit(f"Missing {cov_csv}")
+    cov_times, covs = ([], [])
+    if cov_csv.exists():
+        cov_times, covs = read_coverage_timeseries(cov_csv)
 
-    cov_t, cov = read_coverage_timeseries(cov_csv)
-    if not cov_t:
-        raise SystemExit(f"Empty coverage timeseries in {cov_csv}")
-
-    bump_file = pick_latest_bump_file(BUMP_LOG_DIR, BUMP_LABEL)
+    bump_file = pick_latest_bump_file(run_dir)
     if bump_file is None:
-        print(f"[WARN] No bump file found in {BUMP_LOG_DIR} (bumps_{BUMP_LABEL}_*.csv). Plotting coverage only.")
-        plot_coverage(cov_t, cov, run_dir / "coverage_vs_time_offline.png", "Coverage vs Time")
+        print(f"[WARN] No bump file found in {run_dir}. Plotting zeros.")
+        rows = []
+    else:
+        rows = read_bump_rows(bump_file)
+        if not rows:
+            print(f"[WARN] Bump file empty: {bump_file}. Plotting zeros.")
+
+    out_png = run_dir / "collisions_vs_time_offline.png"
+    if not plot_collisions(rows, cov_times, covs, out_png):
+        print(f"[WARN] Could not plot collisions for {run_dir}")
         return
 
-    rows, fieldnames = read_bump_rows(bump_file)
-    if not rows:
-        print(f"[WARN] Bump file empty: {bump_file}. Plotting coverage only.")
-        plot_coverage(cov_t, cov, run_dir / "coverage_vs_time_offline.png", "Coverage vs Time")
-        return
-
-    segments = split_into_segments(rows)
-    if not segments:
-        print(f"[WARN] Could not split bump log into segments: {bump_file}")
-        plot_coverage(cov_t, cov, run_dir / "coverage_vs_time_offline.png", "Coverage vs Time")
-        return
-
-    # Use the LAST segment = most recent run appended to this bump file
-    events = segments[-1]
-
-    # optional debouncing
-    events = debounce_events(events, MIN_RECOUNT_SEC_ROBOT, MIN_RECOUNT_SEC_OBS)
-
-    # Build time series sampled at coverage timestamps
-    collision_rows = build_collision_timeseries(cov_t, events)
-
-    # Save collision_timeseries.csv in the run folder (so your aggregator works)
-    out_collision_csv = run_dir / "collision_timeseries.csv"
-    save_collision_csv(out_collision_csv, collision_rows)
-
-    # Plots
-    plot_coverage(cov_t, cov, run_dir / "coverage_vs_time_offline.png", "Coverage vs Time")
-    plot_collisions(collision_rows, run_dir / "collisions_vs_time_offline.png", "Collisions vs Time")
-    plot_combined(cov_t, cov, collision_rows, run_dir / "coverage_and_collisions_offline.png", "Coverage & Collisions")
-
-    # Quick console sanity
-    final_tot = collision_rows[-1][1]
-    final_rob = collision_rows[-1][2]
-    final_obs = collision_rows[-1][3]
     print(f"[OK] {run_dir.name}")
-    print(f"  bump_file: {bump_file}")
-    print(f"  segments: {len(segments)} (using last)")
-    print(f"  final collisions: total={final_tot} robot={final_rob} obstacle={final_obs}")
-    print(f"  wrote: {out_collision_csv}")
+    print(f"  coverage_map: {map_out}")
+    if bump_file is not None:
+        print(f"  bump_file: {bump_file}")
+    print(f"  collisions_plot: {out_png}")
 
 
 if __name__ == "__main__":

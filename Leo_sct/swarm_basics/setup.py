@@ -28,7 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'robot_supervisor_3_movements = swarm_basics.robot_supervisor_3_movements:main',
-            'coverage_plotter = swarm_basics.coverage_plotter:main',
+            'coverage_counter = swarm_basics.coverage_counter:main',
             'bump_counter = swarm_basics.bump_counter:main',
         ],
     },

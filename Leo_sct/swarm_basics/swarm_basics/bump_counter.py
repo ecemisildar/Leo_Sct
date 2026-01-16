@@ -47,7 +47,7 @@ DEFAULT_COOLDOWN_ROBOT_SEC = 0.8    # optional: slightly longer for robot-robot
 DEFAULT_COOLDOWN_OBS_SEC = 0.5      # optional: for robot-obstacle
 PRUNE_HZ = 10.0                     # prune inactive contacts at this rate
 CONTACT_TOPIC = "contact"           # used only in per-robot mode
-LOG_DIR = Path.home() / "ros_bump_logs"
+DEFAULT_LOG_DIR = Path.home() / "ros_bump_logs"
 # ---------------------------------------------
 
 
@@ -99,9 +99,21 @@ class BumpCounter(Node):
         self.valid_robot_regex = str(self.declare_parameter("robot_name_regex", r"(robot_\d+)").value)
         self._robot_re = re.compile(self.valid_robot_regex)
 
+        self.flush_interval_sec = float(self.declare_parameter("flush_interval_sec", 1.0).value)
+        self.flush_max_rows = int(self.declare_parameter("flush_max_rows", 200).value)
+
         # ---- Identity label for CSV/logging ----
         ns = self.get_namespace().strip("/") or "root"
         self.label = "global" if self.global_mode else ns
+
+        # ---- CSV output dir ----
+        results_dir = str(self.declare_parameter("results_dir", "").value).strip()
+        run_id = str(self.declare_parameter("run_id", "").value).strip()
+        if results_dir:
+            base_dir = Path(results_dir)
+            self.log_dir = base_dir / run_id if run_id else base_dir
+        else:
+            self.log_dir = DEFAULT_LOG_DIR
 
         # ---- State ----
         # active: key -> (last_seen_time, bump_type)
@@ -129,9 +141,13 @@ class BumpCounter(Node):
         self.create_timer(1.0 / PRUNE_HZ, self._prune)
 
         # ---- CSV logging ----
-        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
         self.csv_path = self._csv_path_for_today()
         self._ensure_csv_header()
+        self._csv_rows = []
+        self._csv_lock = False
+
+        self._flush_timer = self.create_timer(self.flush_interval_sec, self._flush_csv_rows)
 
         self.get_logger().info(
             f"[{self.label}] global_mode={self.global_mode} "
@@ -142,7 +158,7 @@ class BumpCounter(Node):
     # ---------------- CSV helpers ----------------
     def _csv_path_for_today(self) -> Path:
         timestr = time.strftime("%H%M%S")
-        return LOG_DIR / f"bumps_{self.label}_{timestr}.csv"
+        return self.log_dir / f"bumps_{self.label}_{timestr}.csv"
 
     def _ensure_csv_header(self):
         if not self.csv_path.exists():
@@ -161,20 +177,39 @@ class BumpCounter(Node):
 
     def _append_csv(self, stamp, bump_type: str, key: Any,
                     entity_a: str, entity_b: str, avg_xyz, source_topic: str):
-        with self.csv_path.open("a", newline="") as f:
-            w = csv.writer(f)
-            w.writerow([
-                int(stamp.sec), int(stamp.nanosec),
-                self.label,
-                int(self.bump_total), int(self.bump_robot), int(self.bump_obstacle),
-                bump_type,
-                str(key),
-                entity_a, entity_b,
-                f"{avg_xyz[0]:.6f}" if isinstance(avg_xyz[0], float) else "",
-                f"{avg_xyz[1]:.6f}" if isinstance(avg_xyz[1], float) else "",
-                f"{avg_xyz[2]:.6f}" if isinstance(avg_xyz[2], float) else "",
-                source_topic
-            ])
+        self._csv_rows.append([
+            int(stamp.sec), int(stamp.nanosec),
+            self.label,
+            int(self.bump_total), int(self.bump_robot), int(self.bump_obstacle),
+            bump_type,
+            str(key),
+            entity_a, entity_b,
+            f"{avg_xyz[0]:.6f}" if isinstance(avg_xyz[0], float) else "",
+            f"{avg_xyz[1]:.6f}" if isinstance(avg_xyz[1], float) else "",
+            f"{avg_xyz[2]:.6f}" if isinstance(avg_xyz[2], float) else "",
+            source_topic
+        ])
+        if len(self._csv_rows) >= self.flush_max_rows:
+            self._flush_csv_rows()
+
+    def _flush_csv_rows(self):
+        if self._csv_lock or not self._csv_rows:
+            return
+        self._csv_lock = True
+        try:
+            with self.csv_path.open("a", newline="") as f:
+                w = csv.writer(f)
+                w.writerows(self._csv_rows)
+            self._csv_rows.clear()
+        finally:
+            self._csv_lock = False
+
+    def destroy_node(self):
+        try:
+            self._flush_csv_rows()
+        except Exception:
+            pass
+        super().destroy_node()
     # --------------------------------------------
 
     # ---------------- Topic discovery (global) ----------------

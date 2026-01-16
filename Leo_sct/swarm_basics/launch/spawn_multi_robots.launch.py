@@ -1,9 +1,10 @@
 import os
 import math
+import time
 import xacro
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import OpaqueFunction, Shutdown, TimerAction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
@@ -12,15 +13,18 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
 
     leo_description = get_package_share_directory("leo_description")
+    run_id = time.strftime("run_%Y%m%d_%H%M%S")
 
     # total_robots_arg = LaunchConfiguration("total_robots")
 
     plot_node = Node(
             package="swarm_basics",
-            executable="coverage_plotter",
-            name="coverage_plotter",
+            executable="coverage_counter",
+            name="coverage_counter",
             parameters=[
                 {"run_duration": LaunchConfiguration("run_duration")},
+                {"run_id": run_id},
+                {"results_dir": LaunchConfiguration("results_dir")},
             ],
             output="screen"
     )
@@ -28,7 +32,7 @@ def generate_launch_description():
 
     # --- Function to create all robot nodes ---
     def create_all_robot_nodes(context):
-        total_robots_value = 10
+        total_robots_value = int(LaunchConfiguration("total_robots").perform(context))
         total_robots = max(1, total_robots_value)
 
         center_x = 0.0
@@ -143,22 +147,20 @@ def generate_launch_description():
         return nodes
 
     return LaunchDescription([
-        DeclareLaunchArgument(
-            "total_robots",
-            default_value="5",
-            description="Number of robots to spawn in the star formation"
-        ),
-        DeclareLaunchArgument(
-            "run_duration",
-            default_value="500.0",
-            description="Seconds before coverage plotter exits",
+        TimerAction(
+            period=LaunchConfiguration("run_duration"),
+            actions=[Shutdown(reason="run_duration reached")],
         ),
         plot_node,
         Node(
             package="swarm_basics",
             executable="bump_counter",
             name="bump_counter",
-            parameters=[{"global_mode": True}],
+            parameters=[
+                {"global_mode": True},
+                {"run_id": run_id},
+                {"results_dir": LaunchConfiguration("results_dir")},
+            ],
             output="screen",
         ),
         OpaqueFunction(function=create_all_robot_nodes)

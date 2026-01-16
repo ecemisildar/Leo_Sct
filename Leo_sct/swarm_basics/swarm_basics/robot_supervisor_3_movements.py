@@ -72,10 +72,7 @@ class RobotSupervisor(Node):
         self.sct.add_callback(self.sct.EV['EV_path_clear'],None,self.clear_path_check,None) # EV_S1
         self.sct.add_callback(self.sct.EV['EV_obstacle_left'],None,self.left_check,None)    # EV_S2
         self.sct.add_callback(self.sct.EV['EV_obstacle_right'],None,self.right_check,None) # EV_S3
-        # self.sct.add_callback(self.sct.EV['EV_sense_crowd'],None,self.crowd_check,None) # EV_S4
-
-        # self.sct.add_callback(self.sct.EV['EV_S4'],None,self.red_check,None)
-        # self.sct.add_callback(self.sct.EV['EV_S5'],None,self.blue_check,None)
+        self.sct.add_callback(self.sct.EV['EV_blue_seen'],None,self.blue_check,None) 
 
         # Patch make_transition to log supervisor transitions
         original_make_transition = self.sct.make_transition
@@ -95,18 +92,14 @@ class RobotSupervisor(Node):
         if now - self.last_zone_update < self.zone_update_min_dt:
             return
         self.last_zone_update = now
-        self.obstacle_zones = [z.strip() for z in msg.data.split(',') if z.strip()]
-        # self.get_logger().info(f'ZONE: {self.obstacle_zones}')
 
-        for z in self.obstacle_zones:
-            parts = z.split(",")
-            if len(parts) == 3:
-                try:
-                    self.target_offset = float(parts[1])
-                    self.target_distance = float(parts[2])
-                    break
-                except ValueError:
-                    continue
+        z = msg.data.strip().upper()
+        # accept only known tokens
+        if z in {"LEFT", "RIGHT", "CORNER", "CLEAR", "BLUE"}:
+            self.obstacle_zones = [z]   # keep your existing list-based checks working
+        else:
+            self.obstacle_zones = ["CLEAR"]
+
 
 
 
@@ -124,19 +117,10 @@ class RobotSupervisor(Node):
         return 'LEFT' in self.obstacle_zones
            
     def right_check(self, sup_data):
-        return 'RIGHT' in self.obstacle_zones
+        return 'RIGHT' in self.obstacle_zones     
 
-    # def crowd_check(self, sup_data):
-    #     sensed = random.random() < 0.05
-    #     self.get_logger().info(f"crowd_sense invoked -> {'trigger' if sensed else 'idle'}")
-    #     return sensed
-
-
-    # def red_check(self, sup_data):
-    #     return 'RED' in self.obstacle_zones
-
-    # def blue_check(self, sup_data):
-    #     return 'BLUE' in self.obstacle_zones            
+    def blue_check(self, sup_data):
+        return 'BLUE' in self.obstacle_zones        
 
 
     # -------------------------------
@@ -171,36 +155,18 @@ class RobotSupervisor(Node):
             twist.angular.z = 0.0  
 
         elif ev_name == "EV_move_backward":  # EV_V5   
-            # self.get_logger().info("Supervisor decision: BACKWARD")
+            self.get_logger().info("Supervisor decision: BACKWARD")
             twist.linear.x = -0.5
-            twist.angular.z = 0.0      
+            twist.angular.z = 0.0  
 
-        # elif ev_name == "EV_slow_down":  # EV_V6   
-        #     self.get_logger().info("Supervisor decision: SLOW DOWN")
-        #     twist.linear.x = 0.1
-        #     twist.angular.z = 0.0     
+        elif ev_name == "EV_move_to_blue":  # EV_V5   
+            self.get_logger().info("Supervisor decision: MOVE TO BLUE")
+            twist.linear.x = 0.2
+            twist.angular.z = 0.0         
 
-        # elif ev_name == "EV_speed_up":  # EV_V7   
-        #     self.get_logger().info("Supervisor decision: SPEED UP")
-        #     twist.linear.x = 1.0
-        #     twist.angular.z = 0.0           
-
-
-        # elif ev_name == "EV_V4": # RED
-        #     if self.target_distance > 1.0 and self.target_distance < 0.5:
-        #         twist.linear.x = 0.2
-        #         twist.angular.z = -1.0 * self.target_offset
-        #         self.get_logger().info(f"Going toward: offset={self.target_offset:.2f}, dist={self.target_distance:.2f}")
-
-        # elif ev_name == "EV_V5": # BLUE  
-        #         twist.linear.x = 0.0
-        #         twist.angular.z = -1.0 * abs(self.target_offset)
-        #         self.get_logger().info(f"Escaping: offset={self.target_offset:.2f}, dist={self.target_distance:.2f}")
-           
         else:
             # Unknown or no event -> stop for safety
             twist.linear.x = 0.0
-            # self.get_logger().debug(f"Unknown or None event: {ev_name}")
 
         self.active_event = ev_name
         self.active_twist = twist

@@ -61,8 +61,25 @@ def generate_launch_description():
     )
     run_duration = DeclareLaunchArgument(
         "run_duration",
-        default_value="500.0",
+        default_value="300.0",
         description="Seconds before shutting down the launch",
+    )
+    total_robots = DeclareLaunchArgument(
+        "total_robots",
+        default_value="10",
+        description="Number of robots to spawn in the star formation",
+    )
+    results_dir = DeclareLaunchArgument(
+        "results_dir",
+        default_value=os.path.join(
+            os.path.expanduser("~"),
+            "ros2_ws",
+            "src",
+            "Leo_sct",
+            "swarm_basics",
+            "results",
+        ),
+        description="Directory to write run artifacts",
     )
 
     # Setup to launch the simulator and Gazebo world
@@ -89,6 +106,8 @@ def generate_launch_description():
         launch_arguments={
             "robot_ns": LaunchConfiguration("robot_ns"),
             "run_duration": LaunchConfiguration("run_duration"),
+            "total_robots": LaunchConfiguration("total_robots"),
+            "results_dir": LaunchConfiguration("results_dir"),
         }.items(),
     )
 
@@ -115,6 +134,8 @@ def generate_launch_description():
             auto_start,
             robot_ns,
             run_duration,
+            total_robots,
+            results_dir,
             gz_sim,
             spawn_robot,
             topic_bridge,

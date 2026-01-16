@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-import os
 import time
 import math
 import csv
 import traceback
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from collections import defaultdict
 
 import rclpy
 from rclpy.node import Node
@@ -14,41 +12,39 @@ from rclpy.node import Node
 from tf2_msgs.msg import TFMessage
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
-import matplotlib
-if not os.environ.get("DISPLAY"):
-    matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-
-
-class CoveragePlotter(Node):
+class CoverageCounter(Node):
     """
     - Tracks visited grid cells from Gazebo poses (TFMessage)
     - Saves results to results/<run_id>/
+    - Logs paths + visited cells to CSV for offline analysis
+    - Does not render or save plots (handled by offline scripts)
     """
 
     def __init__(self):
-        super().__init__("coverage_plotter")
+        super().__init__("coverage_counter")
 
         # fixed settings (no args)
-        self.robot_namespaces = [f"robot_{i}" for i in range(10)]
         package_root = Path.home() / "ros2_ws/src/Leo_sct/swarm_basics"
 
-        self.results_dir = package_root / "results"
-        self.run_id = time.strftime("run_%Y%m%d_%H%M%S")
-        self.run_duration = 500.0
+        results_dir_default = package_root / "results"
+        self.results_dir = Path(
+            str(self.declare_parameter("results_dir", str(results_dir_default)).value)
+        )
+        run_id_param = str(self.declare_parameter("run_id", "").value).strip()
+        self.run_id = run_id_param or time.strftime("run_%Y%m%d_%H%M%S")
+        self.run_duration = float(self.declare_parameter("run_duration", 500.0).value)
+        self.flush_interval_sec = float(self.declare_parameter("flush_interval_sec", 1.0).value)
+        self.flush_max_rows = int(self.declare_parameter("flush_max_rows", 500).value)
 
-        self.enable_live_plot = False
         self.obstacle_occupancy_threshold = 0.4
         self.world_sdf = package_root / "worlds" / "random_world.sdf"
 
         self.run_dir = self.results_dir / self.run_id
         self.run_dir.mkdir(parents=True, exist_ok=True)
 
-        self.metrics_save_path = self.run_dir / "coverage_vs_time.png"
-        self.map_save_path = self.run_dir / "coverage_map.png"
         self.coverage_csv_path = self.run_dir / "coverage_timeseries.csv"
+        self.paths_csv_path = self.run_dir / "coverage_paths.csv"
+        self.visited_cells_csv_path = self.run_dir / "coverage_visited_cells.csv"
         self.status_path = self.run_dir / "SAVE_STATUS.txt"
         self.error_path = self.run_dir / "SAVE_ERROR.txt"
 
@@ -65,23 +61,14 @@ class CoveragePlotter(Node):
         self.visited = set()
         self.blocked = self._compute_blocked_cells()
 
-        # trajectories + metrics
-        self.trajectories = defaultdict(list)
-        self.robot_colors = {
-            "robot_0": "tab:blue",
-            "robot_1": "tab:orange",
-            "robot_2": "tab:green",
-            "robot_3": "tab:red",
-            "robot_4": "tab:purple",
-            "robot_5": "tab:brown",
-            "robot_6": "tab:pink",
-            "robot_7": "tab:gray",
-            "robot_8": "gold",
-            "robot_9": "tab:cyan",
-        }
+        # metrics
 
         self.start_time = self.get_clock().now()
         self.coverage_history = []
+        self._ensure_paths_csv_header()
+        self._ensure_cells_csv_header()
+        self._path_rows = []
+        self._cell_rows = []
 
         # --- subscriptions ---
         pose_qos = QoSProfile(
@@ -97,19 +84,10 @@ class CoveragePlotter(Node):
         )
 
 
-        # plot setup
-        self.fig_map, self.ax_map = plt.subplots(figsize=(8, 8))
-        self.fig_metrics, self.ax_metrics = plt.subplots(figsize=(10, 5))
-        self._setup_map_axes()
-        self._setup_metrics_axes()
-
-        if self.enable_live_plot and os.environ.get("DISPLAY"):
-            plt.ion()
-            plt.show(block=False)
-
         # timers
-        self.timer_plot = self.create_timer(0.5, self._on_plot_timer)
+        self.timer_plot = self.create_timer(0.5, self._on_metrics_timer)
         self.timer_timeout = self.create_timer(1.0, self._on_timeout_timer)
+        self.timer_flush = self.create_timer(self.flush_interval_sec, self._flush_buffers)
 
         self._write_status(
             "Node started\n"
@@ -126,20 +104,21 @@ class CoveragePlotter(Node):
 
             x = t.transform.translation.x
             y = t.transform.translation.y
-            self.trajectories[name].append((x, y))
+            self._append_path_row(name, x, y)
 
             for idx, (cx, cy) in enumerate(self.cells):
                 if idx in self.visited or idx in self.blocked:
                     continue
                 if cx <= x < cx + self.grid_size and cy <= y < cy + self.grid_size:
                     self.visited.add(idx)
+                    self._append_visited_cell_row(name, idx, cx, cy)
                     break
 
     # timers
-    def _on_plot_timer(self):
+    def _on_metrics_timer(self):
         if self._saving_now:
             return
-        self._update_plots(live_pause=bool(self.enable_live_plot and os.environ.get("DISPLAY")))
+        self._update_metrics()
 
     def _on_timeout_timer(self):
         elapsed = time.time() - self._wall_start
@@ -147,77 +126,11 @@ class CoveragePlotter(Node):
             self._write_status(f"Timeout reached ({self.run_duration}s). Saving + shutdown.\n")
             self.shutdown_and_save()
 
-    # plotting
-    def _setup_map_axes(self):
-        self.ax_map.set_title("Multi-Robot Global Coverage")
-        self.ax_map.set_xlabel("X (m)")
-        self.ax_map.set_ylabel("Y (m)")
-        self.ax_map.set_aspect("equal")
-        self.ax_map.set_xlim(self.env_min, self.env_max)
-        self.ax_map.set_ylim(self.env_min, self.env_max)
-
-    def _setup_metrics_axes(self):
-        self.ax_metrics.set_title("Coverage vs Time")
-        self.ax_metrics.set_xlabel("Time (s)")
-        self.ax_metrics.set_ylabel("Coverage (%)")
-
-    def _update_plots(self, live_pause: bool):
+    def _update_metrics(self):
         elapsed = (self.get_clock().now() - self.start_time).nanoseconds / 1e9
         free_cells = max(1, (len(self.cells) - len(self.blocked)))
         coverage_pct = (len(self.visited) / free_cells) * 100.0
         self.coverage_history.append((elapsed, coverage_pct))
-
-        # map
-        self.ax_map.clear()
-        self._setup_map_axes()
-
-        for idx, (cx, cy) in enumerate(self.cells):
-            if idx in self.blocked:
-                color = "blue"
-            else:
-                color = "green" if idx in self.visited else "red"
-            rect = Rectangle((cx, cy), self.grid_size, self.grid_size,
-                             facecolor=color, edgecolor="black", alpha=0.3)
-            self.ax_map.add_patch(rect)
-
-        for ns in self.robot_namespaces:
-            traj = self.trajectories.get(ns, [])
-            if len(traj) > 1:
-                xs, ys = zip(*traj)
-                self.ax_map.plot(xs, ys, label=ns, color=self.robot_colors.get(ns))
-
-        self.ax_map.legend(loc="upper right", fontsize="small")
-        self.ax_map.text(
-            0.05, 0.95,
-            f"Visited {len(self.visited)}/{len(self.cells) - len(self.blocked)} free cells",
-            transform=self.ax_map.transAxes,
-            fontsize=10,
-            verticalalignment="top",
-            bbox=dict(facecolor="white", alpha=0.6, edgecolor="none"),
-        )
-
-        # metrics
-        self.ax_metrics.clear()
-
-        self.ax_metrics.set_title("Coverage vs Time")
-        self.ax_metrics.set_xlabel("Time (s)")
-        self.ax_metrics.set_ylabel("Coverage (%)")
-        self.ax_metrics.set_ylim(0, 105)
-        self.ax_metrics.grid(True, linestyle="--", alpha=0.4)
-
-        if self.coverage_history:
-            t_cov, cov = zip(*self.coverage_history)
-            self.ax_metrics.plot(t_cov, cov, label="Coverage %")
-
-
-        handles, labels = self.ax_metrics.get_legend_handles_labels()
-        if handles:
-            self.ax_metrics.legend(handles, labels, loc="upper left", fontsize="small")
-
-        self.fig_map.canvas.draw_idle()
-        self.fig_metrics.canvas.draw_idle()
-        if live_pause:
-            plt.pause(0.01)
 
     # saving
     def shutdown_and_save(self):
@@ -229,7 +142,7 @@ class CoveragePlotter(Node):
             except Exception:
                 pass
 
-            self._update_plots(live_pause=False)
+            self._update_metrics()
             self.save_all_artifacts()
         finally:
             self._saving_now = False
@@ -241,13 +154,7 @@ class CoveragePlotter(Node):
         try:
             self._write_status("Saving started...\n")
 
-            self.fig_metrics.tight_layout()
-            self.fig_metrics.canvas.draw()
-            self.fig_map.tight_layout()
-            self.fig_map.canvas.draw()
-
-            self.fig_metrics.savefig(self.metrics_save_path, dpi=200, bbox_inches="tight")
-            self._save_final_map_png()
+            self._flush_buffers(force=True)
             self._write_timeseries_csvs()
 
             self._saved_ok = True
@@ -256,50 +163,74 @@ class CoveragePlotter(Node):
             self.error_path.write_text(traceback.format_exc(), encoding="utf-8")
             self._write_status("Saving FAILED (see SAVE_ERROR.txt)\n")
 
-    def _save_final_map_png(self):
-        fig, ax = plt.subplots(figsize=(8, 8))
-        ax.set_title("Final Global Coverage Map")
-        ax.set_xlabel("X (m)")
-        ax.set_ylabel("Y (m)")
-        ax.set_aspect("equal")
-        ax.set_xlim(self.env_min, self.env_max)
-        ax.set_ylim(self.env_min, self.env_max)
-
-        for idx, (cx, cy) in enumerate(self.cells):
-            if idx in self.blocked:
-                color = "blue"
-            else:
-                color = "green" if idx in self.visited else "red"
-            rect = Rectangle((cx, cy), self.grid_size, self.grid_size,
-                             facecolor=color, edgecolor="black", alpha=0.3)
-            ax.add_patch(rect)
-
-        for ns in self.robot_namespaces:
-            traj = self.trajectories.get(ns, [])
-            if len(traj) > 1:
-                xs, ys = zip(*traj)
-                ax.plot(xs, ys, label=ns, color=self.robot_colors.get(ns))
-
-        ax.legend(loc="upper right", fontsize="small")
-        ax.text(
-            0.05, 0.95,
-            f"Visited {len(self.visited)}/{len(self.cells) - len(self.blocked)} free cells",
-            transform=ax.transAxes,
-            fontsize=10,
-            verticalalignment="top",
-            bbox=dict(facecolor="white", alpha=0.6, edgecolor="none"),
-        )
-
-        fig.tight_layout()
-        fig.savefig(self.map_save_path, dpi=200, bbox_inches="tight")
-        plt.close(fig)
-
     def _write_timeseries_csvs(self):
         with self.coverage_csv_path.open("w", newline="") as f:
             w = csv.writer(f)
             w.writerow(["time_s", "coverage_pct"])
             for t, cov in self.coverage_history:
                 w.writerow([f"{t:.3f}", f"{cov:.3f}"])
+
+    def _ensure_paths_csv_header(self):
+        if not self.paths_csv_path.exists():
+            with self.paths_csv_path.open("w", newline="") as f:
+                w = csv.writer(f)
+                w.writerow([
+                    "stamp_sec", "stamp_nsec",
+                    "robot",
+                    "x", "y"
+                ])
+
+    def _ensure_cells_csv_header(self):
+        if not self.visited_cells_csv_path.exists():
+            with self.visited_cells_csv_path.open("w", newline="") as f:
+                w = csv.writer(f)
+                w.writerow([
+                    "stamp_sec", "stamp_nsec",
+                    "robot",
+                    "cell_index",
+                    "cell_min_x", "cell_min_y",
+                    "cell_center_x", "cell_center_y"
+                ])
+
+    def _append_path_row(self, robot: str, x: float, y: float):
+        stamp = self.get_clock().now().to_msg()
+        self._path_rows.append([
+            int(stamp.sec), int(stamp.nanosec),
+            robot,
+            f"{x:.3f}", f"{y:.3f}"
+        ])
+        if len(self._path_rows) >= self.flush_max_rows:
+            self._flush_buffers()
+
+    def _append_visited_cell_row(self, robot: str, idx: int, cx: float, cy: float):
+        stamp = self.get_clock().now().to_msg()
+        center_x = cx + (self.grid_size * 0.5)
+        center_y = cy + (self.grid_size * 0.5)
+        self._cell_rows.append([
+            int(stamp.sec), int(stamp.nanosec),
+            robot,
+            int(idx),
+            f"{cx:.3f}", f"{cy:.3f}",
+            f"{center_x:.3f}", f"{center_y:.3f}"
+        ])
+        if len(self._cell_rows) >= self.flush_max_rows:
+            self._flush_buffers()
+
+    def _flush_buffers(self, force: bool = False):
+        if not self._path_rows and not self._cell_rows:
+            return
+        if not force and self._saving_now:
+            return
+        if self._path_rows:
+            with self.paths_csv_path.open("a", newline="") as f:
+                w = csv.writer(f)
+                w.writerows(self._path_rows)
+            self._path_rows.clear()
+        if self._cell_rows:
+            with self.visited_cells_csv_path.open("a", newline="") as f:
+                w = csv.writer(f)
+                w.writerows(self._cell_rows)
+            self._cell_rows.clear()
 
     def _write_status(self, text: str):
         with self.status_path.open("a", encoding="utf-8") as f:
@@ -438,7 +369,7 @@ class CoveragePlotter(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = CoveragePlotter()
+    node = CoverageCounter()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

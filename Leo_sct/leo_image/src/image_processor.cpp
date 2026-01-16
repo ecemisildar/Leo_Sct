@@ -2,7 +2,7 @@
 //
 // Lightweight depth-only obstacle zone detector (Ignition/Gazebo Sim) for multi-robot runs.
 // Publishes std_msgs/String on "detected_zones" with exactly one of:
-//   "LEFT", "RIGHT", "CORNER", "CLEAR"
+//   "LEFT", "RIGHT", "CORNER", "CLEAR", "BLUE"
 //
 // Improvements vs naive mean/min:
 // - Depth-only subscription (no RGB sync)
@@ -75,6 +75,23 @@ public:
       std::bind(&DepthZoneDetector::depthCallback, this, std::placeholders::_1)
     );
 
+    // Blue detection (cheap color check, only used when depth is CLEAR)
+    blue_enabled_ = this->declare_parameter<bool>("blue_enabled", true);
+    rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", "depth_camera/image");
+    blue_min_ = this->declare_parameter<int>("blue_min", 80);
+    blue_ratio_ = this->declare_parameter<double>("blue_ratio", 1.4);
+    blue_pixel_ratio_ = this->declare_parameter<double>("blue_pixel_ratio", 0.01);
+    blue_stride_ = this->declare_parameter<int>("blue_stride", 4);
+    blue_hold_ms_ = this->declare_parameter<int>("blue_hold_ms", 500);
+
+    if (blue_enabled_) {
+      rgb_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
+        rgb_topic_,
+        qos,
+        std::bind(&DepthZoneDetector::rgbCallback, this, std::placeholders::_1)
+      );
+    }
+
     last_state_ = "CLEAR";
     last_non_clear_zone_ = "CORNER";
     last_non_clear_time_ = this->now();
@@ -145,9 +162,13 @@ private:
       }
     }
 
-    // Publish unchanged message
+    // Publish final state (BLUE only when depth says CLEAR)
     std_msgs::msg::String out;
-    out.data = zone_now;
+    if (zone_now == "CLEAR" && blueEnabledNow(now)) {
+      out.data = "BLUE";
+    } else {
+      out.data = zone_now;
+    }
     zones_pub_->publish(out);
 
     // Throttled debug log
@@ -338,10 +359,80 @@ private:
     cv::rectangle(vis, cv::Rect(front_x + front_w, y0, right_w, roi_h), cv::Scalar(255,255,255), 1);
   }
 
+  void rgbCallback(const sensor_msgs::msg::Image::ConstSharedPtr& rgb_msg)
+  {
+    cv::Mat bgr;
+    std::string encoding;
+
+    try {
+      auto rgb_ptr = cv_bridge::toCvShare(rgb_msg);
+      encoding = rgb_ptr->encoding;
+      if (encoding == "bgr8") {
+        bgr = rgb_ptr->image;
+      } else if (encoding == "rgb8") {
+        cv::cvtColor(rgb_ptr->image, bgr, cv::COLOR_RGB2BGR);
+      } else if (encoding == "bgra8") {
+        cv::cvtColor(rgb_ptr->image, bgr, cv::COLOR_BGRA2BGR);
+      } else if (encoding == "rgba8") {
+        cv::cvtColor(rgb_ptr->image, bgr, cv::COLOR_RGBA2BGR);
+      } else {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+          "Unsupported RGB encoding: %s (expected bgr8/rgb8/bgra8/rgba8)", encoding.c_str());
+        return;
+      }
+    } catch (const cv_bridge::Exception& e) {
+      RCLCPP_ERROR(this->get_logger(), "cv_bridge exception (RGB): %s", e.what());
+      return;
+    }
+
+    if (bgr.empty()) return;
+
+    if (detectBlueBasic(bgr)) {
+      last_blue_time_ = this->now();
+      blue_seen_ = true;
+    }
+  }
+
+  bool detectBlueBasic(const cv::Mat& bgr) const
+  {
+    const int st = std::max(1, blue_stride_);
+    const int min_b = std::max(0, blue_min_);
+    const double ratio = std::max(1.0, blue_ratio_);
+
+    int blue_count = 0;
+    int sample_count = 0;
+
+    for (int y = 0; y < bgr.rows; y += st) {
+      const cv::Vec3b* row = bgr.ptr<cv::Vec3b>(y);
+      for (int x = 0; x < bgr.cols; x += st) {
+        const cv::Vec3b& px = row[x];
+        const int b = px[0];
+        const int g = px[1];
+        const int r = px[2];
+        sample_count++;
+        if (b >= min_b && b > static_cast<int>(ratio * g) && b > static_cast<int>(ratio * r)) {
+          blue_count++;
+        }
+      }
+    }
+
+    if (sample_count == 0) return false;
+    const double frac = static_cast<double>(blue_count) / static_cast<double>(sample_count);
+    return frac >= std::clamp(blue_pixel_ratio_, 0.0, 1.0);
+  }
+
+  bool blueEnabledNow(const rclcpp::Time& now) const
+  {
+    if (!blue_enabled_ || !blue_seen_) return false;
+    const double age_ms = (now - last_blue_time_).seconds() * 1000.0;
+    return age_ms >= 0.0 && age_ms < static_cast<double>(blue_hold_ms_);
+  }
+
 private:
   // ROS
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr zones_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
 
   // Parameters
   double enter_thresh_{0.8};
@@ -365,6 +456,17 @@ private:
 
   bool show_debug_{false};
   int debug_throttle_ms_{500};
+
+  // Blue detection
+  bool blue_enabled_{true};
+  std::string rgb_topic_{"camera/image_raw"};
+  int blue_min_{80};
+  double blue_ratio_{1.4};
+  double blue_pixel_ratio_{0.01};
+  int blue_stride_{4};
+  int blue_hold_ms_{500};
+  bool blue_seen_{false};
+  rclcpp::Time last_blue_time_;
 
   // State
   std::string last_state_{"CLEAR"};

@@ -3,7 +3,6 @@ import argparse
 import csv
 import statistics
 from pathlib import Path
-from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
@@ -29,47 +28,6 @@ def read_last_value(csv_path: Path, preferred_key: str, fallback_key: str = None
         return float(last)
     except ValueError:
         return None
-
-
-def _parse_run_start(run_id: str):
-    try:
-        return datetime.strptime(run_id.replace("run_", ""), "%Y%m%d_%H%M%S")
-    except Exception:
-        return None
-
-
-def _list_bump_files_for_window(bump_dir: Path, label: str, start_epoch: float, end_epoch: float):
-    files = []
-    for p in bump_dir.glob(f"bumps_{label}_*.csv"):
-        try:
-            mtime = p.stat().st_mtime
-        except OSError:
-            continue
-        if (start_epoch - 3600) <= mtime <= (end_epoch + 3600):
-            files.append(p)
-    return sorted(files)
-
-
-def _read_bump_events(paths):
-    events = []
-    for path in paths:
-        with path.open("r", encoding="utf-8", newline="") as f:
-            reader = csv.DictReader(f)
-            required = ["stamp_sec", "stamp_nsec", "bump_type"]
-            for k in required:
-                if k not in reader.fieldnames:
-                    raise SystemExit(f"Missing column '{k}' in {path}. Header={reader.fieldnames}")
-            for row in reader:
-                try:
-                    sec = int(row["stamp_sec"])
-                    nsec = int(row["stamp_nsec"])
-                    t = float(sec) + float(nsec) * 1e-9
-                except Exception:
-                    continue
-                bump_type = row.get("bump_type", "").strip().lower()
-                events.append((t, bump_type))
-    events.sort(key=lambda x: x[0])
-    return events
 
 
 def pick_runs(run_dirs, window: int, max_runs: int):
@@ -110,6 +68,12 @@ def main():
     parser.add_argument("--baseline_window", type=int, default=10)
     parser.add_argument("--llm_window", type=int, default=10)
 
+    # Collision column preference:
+    # - With the new GLOBAL bump counter (pair events), write collisions_total and read it here.
+    # - fallback to old 'collisions' if needed.
+    parser.add_argument("--collision_key", default="collisions_total")
+    parser.add_argument("--collision_fallback_key", default="collisions")
+
     args = parser.parse_args()
 
     results_dir = Path(args.results_dir)
@@ -117,8 +81,6 @@ def main():
     llm_root = results_dir / "llm_gen"
     if not baseline_root.exists() or not llm_root.exists():
         raise SystemExit(f"Expected baselines/ and llm_gen/ folders under {results_dir}")
-    bump_log_dir = Path.home() / "ros_bump_logs"
-    bump_label = "global"
 
     baseline_dirs_all = list(baseline_root.iterdir())
     llm_dirs_all = list(llm_root.iterdir())
@@ -137,34 +99,20 @@ def main():
         names = []
         for run_dir in run_list:
             cov_csv = run_dir / "coverage_timeseries.csv"
-            if not cov_csv.exists():
+            col_csv = run_dir / "collision_timeseries.csv"
+            if not cov_csv.exists() or not col_csv.exists():
                 raise SystemExit(f"Missing CSVs in {run_dir}")
+
             cov_last = read_last_value(cov_csv, "coverage_pct")
-            duration = read_last_value(cov_csv, "time_s")
-            if cov_last is None or duration is None:
+
+            col_last = read_last_value(col_csv, args.collision_key, args.collision_fallback_key)
+
+            if cov_last is None or col_last is None:
                 raise SystemExit(
                     f"Missing/invalid data in CSVs for {run_dir}\n"
                     f"  coverage key: coverage_pct\n"
-                    f"  time key: time_s"
+                    f"  collision keys tried: {args.collision_key}, {args.collision_fallback_key}"
                 )
-
-            run_start_dt = _parse_run_start(run_dir.name)
-            if run_start_dt is None:
-                raise SystemExit(f"Could not parse run start time from {run_dir.name}")
-            run_start_epoch = run_start_dt.timestamp()
-            run_end_epoch = run_start_epoch + float(duration)
-            bump_files = _list_bump_files_for_window(
-                bump_log_dir, bump_label, run_start_epoch, run_end_epoch
-            )
-            if not bump_files:
-                raise SystemExit(f"No bump logs found near {run_dir.name} in {bump_log_dir}")
-            events = _read_bump_events(bump_files)
-            col_last = sum(
-                1
-                for t, bump_type in events
-                if run_start_epoch - 0.5 <= t <= run_end_epoch + 0.5
-                and bump_type in {"robot", "obstacle"}
-            )
 
             cov_vals.append(cov_last)
             col_vals.append(col_last)
@@ -202,7 +150,7 @@ def main():
           f"collisions={col_llm_mean:.2f}±{col_llm_std:.2f}")
 
     # ---------- Plot ----------
-    fig, ax_cov = plt.subplots(1, 1, figsize=(7, 5))
+    fig, ax_cov = plt.subplots(1, 1, figsize=(9, 6))
     ax_col = ax_cov.twinx()
 
     positions = [1, 2]
@@ -228,9 +176,8 @@ def main():
         labels=["", ""],
         **common_props,
     )
-    ax_cov.set_title("Coverage & Collisions")
     ax_cov.set_xticks([])
-    ax_cov.set_ylabel("Coverage (%)")
+    ax_cov.set_ylabel("Coverage (%)", fontsize=18)
     ax_cov.grid(True, linestyle="--", alpha=0.4)
 
     col_plot = ax_col.boxplot(
@@ -240,7 +187,7 @@ def main():
         labels=["", ""],
         **common_props,
     )
-    ax_col.set_ylabel("Collisions (count)")
+    ax_col.set_ylabel("Collisions (count)", fontsize=18)
     ax_cov.set_xlim(0.5, 2.5)
 
     def _color_boxplot(plot, colors):
@@ -261,9 +208,10 @@ def main():
         Line2D([0], [0], color="blue", lw=2, label="Baseline"),
         Line2D([0], [0], color="red", lw=2, label="LLM-generated"),
     ]
-    ax_cov.legend(handles=legend_handles, loc="upper right", fontsize="small")
+    ax_cov.legend(handles=legend_handles, loc="upper right", fontsize=16)
+    ax_cov.tick_params(axis="y", labelsize=16)
+    ax_col.tick_params(axis="y", labelsize=16)
 
-    fig.suptitle(f"Baseline runs: {len(baseline_dirs)} | LLM runs: {len(llm_dirs)}")
     out_path = results_dir / args.out
     fig.tight_layout()
     fig.savefig(out_path)
