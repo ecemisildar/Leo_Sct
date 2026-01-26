@@ -4,13 +4,15 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Float32
+from std_srvs.srv import SetBool
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
 from swarm_basics.sct import SCT
 from ament_index_python.packages import get_package_share_directory
 import time
+import math
 
 from nav_msgs.msg import Odometry
 # from math import atan2, sqrt, pi
@@ -42,15 +44,26 @@ class RobotSupervisor(Node):
         self.motion_hold_duration = self.declare_parameter(
             'motion_hold_duration', 0.2
         ).value
+        self.blue_stop_distance = self.declare_parameter(
+            'blue_stop_distance', 0.5
+        ).value
+        self.blue_distance_timeout = self.declare_parameter(
+            'blue_distance_timeout', 0.6
+        ).value
 
         self.sct = SCT(config_path)
         self.target_offset = 0.0
         self.target_distance = float('inf')
         self.obstacle_zones = []
+        self.enabled = self.declare_parameter('enabled', False).value
+        self.stop_sent = False
         self.last_zone_update = 0.0
         self.motion_until = 0.0
         self.active_event = None
         self.active_twist = Twist()
+        self.blue_seen = False
+        self.blue_distance = float('inf')
+        self.last_blue_distance_time = 0.0
         self.ns = self.get_namespace().strip('/') or 'root'
         base_seed = int(self.declare_parameter('random_seed', 12345).value)
         self.rng = random.Random(base_seed + self._namespace_index())
@@ -65,6 +78,8 @@ class RobotSupervisor(Node):
 
         # Subscriber
         self.sub = self.create_subscription(String, 'detected_zones', self.zone_callback, 10)
+        self.blue_seen_sub = self.create_subscription(Bool, 'blue_seen', self.blue_seen_callback, 10)
+        self.blue_distance_sub = self.create_subscription(Float32, 'blue_distance', self.blue_distance_callback, 10)
 
 
         # SCT callbacks for UCEs
@@ -72,7 +87,9 @@ class RobotSupervisor(Node):
         self.sct.add_callback(self.sct.EV['EV_path_clear'],None,self.clear_path_check,None) # EV_S1
         self.sct.add_callback(self.sct.EV['EV_obstacle_left'],None,self.left_check,None)    # EV_S2
         self.sct.add_callback(self.sct.EV['EV_obstacle_right'],None,self.right_check,None) # EV_S3
-        self.sct.add_callback(self.sct.EV['EV_blue_seen'],None,self.blue_check,None) 
+        self.sct.add_callback(self.sct.EV['EV_blue_seen'],None,self.blue_check,None)
+        if 'EV_blue_close' in self.sct.EV:
+            self.sct.add_callback(self.sct.EV['EV_blue_close'],None,self.blue_close_check,None)
 
         # Patch make_transition to log supervisor transitions
         original_make_transition = self.sct.make_transition
@@ -85,6 +102,11 @@ class RobotSupervisor(Node):
         self.sct.make_transition = logged_make_transition
 
         self.timer = self.create_timer(self.supervisor_period, self.timer_callback)
+        self.enable_service = self.create_service(
+            SetBool,
+            'enable_supervisor',
+            self.handle_enable_supervisor
+        )
 
 
     def zone_callback(self, msg):
@@ -99,6 +121,20 @@ class RobotSupervisor(Node):
             self.obstacle_zones = [z]   # keep your existing list-based checks working
         else:
             self.obstacle_zones = ["CLEAR"]
+
+    def blue_seen_callback(self, msg):
+        seen = bool(msg.data)
+        if seen and not self.blue_seen:
+            self.get_logger().info("blue_seen event triggered")
+        
+        self.blue_seen = seen
+
+    def blue_distance_callback(self, msg):
+        if math.isfinite(msg.data):
+            self.blue_distance = float(msg.data)
+            self.last_blue_distance_time = time.time()
+        else:
+            self.blue_distance = float('inf')
 
 
 
@@ -120,7 +156,16 @@ class RobotSupervisor(Node):
         return 'RIGHT' in self.obstacle_zones     
 
     def blue_check(self, sup_data):
-        return 'BLUE' in self.obstacle_zones        
+        return self.blue_seen
+
+    def blue_close_check(self, sup_data):
+        if not self.blue_seen:
+            return False
+        if not math.isfinite(self.blue_distance):
+            return False
+        if time.time() - self.last_blue_distance_time > self.blue_distance_timeout:
+            return False
+        return self.blue_distance <= self.blue_stop_distance
 
 
     # -------------------------------
@@ -155,14 +200,19 @@ class RobotSupervisor(Node):
             twist.angular.z = 0.0  
 
         elif ev_name == "EV_move_backward":  # EV_V5   
-            self.get_logger().info("Supervisor decision: BACKWARD")
+            # self.get_logger().info("Supervisor decision: BACKWARD")
             twist.linear.x = -0.5
             twist.angular.z = 0.0  
 
         elif ev_name == "EV_move_to_blue":  # EV_V5   
-            self.get_logger().info("Supervisor decision: MOVE TO BLUE")
+            # self.get_logger().info("Supervisor decision: MOVE TO BLUE")
             twist.linear.x = 0.2
             twist.angular.z = 0.0         
+
+        elif ev_name == "EV_stop":
+            # self.get_logger().info("Supervisor decision: STOP")
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
 
         else:
             # Unknown or no event -> stop for safety
@@ -172,6 +222,20 @@ class RobotSupervisor(Node):
         self.active_twist = twist
         self.motion_until = time.time() + self.motion_hold_duration
         self.cmd_pub.publish(self.active_twist)
+
+    def handle_enable_supervisor(self, request, response):
+        self.enabled = bool(request.data)
+        self.stop_sent = False
+        if not self.enabled:
+            self.active_event = None
+            self.motion_until = 0.0
+            self.active_twist = Twist()
+            self.cmd_pub.publish(self.active_twist)
+            response.message = "Supervisor disabled."
+        else:
+            response.message = "Supervisor enabled."
+        response.success = True
+        return response
 
     def _namespace_index(self) -> int:
         if self.ns.startswith("robot_"):
@@ -186,8 +250,16 @@ class RobotSupervisor(Node):
     # Timer callback
     # -------------------------------
     def timer_callback(self):
-        # Continue executing the current command until its hold time expires
+        if not self.enabled:
+            if not self.stop_sent:
+                self.active_event = None
+                self.motion_until = 0.0
+                self.active_twist = Twist()
+                self.cmd_pub.publish(self.active_twist)
+                self.stop_sent = True
+            return
         now = time.time()
+        # Continue executing the current command until its hold time expires
         if self.active_event and now < self.motion_until:
             self.cmd_pub.publish(self.active_twist)
             return

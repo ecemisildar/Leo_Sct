@@ -24,7 +24,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, Shutdown, TimerAction
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, Shutdown, TimerAction, SetEnvironmentVariable
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -36,6 +36,15 @@ def generate_launch_description():
     pkg_ros_gz_sim = get_package_share_directory("ros_gz_sim")
     pkg_project_gazebo = get_package_share_directory("swarm_basics")
     pkg_project_worlds = get_package_share_directory("leo_gz_worlds")
+    existing_ign_path = os.environ.get("IGN_GAZEBO_RESOURCE_PATH", "")
+    existing_gz_path = os.environ.get("GZ_SIM_RESOURCE_PATH", "")
+    model_path = os.path.join(pkg_project_gazebo, "models")
+    ign_resource_path = os.pathsep.join(
+        [p for p in [pkg_project_gazebo, model_path, existing_ign_path] if p]
+    )
+    gz_resource_path = os.pathsep.join(
+        [p for p in [pkg_project_gazebo, model_path, existing_gz_path] if p]
+    )
 
     sim_world = DeclareLaunchArgument(
         "sim_world",
@@ -45,7 +54,7 @@ def generate_launch_description():
     )
     headless = DeclareLaunchArgument(
         "headless",
-        default_value="false",
+        default_value="true",
         description="Run Gazebo headless (no GUI)",
     )
     auto_start = DeclareLaunchArgument(
@@ -61,13 +70,18 @@ def generate_launch_description():
     )
     run_duration = DeclareLaunchArgument(
         "run_duration",
-        default_value="300.0",
+        default_value="50000.0",
         description="Seconds before shutting down the launch",
     )
     total_robots = DeclareLaunchArgument(
         "total_robots",
         default_value="10",
         description="Number of robots to spawn in the star formation",
+    )
+    auto_start_supervisor = DeclareLaunchArgument(
+        "auto_start_supervisor",
+        default_value="true",
+        description="Enable robot_supervisor_3_movements on launch",
     )
     results_dir = DeclareLaunchArgument(
         "results_dir",
@@ -108,6 +122,7 @@ def generate_launch_description():
             "run_duration": LaunchConfiguration("run_duration"),
             "total_robots": LaunchConfiguration("total_robots"),
             "results_dir": LaunchConfiguration("results_dir"),
+            "auto_start_supervisor": LaunchConfiguration("auto_start_supervisor"),
         }.items(),
     )
 
@@ -129,12 +144,21 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            SetEnvironmentVariable(
+                name="IGN_GAZEBO_RESOURCE_PATH",
+                value=ign_resource_path,
+            ),
+            SetEnvironmentVariable(
+                name="GZ_SIM_RESOURCE_PATH",
+                value=gz_resource_path,
+            ),
             sim_world,
             headless,
             auto_start,
             robot_ns,
             run_duration,
             total_robots,
+            auto_start_supervisor,
             results_dir,
             gz_sim,
             spawn_robot,

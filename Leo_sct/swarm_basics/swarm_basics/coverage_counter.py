@@ -33,8 +33,8 @@ class CoverageCounter(Node):
         run_id_param = str(self.declare_parameter("run_id", "").value).strip()
         self.run_id = run_id_param or time.strftime("run_%Y%m%d_%H%M%S")
         self.run_duration = float(self.declare_parameter("run_duration", 500.0).value)
-        self.flush_interval_sec = float(self.declare_parameter("flush_interval_sec", 1.0).value)
-        self.flush_max_rows = int(self.declare_parameter("flush_max_rows", 500).value)
+        self.flush_interval_sec = float(self.declare_parameter("flush_interval_sec", 3.0).value)
+        self.flush_max_rows = int(self.declare_parameter("flush_max_rows", 2000).value)
 
         self.obstacle_occupancy_threshold = 0.4
         self.world_sdf = package_root / "worlds" / "random_world.sdf"
@@ -56,6 +56,7 @@ class CoverageCounter(Node):
         self.env_min = -7
         self.env_max = 7
         self.grid_size = 1.0
+        self.num_cells_y = int((self.env_max - self.env_min) / self.grid_size)
         self.cells = [(x, y) for x in range(self.env_min, self.env_max)
                               for y in range(self.env_min, self.env_max)]
         self.visited = set()
@@ -83,6 +84,8 @@ class CoverageCounter(Node):
             pose_qos,
         )
 
+        self.pose_interval_sec = 0.2
+        self._last_pose_time = self.get_clock().now()
 
         # timers
         self.timer_plot = self.create_timer(0.5, self._on_metrics_timer)
@@ -95,6 +98,11 @@ class CoverageCounter(Node):
         )
 
     def pose_callback(self, msg: TFMessage):
+        now = self.get_clock().now()
+        if (now - self._last_pose_time).nanoseconds < int(self.pose_interval_sec * 1e9):
+            return
+        self._last_pose_time = now
+
         for t in msg.transforms:
             name = t.child_frame_id
             if not name.startswith("robot_"):
@@ -106,13 +114,15 @@ class CoverageCounter(Node):
             y = t.transform.translation.y
             self._append_path_row(name, x, y)
 
-            for idx, (cx, cy) in enumerate(self.cells):
-                if idx in self.visited or idx in self.blocked:
-                    continue
-                if cx <= x < cx + self.grid_size and cy <= y < cy + self.grid_size:
+            ix = int(math.floor((x - self.env_min) / self.grid_size))
+            iy = int(math.floor((y - self.env_min) / self.grid_size))
+            if 0 <= ix < self.num_cells_y and 0 <= iy < self.num_cells_y:
+                idx = ix * self.num_cells_y + iy
+                if idx not in self.visited and idx not in self.blocked:
+                    cx = self.env_min + ix * self.grid_size
+                    cy = self.env_min + iy * self.grid_size
                     self.visited.add(idx)
                     self._append_visited_cell_row(name, idx, cx, cy)
-                    break
 
     # timers
     def _on_metrics_timer(self):

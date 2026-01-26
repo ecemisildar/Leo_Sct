@@ -5,6 +5,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from std_msgs.msg import String, Bool
+from std_srvs.srv import SetBool
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
@@ -35,6 +36,8 @@ class RobotSupervisor(Node):
         self.target_offset = 0.0
         self.target_distance = float('inf')
         self.obstacle_zones = []
+        self.enabled = self.declare_parameter('enabled', False).value
+        self.stop_sent = False
 
         # Ensure all events have a callback entry
         for ev_name, ev_id in self.sct.EV.items():
@@ -67,6 +70,11 @@ class RobotSupervisor(Node):
         self.sct.make_transition = logged_make_transition
 
         self.timer = self.create_timer(0.1, self.timer_callback)
+        self.enable_service = self.create_service(
+            SetBool,
+            'enable_supervisor',
+            self.handle_enable_supervisor
+        )
 
 
     def zone_callback(self, msg):
@@ -164,11 +172,27 @@ class RobotSupervisor(Node):
 
         self.cmd_pub.publish(twist)
 
+    def handle_enable_supervisor(self, request, response):
+        self.enabled = bool(request.data)
+        self.stop_sent = False
+        if not self.enabled:
+            self.cmd_pub.publish(Twist())
+            response.message = "Supervisor disabled."
+        else:
+            response.message = "Supervisor enabled."
+        response.success = True
+        return response
+
 
     # -------------------------------
     # Timer callback
     # -------------------------------
     def timer_callback(self):
+        if not self.enabled:
+            if not self.stop_sent:
+                self.cmd_pub.publish(Twist())
+                self.stop_sent = True
+            return
         # Run supervisor logic
         self.sct.input_buffer = []
         ce_exists, ce = self.sct.run_step()

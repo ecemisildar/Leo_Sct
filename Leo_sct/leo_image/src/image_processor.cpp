@@ -17,16 +17,20 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
+#include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/string.hpp>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core.hpp>
+#include <opencv2/aruco.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -36,11 +40,13 @@ public:
   DepthZoneDetector() : Node("image_processor")
   {
     zones_pub_ = this->create_publisher<std_msgs::msg::String>("detected_zones", 10);
+    blue_seen_pub_ = this->create_publisher<std_msgs::msg::Bool>("blue_seen", 10);
+    blue_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("blue_distance", 10);
 
     // --- Parameters (safe defaults) ---
-    enter_thresh_     = this->declare_parameter<double>("enter_thresh", 0.80);  // start avoiding
-    exit_thresh_      = this->declare_parameter<double>("exit_thresh",  1.00);  // return to clear
-    emergency_thresh_ = this->declare_parameter<double>("emergency_thresh", 0.60);
+    enter_thresh_     = this->declare_parameter<double>("enter_thresh", 0.70);  // start avoiding
+    exit_thresh_      = this->declare_parameter<double>("exit_thresh",  0.90);  // return to clear
+    emergency_thresh_ = this->declare_parameter<double>("emergency_thresh", 0.50);
 
     min_depth_ = this->declare_parameter<double>("min_depth", 0.08);
     max_depth_ = this->declare_parameter<double>("max_depth", 10.0);
@@ -65,9 +71,13 @@ public:
     show_debug_ = this->declare_parameter<bool>("show_debug", false);
     debug_throttle_ms_ = this->declare_parameter<int>("debug_throttle_ms", 500);
 
+    // When CLEAR, only process every Nth depth frame to save CPU.
+    clear_skip_ = this->declare_parameter<int>("clear_skip", 3);
+
     // QoS: match your bridge publisher.
     // If your depth publisher is BEST_EFFORT, switch this to .best_effort().
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable();
+    auto rgb_qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
 
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
       "depth_camera/depth_image",
@@ -75,19 +85,53 @@ public:
       std::bind(&DepthZoneDetector::depthCallback, this, std::placeholders::_1)
     );
 
-    // Blue detection (cheap color check, only used when depth is CLEAR)
-    blue_enabled_ = this->declare_parameter<bool>("blue_enabled", true);
+    // ArUco detection (publishes on existing "blue_*" topics for compatibility)
+    marker_enabled_ = this->declare_parameter<bool>("blue_enabled", true);
     rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", "depth_camera/image");
-    blue_min_ = this->declare_parameter<int>("blue_min", 80);
-    blue_ratio_ = this->declare_parameter<double>("blue_ratio", 1.4);
-    blue_pixel_ratio_ = this->declare_parameter<double>("blue_pixel_ratio", 0.01);
-    blue_stride_ = this->declare_parameter<int>("blue_stride", 4);
-    blue_hold_ms_ = this->declare_parameter<int>("blue_hold_ms", 500);
+    marker_label_ = this->declare_parameter<std::string>("marker_label", "BLUE");
+    aruco_dictionary_id_ = this->declare_parameter<int>("aruco_dictionary_id", cv::aruco::DICT_6X6_250);
+    aruco_corner_refine_ = this->declare_parameter<bool>("aruco_corner_refine", true);
+    marker_window_radius_ = this->declare_parameter<int>("aruco_window_radius", 2);
+    aruco_try_inverted_ = this->declare_parameter<bool>("aruco_try_inverted", true);
+    aruco_fallback_dicts_ = this->declare_parameter<std::vector<int64_t>>(
+      "aruco_fallback_dicts",
+      std::vector<int64_t>{
+        cv::aruco::DICT_6X6_250,
+        cv::aruco::DICT_4X4_50,
+        cv::aruco::DICT_5X5_100
+      });
+    aruco_min_perimeter_rate_ = this->declare_parameter<double>("aruco_min_perimeter_rate", 0.01);
+    aruco_adaptive_win_min_ = this->declare_parameter<int>("aruco_adaptive_win_min", 3);
+    aruco_adaptive_win_max_ = this->declare_parameter<int>("aruco_adaptive_win_max", 53);
+    aruco_adaptive_win_step_ = this->declare_parameter<int>("aruco_adaptive_win_step", 10);
+    aruco_corner_refine_win_ = this->declare_parameter<int>("aruco_corner_refine_win", 7);
+    aruco_polygonal_accuracy_ = this->declare_parameter<double>("aruco_polygonal_accuracy", 0.05);
 
-    if (blue_enabled_) {
+    // Legacy blue color parameters (kept for launch-file compatibility)
+    blue_min_ = this->declare_parameter<int>("blue_min", 80);
+    blue_ratio_ = this->declare_parameter<double>("blue_ratio", 1.6);
+    blue_pixel_ratio_ = this->declare_parameter<double>("blue_pixel_ratio", 0.002);
+    blue_stride_ = this->declare_parameter<int>("blue_stride", 2);
+    marker_hold_ms_ = this->declare_parameter<int>("blue_hold_ms", 2000);
+    marker_distance_min_count_ = this->declare_parameter<int>("blue_distance_min_count", 6);
+    marker_depth_max_age_ms_ = this->declare_parameter<int>("blue_depth_max_age_ms", 200);
+
+    aruco_dict_ = cv::aruco::getPredefinedDictionary(aruco_dictionary_id_);
+    aruco_params_ = cv::aruco::DetectorParameters::create();
+    aruco_params_->cornerRefinementMethod =
+      aruco_corner_refine_ ? cv::aruco::CORNER_REFINE_SUBPIX : cv::aruco::CORNER_REFINE_NONE;
+    aruco_params_->minMarkerPerimeterRate = static_cast<float>(aruco_min_perimeter_rate_);
+    aruco_params_->adaptiveThreshWinSizeMin = std::max(3, aruco_adaptive_win_min_);
+    aruco_params_->adaptiveThreshWinSizeMax = std::max(aruco_params_->adaptiveThreshWinSizeMin, aruco_adaptive_win_max_);
+    aruco_params_->adaptiveThreshWinSizeStep = std::max(1, aruco_adaptive_win_step_);
+    aruco_params_->cornerRefinementWinSize = std::max(1, aruco_corner_refine_win_);
+    aruco_params_->polygonalApproxAccuracyRate = static_cast<float>(aruco_polygonal_accuracy_);
+
+    if (marker_enabled_) {
+      RCLCPP_WARN(this->get_logger(), "RGB subscription topic: %s", rgb_topic_.c_str());
       rgb_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
         rgb_topic_,
-        qos,
+        rgb_qos,
         std::bind(&DepthZoneDetector::rgbCallback, this, std::placeholders::_1)
       );
     }
@@ -116,6 +160,26 @@ private:
 
   void depthCallback(const sensor_msgs::msg::Image::ConstSharedPtr& depth_msg)
   {
+    const auto now = this->now();
+    // RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), debug_throttle_ms_,
+    //   "Depth frame received: blue_enabled=%s", blue_enabled_ ? "true" : "false");
+
+    if (last_state_ == "CLEAR" && clear_skip_ > 1) {
+      clear_skip_counter_ = (clear_skip_counter_ + 1) % clear_skip_;
+      if (clear_skip_counter_ != 0) {
+        std_msgs::msg::String out;
+        if (markerEnabledNow(now)) {
+          out.data = marker_label_;
+        } else {
+          out.data = last_state_;
+        }
+        zones_pub_->publish(out);
+        return;
+      }
+    } else {
+      clear_skip_counter_ = 0;
+    }
+
     cv::Mat depth;
     std::string encoding;
 
@@ -144,6 +208,9 @@ private:
       return;
     }
 
+    last_depth_ = depth.clone();
+    last_depth_time_ = now;
+
     // Compute stats for each zone
     ZoneStats zs = computeZoneStats(depth);
 
@@ -151,7 +218,6 @@ private:
     std::string zone_now = determineZoneHysteresis(zs);
 
     // Hold/debounce to avoid CLEAR flicker
-    auto now = this->now();
     if (zone_now != "CLEAR") {
       last_non_clear_zone_ = zone_now;
       last_non_clear_time_ = now;
@@ -164,12 +230,24 @@ private:
 
     // Publish final state (BLUE only when depth says CLEAR)
     std_msgs::msg::String out;
-    if (zone_now == "CLEAR" && blueEnabledNow(now)) {
-      out.data = "BLUE";
+    if (zone_now == "CLEAR" && markerEnabledNow(now)) {
+      out.data = marker_label_;
     } else {
       out.data = zone_now;
     }
     zones_pub_->publish(out);
+
+    std_msgs::msg::Bool marker_seen_msg;
+    marker_seen_msg.data = markerEnabledNow(now);
+    blue_seen_pub_->publish(marker_seen_msg);
+
+    std_msgs::msg::Float32 blue_distance_msg;
+    if (marker_seen_msg.data && markerDistanceValid(now)) {
+      blue_distance_msg.data = last_marker_distance_;
+    } else {
+      blue_distance_msg.data = std::numeric_limits<float>::quiet_NaN();
+    }
+    blue_distance_pub_->publish(blue_distance_msg);
 
     // Throttled debug log
     // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), debug_throttle_ms_,
@@ -375,9 +453,11 @@ private:
         cv::cvtColor(rgb_ptr->image, bgr, cv::COLOR_BGRA2BGR);
       } else if (encoding == "rgba8") {
         cv::cvtColor(rgb_ptr->image, bgr, cv::COLOR_RGBA2BGR);
+      } else if (encoding == "mono8" || encoding == "8UC1") {
+        bgr = rgb_ptr->image;
       } else {
         RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-          "Unsupported RGB encoding: %s (expected bgr8/rgb8/bgra8/rgba8)", encoding.c_str());
+          "Unsupported RGB encoding: %s (expected bgr8/rgb8/bgra8/rgba8/mono8)", encoding.c_str());
         return;
       }
     } catch (const cv_bridge::Exception& e) {
@@ -386,51 +466,166 @@ private:
     }
 
     if (bgr.empty()) return;
+    // RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), debug_throttle_ms_,
+    //   "RGB frame received: %dx%d (%s)", bgr.cols, bgr.rows, encoding.c_str());
+    // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+    //   "RGB frame received on %s: %dx%d (%s)",
+    //   this->get_fully_qualified_name(), bgr.cols, bgr.rows, encoding.c_str());
 
-    if (detectBlueBasic(bgr)) {
-      last_blue_time_ = this->now();
-      blue_seen_ = true;
+    cv::Mat gray;
+    if (encoding == "mono8" || encoding == "8UC1") {
+      gray = bgr;
+    } else {
+      cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
+    }
+
+    std::vector<std::vector<cv::Point2f>> corners;
+    std::vector<int> ids;
+    const bool detected = detectAruco(gray, corners, ids);
+    // const int dict_report =
+    //   (last_detected_dict_id_ >= 0) ? last_detected_dict_id_ : aruco_dictionary_id_;
+    // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+    //   "ArUco detections on %s: %zu (dict=%d, inverted=%s)",
+    //   this->get_fully_qualified_name(),
+    //   ids.size(),
+    //   dict_report,
+    //   last_detected_inverted_ ? "true" : "false");
+
+    if (detected) {
+      const auto now = this->now();
+      last_marker_time_ = now;
+      marker_seen_ = true;
+      if (!ids.empty()) {
+        std::ostringstream id_stream;
+        for (size_t i = 0; i < ids.size(); ++i) {
+          if (i > 0) id_stream << ",";
+          id_stream << ids[i];
+        }
+        // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+        //   "Marker detected on %s (ids=[%s])",
+        //   this->get_fully_qualified_name(), id_stream.str().c_str());
+      }
+      updateMarkerDistance(corners, now, bgr.size());
     }
   }
 
-  bool detectBlueBasic(const cv::Mat& bgr) const
+  bool detectAruco(const cv::Mat& gray,
+                   std::vector<std::vector<cv::Point2f>>& corners,
+                   std::vector<int>& ids) const
   {
-    const int st = std::max(1, blue_stride_);
-    const int min_b = std::max(0, blue_min_);
-    const double ratio = std::max(1.0, blue_ratio_);
+    if (gray.empty()) return false;
+    last_detected_dict_id_ = -1;
+    last_detected_inverted_ = false;
 
-    int blue_count = 0;
-    int sample_count = 0;
+    auto try_detect = [&](const cv::Mat& img, bool inverted) -> bool {
+      std::vector<int> dicts;
+      dicts.reserve(1 + aruco_fallback_dicts_.size());
+      dicts.push_back(aruco_dictionary_id_);
+      for (int64_t dict_id : aruco_fallback_dicts_) {
+        const int dict_id_int = static_cast<int>(dict_id);
+        if (dict_id_int != aruco_dictionary_id_) {
+          dicts.push_back(dict_id_int);
+        }
+      }
 
-    for (int y = 0; y < bgr.rows; y += st) {
-      const cv::Vec3b* row = bgr.ptr<cv::Vec3b>(y);
-      for (int x = 0; x < bgr.cols; x += st) {
-        const cv::Vec3b& px = row[x];
-        const int b = px[0];
-        const int g = px[1];
-        const int r = px[2];
-        sample_count++;
-        if (b >= min_b && b > static_cast<int>(ratio * g) && b > static_cast<int>(ratio * r)) {
-          blue_count++;
+      for (int dict_id : dicts) {
+        const auto dict =
+          (dict_id == aruco_dictionary_id_) ? aruco_dict_ : cv::aruco::getPredefinedDictionary(dict_id);
+        cv::aruco::detectMarkers(img, dict, corners, ids, aruco_params_);
+        if (!ids.empty()) {
+          last_detected_dict_id_ = dict_id;
+          last_detected_inverted_ = inverted;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    if (try_detect(gray, false)) return true;
+
+    if (aruco_try_inverted_) {
+      cv::Mat inverted;
+      cv::bitwise_not(gray, inverted);
+      if (try_detect(inverted, true)) return true;
+    }
+
+    return false;
+  }
+
+  bool markerEnabledNow(const rclcpp::Time& now) const
+  {
+    if (!marker_enabled_ || !marker_seen_) return false;
+    const double age_ms = (now - last_marker_time_).seconds() * 1000.0;
+    return age_ms >= 0.0 && age_ms < static_cast<double>(marker_hold_ms_);
+  }
+
+  bool markerDistanceValid(const rclcpp::Time& now) const
+  {
+    if (!marker_distance_valid_) return false;
+    const double age_ms = (now - last_marker_distance_time_).seconds() * 1000.0;
+    return age_ms >= 0.0 && age_ms < static_cast<double>(marker_hold_ms_);
+  }
+
+  void updateMarkerDistance(const std::vector<std::vector<cv::Point2f>>& corners,
+                            const rclcpp::Time& now,
+                            const cv::Size& rgb_size)
+  {
+    if (last_depth_.empty()) return;
+    if (last_depth_.rows <= 0 || last_depth_.cols <= 0) return;
+    if (last_depth_.rows != rgb_size.height || last_depth_.cols != rgb_size.width) return;
+
+    const double depth_age_ms = (now - last_depth_time_).seconds() * 1000.0;
+    if (depth_age_ms < 0.0 || depth_age_ms > static_cast<double>(marker_depth_max_age_ms_)) {
+      return;
+    }
+
+    const float min_d = static_cast<float>(min_depth_);
+    const float max_d = static_cast<float>(max_depth_);
+    const int radius = std::max(1, marker_window_radius_);
+
+    float best = std::numeric_limits<float>::infinity();
+    int count = 0;
+
+    for (const auto& marker : corners) {
+      if (marker.empty()) continue;
+      float cx = 0.0f;
+      float cy = 0.0f;
+      for (const auto& pt : marker) {
+        cx += pt.x;
+        cy += pt.y;
+      }
+      cx /= static_cast<float>(marker.size());
+      cy /= static_cast<float>(marker.size());
+
+      const int x0 = std::clamp(static_cast<int>(std::round(cx)) - radius, 0, last_depth_.cols - 1);
+      const int x1 = std::clamp(static_cast<int>(std::round(cx)) + radius, 0, last_depth_.cols - 1);
+      const int y0 = std::clamp(static_cast<int>(std::round(cy)) - radius, 0, last_depth_.rows - 1);
+      const int y1 = std::clamp(static_cast<int>(std::round(cy)) + radius, 0, last_depth_.rows - 1);
+
+      for (int y = y0; y <= y1; ++y) {
+        const float* drow = last_depth_.ptr<float>(y);
+        for (int x = x0; x <= x1; ++x) {
+          const float d = drow[x];
+          if (std::isfinite(d) && d > min_d && d < max_d) {
+            best = std::min(best, d);
+            count++;
+          }
         }
       }
     }
 
-    if (sample_count == 0) return false;
-    const double frac = static_cast<double>(blue_count) / static_cast<double>(sample_count);
-    return frac >= std::clamp(blue_pixel_ratio_, 0.0, 1.0);
-  }
-
-  bool blueEnabledNow(const rclcpp::Time& now) const
-  {
-    if (!blue_enabled_ || !blue_seen_) return false;
-    const double age_ms = (now - last_blue_time_).seconds() * 1000.0;
-    return age_ms >= 0.0 && age_ms < static_cast<double>(blue_hold_ms_);
+    if (count >= marker_distance_min_count_ && std::isfinite(best)) {
+      last_marker_distance_ = best;
+      last_marker_distance_time_ = now;
+      marker_distance_valid_ = true;
+    }
   }
 
 private:
   // ROS
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr zones_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr blue_seen_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr blue_distance_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
 
@@ -456,17 +651,45 @@ private:
 
   bool show_debug_{false};
   int debug_throttle_ms_{500};
+  int clear_skip_{1};
+  int clear_skip_counter_{0};
 
-  // Blue detection
-  bool blue_enabled_{true};
+  // ArUco detection (publish on blue topics)
+  bool marker_enabled_{true};
   std::string rgb_topic_{"camera/image_raw"};
+  std::string marker_label_{"BLUE"};
+  int aruco_dictionary_id_{cv::aruco::DICT_6X6_250};
+  bool aruco_corner_refine_{true};
+  int marker_window_radius_{2};
+  bool aruco_try_inverted_{true};
+  std::vector<int64_t> aruco_fallback_dicts_;
+  double aruco_min_perimeter_rate_{0.01};
+  int aruco_adaptive_win_min_{3};
+  int aruco_adaptive_win_max_{53};
+  int aruco_adaptive_win_step_{10};
+  int aruco_corner_refine_win_{7};
+  double aruco_polygonal_accuracy_{0.05};
+  int marker_hold_ms_{500};
+  int marker_distance_min_count_{6};
+  int marker_depth_max_age_ms_{200};
+  bool marker_seen_{false};
+  rclcpp::Time last_marker_time_;
+  cv::Ptr<cv::aruco::Dictionary> aruco_dict_;
+  cv::Ptr<cv::aruco::DetectorParameters> aruco_params_;
+  mutable int last_detected_dict_id_{-1};
+  mutable bool last_detected_inverted_{false};
+
+  // Legacy blue parameters (unused)
   int blue_min_{80};
   double blue_ratio_{1.4};
   double blue_pixel_ratio_{0.01};
   int blue_stride_{4};
-  int blue_hold_ms_{500};
-  bool blue_seen_{false};
-  rclcpp::Time last_blue_time_;
+
+  cv::Mat last_depth_;
+  rclcpp::Time last_depth_time_;
+  float last_marker_distance_{std::numeric_limits<float>::infinity()};
+  rclcpp::Time last_marker_distance_time_;
+  bool marker_distance_valid_{false};
 
   // State
   std::string last_state_{"CLEAR"};

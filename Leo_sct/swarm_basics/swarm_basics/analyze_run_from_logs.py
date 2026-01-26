@@ -332,6 +332,8 @@ def plot_collisions(rows, cov_times, covs, out_png: Path):
     ax.plot(t, obs, label="Obstacle collisions")
     ax.set_xlabel("Time (s)", fontsize=16)
     ax.set_ylabel("Collisions (cumulative)", fontsize=16)
+    ax.set_xlim(left=0.0)
+    ax.set_ylim(bottom=0.0)
     ax.grid(True, linestyle="--", alpha=0.4)
 
     if cov_times and covs:

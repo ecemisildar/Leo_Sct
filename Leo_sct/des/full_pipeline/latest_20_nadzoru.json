@@ -1,0 +1,49 @@
+{
+  "rationale": "The supervisor prioritizes forward exploration, uses systematic recovery maneuvers when obstacles are detected, and avoids oscillations by introducing a 'recovery' state. Helper states like 'recovery_left' and 'recovery_right' ensure the robot does not immediately reverse direction after an obstacle, promoting thorough area coverage.",
+  "new_states": [
+    "clear",
+    "obs_front",
+    "obs_left",
+    "obs_right",
+    "recovery_left",
+    "recovery_right"
+  ],
+  "transitions": [
+    "(\"clear\", \"move_forward\", \"clear\")",
+    "(\"clear\", \"obstacle_front\", \"obs_front\")",
+    "(\"clear\", \"obstacle_left\", \"obs_left\")",
+    "(\"clear\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_front\", \"stop\", \"obs_front\")",
+    "(\"obs_front\", \"rotate_counterclockwise\", \"recovery_left\")",
+    "(\"obs_front\", \"rotate_clockwise\", \"recovery_right\")",
+    "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_front\", \"path_clear\", \"clear\")",
+    "(\"obs_left\", \"stop\", \"obs_left\")",
+    "(\"obs_left\", \"rotate_clockwise\", \"recovery_right\")",
+    "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_left\", \"path_clear\", \"clear\")",
+    "(\"obs_right\", \"stop\", \"obs_right\")",
+    "(\"obs_right\", \"rotate_counterclockwise\", \"recovery_left\")",
+    "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_right\", \"path_clear\", \"clear\")",
+    "(\"recovery_left\", \"move_forward\", \"clear\")",
+    "(\"recovery_left\", \"obstacle_front\", \"obs_front\")",
+    "(\"recovery_left\", \"obstacle_left\", \"obs_left\")",
+    "(\"recovery_left\", \"obstacle_right\", \"obs_right\")",
+    "(\"recovery_left\", \"path_clear\", \"clear\")",
+    "(\"recovery_right\", \"move_forward\", \"clear\")",
+    "(\"recovery_right\", \"obstacle_front\", \"obs_front\")",
+    "(\"recovery_right\", \"obstacle_left\", \"obs_left\")",
+    "(\"recovery_right\", \"obstacle_right\", \"obs_right\")",
+    "(\"recovery_right\", \"path_clear\", \"clear\")"
+  ],
+  "strategy": [
+    "Prioritize move_forward in clear state for exploration.",
+    "On obstacle detection, stop and select a recovery rotation away from the obstacle.",
+    "Use recovery_left and recovery_right to avoid immediate reversal and promote systematic area coverage.",
+    "After recovery, attempt forward movement again.",
+    "Transitions ensure the robot does not oscillate between two states.",
+    "Always react to new obstacle cues, even during recovery."
+  ]
+}

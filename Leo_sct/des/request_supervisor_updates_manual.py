@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
@@ -21,6 +22,9 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_KEY_FILE = ROOT / "api_key.txt"
 DEFAULT_MODEL = "gpt-4.1"
+DEFAULT_GOAL = "Find the blue object and get close to it and stop while staying safe"
+DEFAULT_TIMEOUT_S = 120.0
+DEFAULT_RETRIES = 2
 
 DEFAULT_STATES = ["clear", "obs_left", "obs_right", "obs_front"]
 DEFAULT_CONTROLLABLE_EVENTS = [
@@ -29,18 +33,92 @@ DEFAULT_CONTROLLABLE_EVENTS = [
     "rotate_clockwise",
     "rotate_counterclockwise",
     "full_rotate",
-    # "random_walk",
+    "move_to_blue",
+    "stop",
 ]
 DEFAULT_UNCONTROLLABLE_EVENTS = [
     "path_clear",
     "obstacle_front",
     "obstacle_left",
     "obstacle_right",
+    "blue_seen",
+    "blue_close",
 ]
 DEFAULT_CONSTRAINTS = [
     "Every state must have an outgoing arrow for all uncontrollable events.",
-    "Never allow moving forward or random walk when there is an obstacle.",
+    "Do NOT introduce new uncontrollable or controllable events.",
+    
+    "You MUST include controllable transitions. For every non-observation helper state you introduce, include its intended primary controllable transition.",
+    "Commit states MUST contain the matching controllable self-loop: "
+    "rotate_commit_cw has rotate_clockwise->rotate_commit_cw; "
+    "rotate_commit_ccw has rotate_counterclockwise->rotate_commit_ccw; "
+    "forward_commit has move_forward->forward_commit.",
+    "In each state, include at most ONE primary controllable action among: move_forward, move_backward, rotate_clockwise, rotate_counterclockwise, full_rotate. "
+    "(Exception: obs_front may include move_backward AND full_rotate.)",
+
+    "Never allow move_forward in response to obstacle_front, and do not return to move_forward immediately after obstacle_front; pass through a recovery/escape state first.",
+    "Avoid oscillations: do not provide both rotate_clockwise and rotate_counterclockwise as controllables in the same state (especially 'clear').",
+    "Use commit states: if you rotate, transition into a turn-commit state that continues the SAME rotation until path_clear, then go to a forward-commit state.",
+
 ]
+
+GOAL_PROFILES = {
+    "explore": {
+        "goal": "Cover the entire arena efficiently while staying safe",
+        "controllable_events": [
+            "move_forward",
+            "move_backward",
+            "rotate_clockwise",
+            "rotate_counterclockwise",
+            "full_rotate",
+        ],
+        "uncontrollable_events": [
+            "path_clear",
+            "obstacle_front",
+            "obstacle_left",
+            "obstacle_right",
+        ],
+        "constraints": [
+            "Focus on systematic exploration; avoid long dwell times in one spot.",
+            "Do not collide with obstacles and robots.",
+            "Prefer forward movement unless obstacle cues demand recovery.",
+        ],
+        "include_default_constraints": True,
+    },
+    "find_blue": {
+        "goal": "Find the blue object as soon as possible and get close to it and stop. Do not collide with any robots and obstacles",
+        "controllable_events": [
+            "move_forward",
+            "move_backward",
+            "rotate_clockwise",
+            "rotate_counterclockwise",
+            "full_rotate",
+            "move_to_blue",
+            "stop",
+        ],
+        "uncontrollable_events": [
+            "path_clear",
+            "obstacle_front",
+            "obstacle_left",
+            "obstacle_right",
+            "blue_seen",
+            "blue_close",
+        ],
+        "constraints": [
+            "Prioritize reaching the blue object quickly; exploration is secondary.",
+            "When blue_seen occurs in clear or forward_commit, include a controllable transition to move_to_blue or a move_to_blue commit state.",
+            "Do NOT allow stop as a primary controllable action solely due to blue_seen; keep moving toward blue unless blue_close is active.",
+            "After blue_seen, avoid returning to exploration states unless the blue object is lost.",
+            "When close to the blue object, prefer stop as the primary controllable action to finish the task safely.",
+            "When blue_close occurs, transition to a blue_close/approach-complete state where stop is the primary or only controllable action.",
+            "When blue is NOT seen, exploration is primary: include an explicit scan state that performs full_rotate or a rotate commit before returning to forward.",
+            "In clear, do not always choose move_forward; allow a rotate commit (or full_rotate) as a primary controllable action for scanning.",
+            "Insert scan states after obstacle recovery or after a forward commit cycle to prevent long straight runs without scanning.",
+            "Use a search pattern: alternate between short forward commits and rotations until blue_seen.",
+        ],
+        "include_default_constraints": True,
+    },
+}
 
 
 def read_api_key() -> str:
@@ -147,10 +225,7 @@ def build_prompt(
             "above. You may propose additional helper states if justified."
         )
         lines.append("")
-    lines.append(
-        f"Goal: {goal}. The supervisor should encourage systematic area "
-        "coverage, avoid oscillations, and ensure safe reactions to obstacles."
-    )
+    lines.append(f"Goal: {goal}. Avoid oscillations and ensure safe reactions to obstacles.")
     lines.append("")
     lines.append(
         "Return JSON with this schema:\n"
@@ -161,7 +236,7 @@ def build_prompt(
         '     "(\\"state\\", \\"event\\", \\"next\\")",\n'
         '     "... additional lines ..."\n'
         '  ],\n'
-        '  "coverage_strategy": ["bullet list of coverage ideas"]\n'
+        '  "strategy": ["bullet list of goal-seeking ideas"]\n'
         "}"
     )
     lines.append(
@@ -176,6 +251,8 @@ def call_chat_completion(
     prompt: str,
     model: str,
     temperature: float,
+    timeout_s: float,
+    retries: int,
 ) -> Dict[str, str]:
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -195,15 +272,26 @@ def call_chat_completion(
             {"role": "user", "content": prompt},
         ],
     }
-    response = requests.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers=headers,
-        data=json.dumps(payload),
-        timeout=60,
-    )
-    response.raise_for_status()
-    content = response.json()["choices"][0]["message"]["content"]
-    return parse_json_response(content)
+    last_error: Exception | None = None
+    for attempt in range(1, retries + 2):
+        try:
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                data=json.dumps(payload),
+                timeout=timeout_s,
+            )
+            response.raise_for_status()
+            content = response.json()["choices"][0]["message"]["content"]
+            return parse_json_response(content)
+        except requests.exceptions.ReadTimeout as exc:
+            last_error = exc
+        except requests.exceptions.RequestException as exc:
+            last_error = exc
+        if attempt <= retries:
+            time.sleep(min(2 ** attempt, 8))
+    assert last_error is not None
+    raise last_error
 
 
 def parse_json_response(content: str) -> Dict[str, str]:
@@ -266,6 +354,16 @@ def main(argv: List[str]) -> int:
         description="Generate DES supervisor transitions via GPT (no C++ parsing)."
     )
     parser.add_argument(
+        "--profile",
+        choices=sorted(GOAL_PROFILES.keys()),
+        help="Select a predefined goal/profile (sets defaults for goal/events/constraints).",
+    )
+    parser.add_argument(
+        "--list-profiles",
+        action="store_true",
+        help="List available profiles and exit.",
+    )
+    parser.add_argument(
         "--states",
         nargs="+",
         help="List of known DES states (default: clear obs_left obs_right obs_front).",
@@ -298,7 +396,7 @@ def main(argv: List[str]) -> int:
     )
     parser.add_argument(
         "--goal",
-        default="Cover the entire arena efficiently while staying safe",
+        default=None,
         help="High level objective passed to GPT.",
     )
     parser.add_argument(
@@ -309,8 +407,20 @@ def main(argv: List[str]) -> int:
     parser.add_argument(
         "--temperature",
         type=float,
-        default=0.55,
+        default=0.2,
         help="Sampling temperature for the API call.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=DEFAULT_TIMEOUT_S,
+        help="HTTP timeout (seconds) for the API call.",
+    )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=DEFAULT_RETRIES,
+        help="Retry count for transient API/network failures.",
     )
     parser.add_argument(
         "--scenario",
@@ -343,6 +453,13 @@ def main(argv: List[str]) -> int:
     )
     args = parser.parse_args(argv)
 
+    if args.list_profiles:
+        for name, profile in sorted(GOAL_PROFILES.items()):
+            print(f"{name}: {profile['goal']}")
+        return 0
+
+    profile = GOAL_PROFILES.get(args.profile or "", {})
+
     transitions_input: List[str] = []
     if args.transitions_file:
         for path in args.transitions_file:
@@ -360,17 +477,25 @@ def main(argv: List[str]) -> int:
     if not states:
         raise SystemExit("At least one state must be provided (via --states or transitions).")
 
-    controllable = args.controllable_events or DEFAULT_CONTROLLABLE_EVENTS
-    uncontrollable = args.uncontrollable_events or DEFAULT_UNCONTROLLABLE_EVENTS
+    controllable = args.controllable_events or profile.get(
+        "controllable_events", DEFAULT_CONTROLLABLE_EVENTS
+    )
+    uncontrollable = args.uncontrollable_events or profile.get(
+        "uncontrollable_events", DEFAULT_UNCONTROLLABLE_EVENTS
+    )
 
     guidance_lines: List[str] = []
-    if not args.no_default_constraints:
+    include_default_constraints = profile.get("include_default_constraints", True)
+    if not args.no_default_constraints and include_default_constraints:
         guidance_lines.extend(DEFAULT_CONSTRAINTS)
+    guidance_lines.extend(profile.get("constraints", []))
     if args.constraint:
         guidance_lines.extend(args.constraint)
 
+    goal = args.goal or profile.get("goal") or DEFAULT_GOAL
+
     prompt = build_prompt(
-        goal=args.goal,
+        goal=goal,
         states=states,
         controllable=controllable,
         uncontrollable=uncontrollable,
@@ -385,7 +510,14 @@ def main(argv: List[str]) -> int:
         return 0
 
     api_key = read_api_key()
-    result = call_chat_completion(api_key, prompt, args.model, args.temperature)
+    result = call_chat_completion(
+        api_key,
+        prompt,
+        args.model,
+        args.temperature,
+        args.timeout,
+        args.retries,
+    )
     print(json.dumps(result, indent=2))
     transitions_out = result.get("transitions")
     if transitions_out:

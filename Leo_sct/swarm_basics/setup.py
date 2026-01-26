@@ -17,6 +17,18 @@ setup(
         ('share/' + package_name + '/config', ['config/sup_gpt.yaml']),
         ('share/' + package_name + '/config', ['config/cylinder_positions.json']),
         ('share/' + package_name + '/worlds', ['worlds/random_world.sdf']),
+        ('share/' + package_name + '/worlds', ['worlds/aruco_4x4_0.png']),
+        ('share/' + package_name + '/worlds/textures', ['worlds/textures/aruco_4x4_0.png']),
+        ('share/' + package_name + '/models/aruco_marker_0', [
+            'models/aruco_marker_0/model.config',
+            'models/aruco_marker_0/model.sdf',
+        ]),
+        ('share/' + package_name + '/models/aruco_marker_0/materials/scripts', [
+            'models/aruco_marker_0/materials/scripts/aruco_marker.material',
+        ]),
+        ('share/' + package_name + '/models/aruco_marker_0/materials/textures', [
+            'models/aruco_marker_0/materials/textures/aruco_4x4_0.png',
+        ]),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

@@ -24,7 +24,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -35,6 +35,16 @@ def generate_launch_description():
     # Setup project paths
     pkg_ros_gz_sim = get_package_share_directory("ros_gz_sim")
     pkg_project_gazebo = get_package_share_directory("leo_gz_bringup")
+    pkg_swarm_basics = get_package_share_directory("swarm_basics")
+    existing_ign_path = os.environ.get("IGN_GAZEBO_RESOURCE_PATH", "")
+    existing_gz_path = os.environ.get("GZ_SIM_RESOURCE_PATH", "")
+    swarm_models = os.path.join(pkg_swarm_basics, "models")
+    ign_resource_path = os.pathsep.join(
+        [p for p in [pkg_swarm_basics, swarm_models, existing_ign_path] if p]
+    )
+    gz_resource_path = os.pathsep.join(
+        [p for p in [pkg_swarm_basics, swarm_models, existing_gz_path] if p]
+    )
     pkg_project_worlds = get_package_share_directory("leo_gz_worlds")
 
     sim_world = DeclareLaunchArgument(
@@ -82,6 +92,14 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            SetEnvironmentVariable(
+                name="IGN_GAZEBO_RESOURCE_PATH",
+                value=ign_resource_path,
+            ),
+            SetEnvironmentVariable(
+                name="GZ_SIM_RESOURCE_PATH",
+                value=gz_resource_path,
+            ),
             sim_world,
             robot_ns,
             gz_sim,

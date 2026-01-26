@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Leo Swarm Control</title>
+    <link rel="stylesheet" href="styles.css?v=2" />
+  </head>
+  <body>
+    <div class="bg-glow"></div>
+    <header class="site-header">
+      <div class="brand">
+        <div>
+          <h1>Leo Swarm Control</h1>
+          <p>User interface for start/stop, autonomous runs, and manual driving.</p>
+        </div>
+      </div>
+      <div class="status-pill" id="connectionStatus">ROS2: Disconnected</div>
+    </header>
+
+    <section class="mode-switch" role="tablist" aria-label="Control modes">
+      <button class="mode-btn is-active" data-mode="startup" role="tab" aria-selected="true">
+        1. Start / Stop
+      </button>
+      <button class="mode-btn" data-mode="autonomous" role="tab" aria-selected="false">
+        2. Autonomous Drive
+      </button>
+      <button class="mode-btn" data-mode="manual" role="tab" aria-selected="false">
+        3. Manual Drive
+      </button>
+    </section>
+
+    <main>
+      <section class="mode-panel" id="mode-startup" data-mode-panel="startup">
+        <div class="panel-header">
+          <h2>Robot Power &amp; Status</h2>
+          <button class="ghost-btn" id="allStopBtn">Emergency Stop All</button>
+        </div>
+        <div class="robot-grid" id="startupGrid"></div>
+      </section>
+
+      <section class="mode-panel is-hidden" id="mode-autonomous" data-mode-panel="autonomous">
+        <div class="panel-header">
+          <h2>Autonomous Run (LLM + SCT + ROS)</h2>
+          <div class="tag">Pipeline: LLM → SCT → ROS2</div>
+        </div>
+        <div class="autonomous-layout">
+          <div class="card">
+            <h3>Select autonomous robots</h3>
+            <p class="muted">Choose which robots will run the autonomous pipeline.</p>
+            <div class="checkbox-grid" id="autonomousGrid"></div>
+          </div>
+          <div class="card">
+            <h3>Scenario Controls</h3>
+            <label class="field">
+              <span>Mission preset</span>
+              <select id="missionPreset">
+                <option value="explore">Explore (SCT)</option>
+              </select>
+            </label>
+            <div class="button-row">
+              <button class="primary-btn" id="startAutoBtn">Start Autonomous</button>
+              <button class="ghost-btn" id="stopAutoBtn">Stop Autonomous</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mode-panel is-hidden" id="mode-manual" data-mode-panel="manual">
+        <div class="panel-header">
+          <h2>Manual Drive</h2>
+          <div class="tag">cmd_vel over ROS2</div>
+        </div>
+        <div class="manual-layout">
+          <div class="card">
+            <label class="field">
+              <span>Manual robot</span>
+              <select id="manualRobotSelect"></select>
+            </label>
+            <div class="speed-row">
+              <label class="field">
+                <span>Linear speed</span>
+                <input type="range" id="linearSpeed" min="0" max="1.0" step="0.05" value="0.4" />
+              </label>
+              <label class="field">
+                <span>Angular speed</span>
+                <input type="range" id="angularSpeed" min="0" max="2.0" step="0.1" value="1.0" />
+              </label>
+            </div>
+            <div class="dpad">
+              <button class="dpad-btn" data-cmd="forward">▲</button>
+              <div class="dpad-row">
+                <button class="dpad-btn" data-cmd="left">◀</button>
+                <button class="dpad-btn stop" data-cmd="stop">■</button>
+                <button class="dpad-btn" data-cmd="right">▶</button>
+              </div>
+              <button class="dpad-btn" data-cmd="backward">▼</button>
+            </div>
+            <p class="muted">Tip: select one robot for manual, leave the rest for autonomous or idle.</p>
+          </div>
+          <div class="card">
+            <h3>Live Command Preview</h3>
+            <div class="console" id="cmdPreview">
+              <div class="console-line">Ready to send cmd_vel...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Leo Swarm Control UI • up to 4 robots</span>
+      <span id="activeSummary"></span>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

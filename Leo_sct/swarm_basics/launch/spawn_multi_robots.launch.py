@@ -4,6 +4,9 @@ import time
 import xacro
 
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.actions import ExecuteProcess, RegisterEventHandler
+from launch.event_handlers import OnShutdown
 from launch.actions import OpaqueFunction, Shutdown, TimerAction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -14,6 +17,13 @@ def generate_launch_description():
 
     leo_description = get_package_share_directory("leo_description")
     run_id = time.strftime("run_%Y%m%d_%H%M%S")
+
+    auto_start_supervisor = LaunchConfiguration("auto_start_supervisor")
+    auto_start_supervisor_arg = DeclareLaunchArgument(
+        "auto_start_supervisor",
+        default_value="true",
+        description="Enable robot_supervisor_3_movements on launch",
+    )
 
     # total_robots_arg = LaunchConfiguration("total_robots")
 
@@ -56,10 +66,10 @@ def generate_launch_description():
             ns = robot["ns"]
             bridge_args += [
                 f"/{ns}/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
-                f"/{ns}/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
-                f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+                # f"/{ns}/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
+                # f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
                 f"/{ns}/depth_camera/depth_image@sensor_msgs/msg/Image@ignition.msgs.Image",
-                f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo",
+                # f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo",
                 f"/{ns}/depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image",
                 f"/world/random_world/model/{ns}/link/{ns}/base_footprint/sensor/contact_sensor/contact"
                 f"@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts",
@@ -128,9 +138,10 @@ def generate_launch_description():
                 namespace=ns,
                 parameters=[
                     {"spawn_x": x},
-                    {"spawn_y": y}
+                    {"spawn_y": y},
+                    {"enabled": auto_start_supervisor},
                 ],
-                output="screen"
+                output="screen",
             )
 
             cpp_node = Node(
@@ -147,6 +158,17 @@ def generate_launch_description():
         return nodes
 
     return LaunchDescription([
+        auto_start_supervisor_arg,
+        RegisterEventHandler(
+            OnShutdown(
+                on_shutdown=[
+                    ExecuteProcess(
+                        cmd=["bash", "-lc", "pkill -f parameter_bridge || true"],
+                        output="screen",
+                    )
+                ]
+            )
+        ),
         TimerAction(
             period=LaunchConfiguration("run_duration"),
             actions=[Shutdown(reason="run_duration reached")],
