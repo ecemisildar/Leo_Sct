@@ -1,0 +1,47 @@
+image_processor:
+  ros__parameters:
+    # Depth-based obstacle detection tuning for real camera.
+    enter_thresh: 0.70
+    exit_thresh: 0.90
+    emergency_thresh: 0.50
+
+    # Depth range in meters (adjust for your sensor).
+    min_depth: 0.20
+    max_depth: 6.00
+
+    # ROI / robustness tuning
+    stride: 2
+    percentile: 0.10
+    near_count_k: 6
+    valid_count_min: 20
+    crop_y0_frac: 0.30
+    crop_y1_frac: 0.80
+    front_gain: 1.40
+
+    # Stability / throttling
+    hold_ms: 300
+    clear_skip: 3
+    safe_frames_required: 4
+
+    # ArUco detection (optional)
+    blue_enabled: true
+    marker_label: BLUE
+    aruco_dictionary_id: 0  # cv::aruco::DICT_6X6_250
+    aruco_corner_refine: true
+    aruco_try_inverted: true
+    aruco_window_radius: 2
+    aruco_min_perimeter_rate: 0.01
+    aruco_adaptive_win_min: 3
+    aruco_adaptive_win_max: 53
+    aruco_adaptive_win_step: 10
+    aruco_corner_refine_win: 7
+    aruco_polygonal_accuracy: 0.05
+
+    # Legacy blue color params (kept for compatibility)
+    blue_min: 80
+    blue_ratio: 1.6
+    blue_pixel_ratio: 0.002
+    blue_stride: 2
+    blue_hold_ms: 2000
+    blue_distance_min_count: 6
+    blue_depth_max_age_ms: 200

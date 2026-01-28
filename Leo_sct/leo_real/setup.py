@@ -12,6 +12,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', ['launch/leo_real.launch.py']),
         ('share/' + package_name + '/config', ['config/sup_gpt.yaml']),
+        ('share/' + package_name + '/config', ['config/real_camera.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

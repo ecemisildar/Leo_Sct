@@ -1,5 +1,7 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+import os
 
 
 def generate_launch_description():
@@ -10,6 +12,9 @@ def generate_launch_description():
     ]
 
     nodes = []
+
+    pkg_leo_real = get_package_share_directory("leo_real")
+    camera_params_file = os.path.join(pkg_leo_real, "config", "real_camera.yaml")
 
     for robot in robots:
         ns = robot["ns"]
@@ -53,6 +58,10 @@ def generate_launch_description():
             executable="image_processor",
             name="image_processor",
             namespace=ns,
+            parameters=[
+                camera_params_file,
+                {"rgb_topic": f"/{ns}/camera/color/image_raw"},
+            ],
             remappings=[
                 # left side: what your node expects (sim convention)
                 # right side: REAL depth topic for this robot
@@ -63,7 +72,6 @@ def generate_launch_description():
             output="screen",
         )
 
-        nodes += [supervisor_node]
+        nodes += [supervisor_node, image_proc_node]
 
     return LaunchDescription(nodes)
-
