@@ -5,11 +5,17 @@ End-to-end pipeline:
   2) Convert JSON -> Nadzoru XML.
   3) Run Nadzoru script operations headlessly to produce Sloc*.xml.
   4) Convert one or more Sloc XMLs into SCT YAML for the ROS node.
+
+Quick run:
+  python3 run_pipeline.py --task explore --run-llm
+  python3 run_pipeline.py --task find_marker --skip-llm
+  python3 run_pipeline.py --task wall_follow --run-llm
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence
@@ -19,43 +25,35 @@ import yaml
 THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(THIS_DIR))
 DEFAULT_NADZORU_ROOT = Path.home() / "Documents" / "Nadzoru2"
-DEFAULT_SOURCE_AUTOMATA_DIR = THIS_DIR / "nadzoru_files" / "hardcoded_automata"
+DEFAULT_SOURCE_AUTOMATA_DIR = THIS_DIR / "hardcoded_find_obj"
+DEFAULT_SOURCE_AUTOMATA_DIR_EXPLORE = THIS_DIR / "hardcoded_coverage"
+DEFAULT_SOURCE_AUTOMATA_DIR_WALL_FOLLOW = THIS_DIR / "hardcoded_wall_follow"
+DEFAULT_SOURCE_AUTOMATA_DIR_ZIGZAG = THIS_DIR / "hardcoded_zigzag"
+
+TASK_AUTOMATA_DIRS = {
+    "find_marker": DEFAULT_SOURCE_AUTOMATA_DIR,
+    "explore": DEFAULT_SOURCE_AUTOMATA_DIR_EXPLORE,
+    "wall_follow": DEFAULT_SOURCE_AUTOMATA_DIR_WALL_FOLLOW,
+    "zigzag": DEFAULT_SOURCE_AUTOMATA_DIR_ZIGZAG,
+}
+DEFAULT_PROFILE_PATH = THIS_DIR / "task_profiles.json"
 DEFAULT_OUTPUT_DIR = THIS_DIR / "full_pipeline"
 DEFAULT_LLM_DIR = THIS_DIR
 DEFAULT_LLM_PREFIX = "latest_"
 DEFAULT_LLM_SUFFIX = "_nadzoru.json"
 DEFAULT_YAML_OUT_DIR = Path("/home/ecem/ros2_ws/src/Leo_sct/swarm_basics/config")
+DEFAULT_REAL_YAML_OUT_DIR = Path("/home/ecem/ros2_ws/src/Leo_sct/leo_real/config")
 DEFAULT_YAML_PREFIX = "sup_gpt_"
 DEFAULT_SUPERVISOR_ID = "Sup_reactive_motion"
 
 # Hardcoded LLM options (used only if RUN_LLM is True).
 RUN_LLM = True
-LLM_ARGS = [
-    "--profile",
-    "find_blue",
-]
+LLM_ARGS: List[str] = []
 
 # Optional seeds for JSON -> XML conversion (leave empty to infer).
 DEFAULT_STATES: List[str] = []
 DEFAULT_INITIAL: List[str] = []
 DEFAULT_MARKED: List[str] = []
-DEFAULT_CONTROLLABLE: List[str] = [
-    "move_forward",
-    "move_backward",
-    "rotate_clockwise",
-    "rotate_counterclockwise",
-    "full_rotate",
-    "move_to_blue",
-    "stop",
-]
-DEFAULT_UNCONTROLLABLE: List[str] = [
-    "path_clear",
-    "obstacle_front",
-    "obstacle_left",
-    "obstacle_right",
-    "blue_seen",
-    "blue_close",
-]
 
 # Skip JSON->XML and use existing E1.xml in full_pipeline.
 START_FROM_XML_ONLY = False
@@ -68,34 +66,35 @@ def _ensure_nadzoru_imports(nadzoru_root: Path) -> None:
     sys.path.insert(0, str(nadzoru_root))
 
 
-def _infer_index(json_path: Path) -> str:
+def _infer_index(json_path: Path, task: str) -> str:
     name = json_path.stem
-    if "latest_" in name and name.endswith("_nadzoru"):
-        return name.split("latest_", 1)[1].split("_nadzoru", 1)[0]
-    if name.startswith("latest_"):
-        return name.split("latest_", 1)[1]
+    prefix = f"{task}_"
+    if name.startswith(prefix) and name.endswith("_nadzoru"):
+        return name[len(prefix):].split("_nadzoru", 1)[0]
+    if name.startswith(prefix):
+        return name[len(prefix):]
     return "1"
 
 
-def _next_llm_json_path(output_dir: Path) -> Path:
-    existing = list(output_dir.glob(f"{DEFAULT_LLM_PREFIX}*{DEFAULT_LLM_SUFFIX}"))
+def _next_llm_json_path(output_dir: Path, task: str) -> Path:
+    existing = list(output_dir.glob(f"{task}_*{DEFAULT_LLM_SUFFIX}"))
     max_idx = 0
     for path in existing:
-        idx = _infer_index(path)
+        idx = _infer_index(path, task)
         if idx.isdigit():
             max_idx = max(max_idx, int(idx))
     next_idx = max_idx + 1
-    return output_dir / f"{DEFAULT_LLM_PREFIX}{next_idx}{DEFAULT_LLM_SUFFIX}"
+    return output_dir / f"{task}_{next_idx}{DEFAULT_LLM_SUFFIX}"
 
 
-def _latest_llm_json_path(output_dir: Path) -> Path:
-    existing = list(output_dir.glob(f"{DEFAULT_LLM_PREFIX}*{DEFAULT_LLM_SUFFIX}"))
+def _latest_llm_json_path(output_dir: Path, task: str) -> Path:
+    existing = list(output_dir.glob(f"{task}_*{DEFAULT_LLM_SUFFIX}"))
     max_idx = 0
     for path in existing:
-        idx = _infer_index(path)
+        idx = _infer_index(path, task)
         if idx.isdigit():
             max_idx = max(max_idx, int(idx))
-    return output_dir / f"{DEFAULT_LLM_PREFIX}{max_idx}{DEFAULT_LLM_SUFFIX}"
+    return output_dir / f"{task}_{max_idx}{DEFAULT_LLM_SUFFIX}"
 
 
 def _prepare_output_dir(
@@ -105,16 +104,14 @@ def _prepare_output_dir(
     keep_existing_e: bool,
 ) -> Dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
+    for stale in ("G1.xml", "G2.xml"):
+        stale_path = output_dir / stale
+        if stale_path.exists():
+            stale_path.unlink()
     g1_src = source_dir / "G1.xml"
     g2_src = source_dir / "G2.xml"
     if not g1_src.exists() or not g2_src.exists():
         raise SystemExit("G1.xml or G2.xml not found in hardcoded automata folder.")
-    g1_dst = output_dir / "G1.xml"
-    g2_dst = output_dir / "G2.xml"
-    if not g1_dst.exists():
-        g1_dst.write_bytes(g1_src.read_bytes())
-    if not g2_dst.exists():
-        g2_dst.write_bytes(g2_src.read_bytes())
 
     e_xml = output_dir / f"E{index}.xml"
     sloc_xml = output_dir / f"Sloc{index}.xml"
@@ -138,19 +135,20 @@ def _prepare_output_dir(
         "e_xml": e_xml,
         "sloc_xml": sloc_xml,
         "script": script_path,
-        "g1": g1_dst,
-        "g2": g2_dst,
+        "g1": g1_src,
+        "g2": g2_src,
     }
 
 
-def _load_automatons(xml_dir: Path) -> Dict[str, "Automaton"]:
+def _load_automatons(xml_dirs: Sequence[Path]) -> Dict[str, "Automaton"]:
     from machine.automaton import Automaton
 
     automatons: Dict[str, Automaton] = {}
-    for xml_path in sorted(xml_dir.glob("*.xml")):
-        automaton = Automaton()
-        automaton.load(str(xml_path))
-        automatons[automaton.get_id_name()] = automaton
+    for xml_dir in xml_dirs:
+        for xml_path in sorted(xml_dir.glob("*.xml")):
+            automaton = Automaton()
+            automaton.load(str(xml_path))
+            automatons[automaton.get_id_name()] = automaton
     return automatons
 
 
@@ -307,9 +305,45 @@ def _build_llm_args(
     return args
 
 
+def _infer_llm_profile(llm_args: Sequence[str]) -> str | None:
+    if "--profile" not in llm_args:
+        return None
+    try:
+        idx = llm_args.index("--profile")
+        if idx + 1 < len(llm_args):
+            return llm_args[idx + 1]
+    except ValueError:
+        return None
+    return None
+
+
+def _load_profiles(path: Path) -> Dict[str, Dict[str, object]]:
+    if not path.exists():
+        raise SystemExit(f"Profile file not found: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _select_event_sets(profile: str | None, profiles: Dict[str, Dict[str, object]]) -> tuple[List[str], List[str]]:
+    if not profile:
+        raise SystemExit("Profile name is required to select event sets.")
+    if profile not in profiles:
+        raise SystemExit(f"Unknown profile: {profile}")
+    data = profiles[profile]
+    controllable = list(data.get("controllable_events", []))
+    uncontrollable = list(data.get("uncontrollable_events", []))
+    if not controllable or not uncontrollable:
+        raise SystemExit(f"Profile '{profile}' is missing event lists.")
+    return controllable, uncontrollable
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run the full DES->Nadzoru->SCT pipeline."
+    )
+    parser.add_argument(
+        "--task",
+        required=True,
+        help="Task profile to run (e.g., explore, find_marker, wall_follow).",
     )
     parser.add_argument(
         "--run-llm",
@@ -343,29 +377,39 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    profiles = _load_profiles(DEFAULT_PROFILE_PATH)
+    if args.task not in profiles:
+        raise SystemExit(f"Unknown task: {args.task}")
+
     run_llm = args.run_llm and not args.skip_llm
+    llm_profile_arg = args.llm_profile or args.task
     llm_args = _build_llm_args(
         LLM_ARGS,
-        profile=args.llm_profile,
+        profile=llm_profile_arg,
         goal=args.llm_goal,
         constraints=args.llm_constraint,
         no_default_constraints=args.llm_no_default_constraints,
     )
+    llm_profile = args.task
+    if llm_profile not in TASK_AUTOMATA_DIRS:
+        raise SystemExit(f"No automata folder configured for task: {llm_profile}")
+    source_automata_dir = TASK_AUTOMATA_DIRS[llm_profile]
+    controllable_events, uncontrollable_events = _select_event_sets(llm_profile, profiles)
 
     if run_llm:
         DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        llm_json_path = _next_llm_json_path(DEFAULT_OUTPUT_DIR)
+        llm_json_path = _next_llm_json_path(DEFAULT_OUTPUT_DIR, args.task)
         _run_llm(llm_args, llm_json_path)
     else:
-        llm_json_path = _latest_llm_json_path(DEFAULT_OUTPUT_DIR)
+        llm_json_path = _latest_llm_json_path(DEFAULT_OUTPUT_DIR, args.task)
 
     if not run_llm and not START_FROM_XML_ONLY and not llm_json_path.exists():
         raise SystemExit(f"Expected input not found: {llm_json_path}")
 
-    index = START_FROM_XML_INDEX if START_FROM_XML_ONLY else _infer_index(llm_json_path)
+    index = START_FROM_XML_INDEX if START_FROM_XML_ONLY else _infer_index(llm_json_path, args.task)
     paths = _prepare_output_dir(
         DEFAULT_OUTPUT_DIR,
-        DEFAULT_SOURCE_AUTOMATA_DIR,
+        source_automata_dir,
         index,
         START_FROM_XML_ONLY,
     )
@@ -376,15 +420,15 @@ def main() -> int:
             DEFAULT_STATES,
             DEFAULT_INITIAL,
             DEFAULT_MARKED,
-            DEFAULT_CONTROLLABLE,
-            DEFAULT_UNCONTROLLABLE,
+            controllable_events,
+            uncontrollable_events,
             DEFAULT_SUPERVISOR_ID,
         )
     elif not paths["e_xml"].exists():
         raise SystemExit(f"Expected input not found: {paths['e_xml']}")
 
     _ensure_nadzoru_imports(DEFAULT_NADZORU_ROOT)
-    automata = _load_automatons(DEFAULT_OUTPUT_DIR)
+    automata = _load_automatons([DEFAULT_OUTPUT_DIR, source_automata_dir])
     _run_nadzoru_script(paths["script"], automata, DEFAULT_OUTPUT_DIR)
 
     if not paths["sloc_xml"].exists():
@@ -398,10 +442,22 @@ def main() -> int:
     sloc_automatons.append(automaton)
 
     yaml_payload = _build_sct_yaml(sloc_automatons)
-    yaml_out = DEFAULT_YAML_OUT_DIR / f"{DEFAULT_YAML_PREFIX}{index}.yaml"
-    yaml_latest = DEFAULT_YAML_OUT_DIR / "sup_gpt.yaml"
+    yaml_out = DEFAULT_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}{index}.yaml"
+    yaml_latest = DEFAULT_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}latest.yaml"
+    yaml_default = DEFAULT_YAML_OUT_DIR / "sup_gpt.yaml"
+    yaml_real_out = DEFAULT_REAL_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}{index}.yaml"
+    yaml_real_latest = DEFAULT_REAL_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}latest.yaml"
+    yaml_real_default = DEFAULT_REAL_YAML_OUT_DIR / "sup_gpt.yaml"
     yaml_out.parent.mkdir(parents=True, exist_ok=True)
-    for path in (yaml_out, yaml_latest):
+    yaml_real_out.parent.mkdir(parents=True, exist_ok=True)
+    for path in (
+        yaml_out,
+        yaml_latest,
+        yaml_default,
+        yaml_real_out,
+        yaml_real_latest,
+        yaml_real_default,
+    ):
         with open(path, "w", encoding="utf-8") as f:
             yaml.safe_dump(yaml_payload, f, sort_keys=False, default_flow_style=True)
 

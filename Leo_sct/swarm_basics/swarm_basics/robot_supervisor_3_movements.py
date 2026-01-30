@@ -44,11 +44,14 @@ class RobotSupervisor(Node):
         self.motion_hold_duration = self.declare_parameter(
             'motion_hold_duration', 0.2
         ).value
-        self.blue_stop_distance = self.declare_parameter(
-            'blue_stop_distance', 0.5
+        self.marker_stop_distance = self.declare_parameter(
+            'marker_stop_distance', 0.5
         ).value
-        self.blue_distance_timeout = self.declare_parameter(
-            'blue_distance_timeout', 0.6
+        self.marker_distance_timeout = self.declare_parameter(
+            'marker_distance_timeout', 0.6
+        ).value
+        self.marker_lost_timeout = self.declare_parameter(
+            'marker_lost_timeout', 0.8
         ).value
 
         self.sct = SCT(config_path)
@@ -61,9 +64,10 @@ class RobotSupervisor(Node):
         self.motion_until = 0.0
         self.active_event = None
         self.active_twist = Twist()
-        self.blue_seen = False
-        self.blue_distance = float('inf')
-        self.last_blue_distance_time = 0.0
+        self.marker_seen = False
+        self.marker_distance = float('inf')
+        self.last_marker_distance_time = 0.0
+        self.last_marker_lost_time = 0.0
         self.ns = self.get_namespace().strip('/') or 'root'
         base_seed = int(self.declare_parameter('random_seed', 12345).value)
         self.rng = random.Random(base_seed + self._namespace_index())
@@ -78,18 +82,26 @@ class RobotSupervisor(Node):
 
         # Subscriber
         self.sub = self.create_subscription(String, 'detected_zones', self.zone_callback, 10)
-        self.blue_seen_sub = self.create_subscription(Bool, 'blue_seen', self.blue_seen_callback, 10)
-        self.blue_distance_sub = self.create_subscription(Float32, 'blue_distance', self.blue_distance_callback, 10)
+        self.marker_seen_sub = self.create_subscription(Bool, 'marker_seen', self.marker_seen_callback, 10)
+        self.marker_lost_sub = self.create_subscription(Bool, 'marker_lost', self.marker_lost_callback, 10)
+        self.marker_distance_sub = self.create_subscription(Float32, 'marker_distance', self.marker_distance_callback, 10)
 
 
         # SCT callbacks for UCEs
-        self.sct.add_callback(self.sct.EV['EV_obstacle_front'],None,self.middle_check,None) # EV_S0
-        self.sct.add_callback(self.sct.EV['EV_path_clear'],None,self.clear_path_check,None) # EV_S1
-        self.sct.add_callback(self.sct.EV['EV_obstacle_left'],None,self.left_check,None)    # EV_S2
-        self.sct.add_callback(self.sct.EV['EV_obstacle_right'],None,self.right_check,None) # EV_S3
-        self.sct.add_callback(self.sct.EV['EV_blue_seen'],None,self.blue_check,None)
-        if 'EV_blue_close' in self.sct.EV:
-            self.sct.add_callback(self.sct.EV['EV_blue_close'],None,self.blue_close_check,None)
+        if 'EV_obstacle_front' in self.sct.EV:
+            self.sct.add_callback(self.sct.EV['EV_obstacle_front'],None,self.middle_check,None) # EV_S0
+        if 'EV_path_clear' in self.sct.EV:
+            self.sct.add_callback(self.sct.EV['EV_path_clear'],None,self.clear_path_check,None) # EV_S1
+        if 'EV_obstacle_left' in self.sct.EV:
+            self.sct.add_callback(self.sct.EV['EV_obstacle_left'],None,self.left_check,None)    # EV_S2
+        if 'EV_obstacle_right' in self.sct.EV:
+            self.sct.add_callback(self.sct.EV['EV_obstacle_right'],None,self.right_check,None) # EV_S3
+        if 'EV_marker_seen' in self.sct.EV:
+            self.sct.add_callback(self.sct.EV['EV_marker_seen'],None,self.marker_check,None)
+        if 'EV_marker_lost' in self.sct.EV:
+            self.sct.add_callback(self.sct.EV['EV_marker_lost'],None,self.marker_lost_check,None)
+        if 'EV_marker_close' in self.sct.EV:
+            self.sct.add_callback(self.sct.EV['EV_marker_close'],None,self.marker_close_check,None)
 
         # Patch make_transition to log supervisor transitions
         original_make_transition = self.sct.make_transition
@@ -117,24 +129,30 @@ class RobotSupervisor(Node):
 
         z = msg.data.strip().upper()
         # accept only known tokens
-        if z in {"LEFT", "RIGHT", "CORNER", "CLEAR", "BLUE"}:
+        if z in {"LEFT", "RIGHT", "CORNER", "CLEAR", "marker"}:
             self.obstacle_zones = [z]   # keep your existing list-based checks working
         else:
             self.obstacle_zones = ["CLEAR"]
 
-    def blue_seen_callback(self, msg):
+    def marker_seen_callback(self, msg):
         seen = bool(msg.data)
-        if seen and not self.blue_seen:
-            self.get_logger().info("blue_seen event triggered")
+        if seen and not self.marker_seen:
+            self.get_logger().info("marker_seen event triggered")
         
-        self.blue_seen = seen
+        self.marker_seen = seen
+        if seen:
+            self.last_marker_lost_time = 0.0
 
-    def blue_distance_callback(self, msg):
+    def marker_lost_callback(self, msg):
+        if bool(msg.data):
+            self.last_marker_lost_time = time.time()
+
+    def marker_distance_callback(self, msg):
         if math.isfinite(msg.data):
-            self.blue_distance = float(msg.data)
-            self.last_blue_distance_time = time.time()
+            self.marker_distance = float(msg.data)
+            self.last_marker_distance_time = time.time()
         else:
-            self.blue_distance = float('inf')
+            self.marker_distance = float('inf')
 
 
 
@@ -155,17 +173,24 @@ class RobotSupervisor(Node):
     def right_check(self, sup_data):
         return 'RIGHT' in self.obstacle_zones     
 
-    def blue_check(self, sup_data):
-        return self.blue_seen
+    def marker_check(self, sup_data):
+        return self.marker_seen
 
-    def blue_close_check(self, sup_data):
-        if not self.blue_seen:
+    def marker_close_check(self, sup_data):
+        if not self.marker_seen:
             return False
-        if not math.isfinite(self.blue_distance):
+        if not math.isfinite(self.marker_distance):
             return False
-        if time.time() - self.last_blue_distance_time > self.blue_distance_timeout:
+        if time.time() - self.last_marker_distance_time > self.marker_distance_timeout:
             return False
-        return self.blue_distance <= self.blue_stop_distance
+        return self.marker_distance <= self.marker_stop_distance
+
+    def marker_lost_check(self, sup_data):
+        if self.marker_seen:
+            return False
+        if self.last_marker_lost_time <= 0.0:
+            return False
+        return (time.time() - self.last_marker_lost_time) <= self.marker_lost_timeout
 
 
     # -------------------------------
@@ -204,8 +229,8 @@ class RobotSupervisor(Node):
             twist.linear.x = -0.5
             twist.angular.z = 0.0  
 
-        elif ev_name == "EV_move_to_blue":  # EV_V5   
-            # self.get_logger().info("Supervisor decision: MOVE TO BLUE")
+        elif ev_name == "EV_move_to_marker":  # EV_V5   
+            # self.get_logger().info("Supervisor decision: MOVE TO marker")
             twist.linear.x = 0.2
             twist.angular.z = 0.0         
 

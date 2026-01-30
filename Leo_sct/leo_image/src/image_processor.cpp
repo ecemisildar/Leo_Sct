@@ -2,7 +2,7 @@
 //
 // Lightweight depth-only obstacle zone detector (Ignition/Gazebo Sim) for multi-robot runs.
 // Publishes std_msgs/String on "detected_zones" with exactly one of:
-//   "LEFT", "RIGHT", "CORNER", "CLEAR", "BLUE"
+//   "LEFT", "RIGHT", "CORNER", "CLEAR", "marker"
 //
 // Improvements vs naive mean/min:
 // - Depth-only subscription (no RGB sync)
@@ -39,9 +39,13 @@ class DepthZoneDetector : public rclcpp::Node
 public:
   DepthZoneDetector() : Node("image_processor")
   {
+    clock_ = this->get_clock();
+    const auto now = clock_->now();
+
     zones_pub_ = this->create_publisher<std_msgs::msg::String>("detected_zones", 10);
-    blue_seen_pub_ = this->create_publisher<std_msgs::msg::Bool>("blue_seen", 10);
-    blue_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("blue_distance", 10);
+    marker_seen_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_seen", 10);
+    marker_lost_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_lost", 10);
+    marker_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("marker_distance", 10);
 
     // --- Parameters (safe defaults) ---
     enter_thresh_     = this->declare_parameter<double>("enter_thresh", 0.70);  // start avoiding
@@ -85,10 +89,10 @@ public:
       std::bind(&DepthZoneDetector::depthCallback, this, std::placeholders::_1)
     );
 
-    // ArUco detection (publishes on existing "blue_*" topics for compatibility)
-    marker_enabled_ = this->declare_parameter<bool>("blue_enabled", true);
+    // ArUco detection (publishes on existing "marker_*" topics for compatibility)
+    marker_enabled_ = this->declare_parameter<bool>("marker_enabled", true);
     rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", "depth_camera/image");
-    marker_label_ = this->declare_parameter<std::string>("marker_label", "BLUE");
+    marker_label_ = this->declare_parameter<std::string>("marker_label", "marker");
     aruco_dictionary_id_ = this->declare_parameter<int>("aruco_dictionary_id", cv::aruco::DICT_6X6_250);
     aruco_corner_refine_ = this->declare_parameter<bool>("aruco_corner_refine", true);
     marker_window_radius_ = this->declare_parameter<int>("aruco_window_radius", 2);
@@ -107,14 +111,15 @@ public:
     aruco_corner_refine_win_ = this->declare_parameter<int>("aruco_corner_refine_win", 7);
     aruco_polygonal_accuracy_ = this->declare_parameter<double>("aruco_polygonal_accuracy", 0.05);
 
-    // Legacy blue color parameters (kept for launch-file compatibility)
-    blue_min_ = this->declare_parameter<int>("blue_min", 80);
-    blue_ratio_ = this->declare_parameter<double>("blue_ratio", 1.6);
-    blue_pixel_ratio_ = this->declare_parameter<double>("blue_pixel_ratio", 0.002);
-    blue_stride_ = this->declare_parameter<int>("blue_stride", 2);
-    marker_hold_ms_ = this->declare_parameter<int>("blue_hold_ms", 2000);
-    marker_distance_min_count_ = this->declare_parameter<int>("blue_distance_min_count", 6);
-    marker_depth_max_age_ms_ = this->declare_parameter<int>("blue_depth_max_age_ms", 200);
+    // Legacy marker color parameters (kept for launch-file compatibility)
+    marker_min_ = this->declare_parameter<int>("marker_min", 80);
+    marker_ratio_ = this->declare_parameter<double>("marker_ratio", 1.6);
+    marker_pixel_ratio_ = this->declare_parameter<double>("marker_pixel_ratio", 0.002);
+    marker_stride_ = this->declare_parameter<int>("marker_stride", 2);
+    marker_hold_ms_ = this->declare_parameter<int>("marker_hold_ms", 2000);
+    marker_lost_hold_ms_ = this->declare_parameter<int>("marker_lost_hold_ms", 600);
+    marker_distance_min_count_ = this->declare_parameter<int>("marker_distance_min_count", 6);
+    marker_depth_max_age_ms_ = this->declare_parameter<int>("marker_depth_max_age_ms", 200);
 
     aruco_dict_ = cv::aruco::getPredefinedDictionary(aruco_dictionary_id_);
     aruco_params_ = cv::aruco::DetectorParameters::create();
@@ -138,7 +143,12 @@ public:
 
     last_state_ = "CLEAR";
     last_non_clear_zone_ = "CORNER";
-    last_non_clear_time_ = this->now();
+    last_non_clear_time_ = now;
+    last_marker_enabled_ = false;
+    last_marker_time_ = now;
+    last_marker_lost_time_ = now;
+    last_depth_time_ = now;
+    last_marker_distance_time_ = now;
     // Stability: require N consecutive safe frames before exiting avoid mode
     safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 4);
 
@@ -160,9 +170,9 @@ private:
 
   void depthCallback(const sensor_msgs::msg::Image::ConstSharedPtr& depth_msg)
   {
-    const auto now = this->now();
+    const auto now = clock_->now();
     // RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), debug_throttle_ms_,
-    //   "Depth frame received: blue_enabled=%s", blue_enabled_ ? "true" : "false");
+    //   "Depth frame received: marker_enabled=%s", marker_enabled_ ? "true" : "false");
 
     if (last_state_ == "CLEAR" && clear_skip_ > 1) {
       clear_skip_counter_ = (clear_skip_counter_ + 1) % clear_skip_;
@@ -228,9 +238,15 @@ private:
       }
     }
 
-    // Publish final state (BLUE only when depth says CLEAR)
+    // Publish final state (marker only when depth says CLEAR)
+    const bool marker_now = markerEnabledNow(now);
+    if (last_marker_enabled_ && !marker_now && marker_enabled_) {
+      last_marker_lost_time_ = now;
+    }
+    last_marker_enabled_ = marker_now;
+
     std_msgs::msg::String out;
-    if (zone_now == "CLEAR" && markerEnabledNow(now)) {
+    if (zone_now == "CLEAR" && marker_now) {
       out.data = marker_label_;
     } else {
       out.data = zone_now;
@@ -238,16 +254,20 @@ private:
     zones_pub_->publish(out);
 
     std_msgs::msg::Bool marker_seen_msg;
-    marker_seen_msg.data = markerEnabledNow(now);
-    blue_seen_pub_->publish(marker_seen_msg);
+    marker_seen_msg.data = marker_now;
+    marker_seen_pub_->publish(marker_seen_msg);
 
-    std_msgs::msg::Float32 blue_distance_msg;
+    std_msgs::msg::Bool marker_lost_msg;
+    marker_lost_msg.data = markerLostNow(now);
+    marker_lost_pub_->publish(marker_lost_msg);
+
+    std_msgs::msg::Float32 marker_distance_msg;
     if (marker_seen_msg.data && markerDistanceValid(now)) {
-      blue_distance_msg.data = last_marker_distance_;
+      marker_distance_msg.data = last_marker_distance_;
     } else {
-      blue_distance_msg.data = std::numeric_limits<float>::quiet_NaN();
+      marker_distance_msg.data = std::numeric_limits<float>::quiet_NaN();
     }
-    blue_distance_pub_->publish(blue_distance_msg);
+    marker_distance_pub_->publish(marker_distance_msg);
 
     // Throttled debug log
     // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), debug_throttle_ms_,
@@ -482,14 +502,14 @@ private:
     std::vector<std::vector<cv::Point2f>> corners;
     std::vector<int> ids;
     const bool detected = detectAruco(gray, corners, ids);
-    // const int dict_report =
-    //   (last_detected_dict_id_ >= 0) ? last_detected_dict_id_ : aruco_dictionary_id_;
-    // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-    //   "ArUco detections on %s: %zu (dict=%d, inverted=%s)",
-    //   this->get_fully_qualified_name(),
-    //   ids.size(),
-    //   dict_report,
-    //   last_detected_inverted_ ? "true" : "false");
+    const int dict_report =
+      (last_detected_dict_id_ >= 0) ? last_detected_dict_id_ : aruco_dictionary_id_;
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+      "ArUco detections on %s: %zu (dict=%d, inverted=%s)",
+      this->get_fully_qualified_name(),
+      ids.size(),
+      dict_report,
+      last_detected_inverted_ ? "true" : "false");
 
     if (detected) {
       const auto now = this->now();
@@ -566,6 +586,13 @@ private:
     return age_ms >= 0.0 && age_ms < static_cast<double>(marker_hold_ms_);
   }
 
+  bool markerLostNow(const rclcpp::Time& now) const
+  {
+    if (!marker_enabled_) return false;
+    const double age_ms = (now - last_marker_lost_time_).seconds() * 1000.0;
+    return age_ms >= 0.0 && age_ms < static_cast<double>(marker_lost_hold_ms_);
+  }
+
   void updateMarkerDistance(const std::vector<std::vector<cv::Point2f>>& corners,
                             const rclcpp::Time& now,
                             const cv::Size& rgb_size)
@@ -624,10 +651,12 @@ private:
 private:
   // ROS
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr zones_pub_;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr blue_seen_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr blue_distance_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr marker_seen_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr marker_lost_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr marker_distance_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
+  rclcpp::Clock::SharedPtr clock_;
 
   // Parameters
   double enter_thresh_{0.8};
@@ -654,10 +683,10 @@ private:
   int clear_skip_{1};
   int clear_skip_counter_{0};
 
-  // ArUco detection (publish on blue topics)
+  // ArUco detection (publish on marker topics)
   bool marker_enabled_{true};
   std::string rgb_topic_{"camera/image_raw"};
-  std::string marker_label_{"BLUE"};
+  std::string marker_label_{"marker"};
   int aruco_dictionary_id_{cv::aruco::DICT_6X6_250};
   bool aruco_corner_refine_{true};
   int marker_window_radius_{2};
@@ -670,20 +699,23 @@ private:
   int aruco_corner_refine_win_{7};
   double aruco_polygonal_accuracy_{0.05};
   int marker_hold_ms_{500};
+  int marker_lost_hold_ms_{600};
   int marker_distance_min_count_{6};
   int marker_depth_max_age_ms_{200};
   bool marker_seen_{false};
+  bool last_marker_enabled_{false};
   rclcpp::Time last_marker_time_;
+  rclcpp::Time last_marker_lost_time_;
   cv::Ptr<cv::aruco::Dictionary> aruco_dict_;
   cv::Ptr<cv::aruco::DetectorParameters> aruco_params_;
   mutable int last_detected_dict_id_{-1};
   mutable bool last_detected_inverted_{false};
 
-  // Legacy blue parameters (unused)
-  int blue_min_{80};
-  double blue_ratio_{1.4};
-  double blue_pixel_ratio_{0.01};
-  int blue_stride_{4};
+  // Legacy marker parameters (unused)
+  int marker_min_{80};
+  double marker_ratio_{1.4};
+  double marker_pixel_ratio_{0.01};
+  int marker_stride_{4};
 
   cv::Mat last_depth_;
   rclcpp::Time last_depth_time_;

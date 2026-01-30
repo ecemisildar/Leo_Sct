@@ -36,13 +36,20 @@ DEFAULT_UNCONTROLLABLE = [
 ]
 
 
-def _parse_transition_line(line: str) -> Dict[str, str]:
+def _parse_transition_line(line: object) -> Dict[str, str]:
+    if isinstance(line, (list, tuple)) and len(line) == 3:
+        src, event, dst = line
+        return {"source": str(src), "event": str(event), "target": str(dst)}
+
+    if not isinstance(line, str):
+        raise ValueError(f"Unable to parse transition line (expected str/list): {line}")
+
     pattern = r'\("([^"]+)",\s*"([^"]+)",\s*"([^"]+)"\)'
     match = re.search(pattern, line.strip())
     if not match:
         raise ValueError(f"Unable to parse transition line: {line}")
     src, event, dst = match.groups()
-    return {"source": src, "event": event, "target": dst} 
+    return {"source": src, "event": event, "target": dst}
 
 
 def _collect_states(
@@ -191,6 +198,14 @@ def convert_json_to_xml(args: argparse.Namespace) -> None:
     transition_lines = payload.get("transitions")
     if not transition_lines:
         raise SystemExit("JSON file does not contain a 'transitions' list.")
+
+    first = transition_lines[0]
+    if isinstance(first, (list, tuple)):
+        print("Parsing transitions as [state, event, next] lists.")
+    elif isinstance(first, str):
+        print("Parsing transitions as string tuples.")
+    else:
+        print(f"Parsing transitions with unexpected type: {type(first).__name__}")
 
     transitions = [_parse_transition_line(line) for line in transition_lines]
     state_names = _collect_states(args.states or [], payload.get("new_states"), transitions)

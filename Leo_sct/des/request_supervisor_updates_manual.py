@@ -22,7 +22,8 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_KEY_FILE = ROOT / "api_key.txt"
 DEFAULT_MODEL = "gpt-4.1"
-DEFAULT_GOAL = "Find the blue object and get close to it and stop while staying safe"
+DEFAULT_PROFILE_PATH = Path(__file__).resolve().parent / "task_profiles.json"
+DEFAULT_GOAL = "Find the marker object and get close to it and stop while staying safe"
 DEFAULT_TIMEOUT_S = 120.0
 DEFAULT_RETRIES = 2
 
@@ -33,7 +34,7 @@ DEFAULT_CONTROLLABLE_EVENTS = [
     "rotate_clockwise",
     "rotate_counterclockwise",
     "full_rotate",
-    "move_to_blue",
+    "move_to_marker",
     "stop",
 ]
 DEFAULT_UNCONTROLLABLE_EVENTS = [
@@ -41,12 +42,13 @@ DEFAULT_UNCONTROLLABLE_EVENTS = [
     "obstacle_front",
     "obstacle_left",
     "obstacle_right",
-    "blue_seen",
-    "blue_close",
+    "marker_seen",
+    "marker_close",
 ]
 DEFAULT_CONSTRAINTS = [
     "Every state must have an outgoing arrow for all uncontrollable events.",
     "Do NOT introduce new uncontrollable or controllable events.",
+    "Events must be chosen only from the provided event lists; commit/scan state names (e.g., rotate_commit_cw) are states, not events.",
     
     "You MUST include controllable transitions. For every non-observation helper state you introduce, include its intended primary controllable transition.",
     "Commit states MUST contain the matching controllable self-loop: "
@@ -62,63 +64,32 @@ DEFAULT_CONSTRAINTS = [
 
 ]
 
-GOAL_PROFILES = {
-    "explore": {
-        "goal": "Cover the entire arena efficiently while staying safe",
-        "controllable_events": [
-            "move_forward",
-            "move_backward",
-            "rotate_clockwise",
-            "rotate_counterclockwise",
-            "full_rotate",
-        ],
-        "uncontrollable_events": [
-            "path_clear",
-            "obstacle_front",
-            "obstacle_left",
-            "obstacle_right",
-        ],
-        "constraints": [
-            "Focus on systematic exploration; avoid long dwell times in one spot.",
-            "Do not collide with obstacles and robots.",
-            "Prefer forward movement unless obstacle cues demand recovery.",
-        ],
-        "include_default_constraints": True,
-    },
-    "find_blue": {
-        "goal": "Find the blue object as soon as possible and get close to it and stop. Do not collide with any robots and obstacles",
-        "controllable_events": [
-            "move_forward",
-            "move_backward",
-            "rotate_clockwise",
-            "rotate_counterclockwise",
-            "full_rotate",
-            "move_to_blue",
-            "stop",
-        ],
-        "uncontrollable_events": [
-            "path_clear",
-            "obstacle_front",
-            "obstacle_left",
-            "obstacle_right",
-            "blue_seen",
-            "blue_close",
-        ],
-        "constraints": [
-            "Prioritize reaching the blue object quickly; exploration is secondary.",
-            "When blue_seen occurs in clear or forward_commit, include a controllable transition to move_to_blue or a move_to_blue commit state.",
-            "Do NOT allow stop as a primary controllable action solely due to blue_seen; keep moving toward blue unless blue_close is active.",
-            "After blue_seen, avoid returning to exploration states unless the blue object is lost.",
-            "When close to the blue object, prefer stop as the primary controllable action to finish the task safely.",
-            "When blue_close occurs, transition to a blue_close/approach-complete state where stop is the primary or only controllable action.",
-            "When blue is NOT seen, exploration is primary: include an explicit scan state that performs full_rotate or a rotate commit before returning to forward.",
-            "In clear, do not always choose move_forward; allow a rotate commit (or full_rotate) as a primary controllable action for scanning.",
-            "Insert scan states after obstacle recovery or after a forward commit cycle to prevent long straight runs without scanning.",
-            "Use a search pattern: alternate between short forward commits and rotations until blue_seen.",
-        ],
-        "include_default_constraints": True,
-    },
+STATE_SEMANTICS = {
+    "clear": "no obstacle in front/left/right; safe to advance.",
+    "obs_front": "obstacle detected in front region; forward is unsafe.",
+    "obs_left": "obstacle close on left; left turn is unsafe; right turn may be preferred.",
+    "obs_right": "obstacle close on right; right turn is unsafe; left turn may be preferred.",
 }
+
+EVENT_SEMANTICS = {
+    "path_clear": "sensors say forward corridor is clear (no front obstacle).",
+    "obstacle_front": "front sensor region is blocked.",
+    "obstacle_left": "left sensor region is blocked.",
+    "obstacle_right": "right sensor region is blocked.",
+    "rotate_clockwise": "robot rotates clockwise.",
+    "rotate_counterclockwise": "robot rotates counterclockwise.",
+    "marker_seen": "marker currently detected in camera.",
+    "marker_lost": "marker currently not detected in camera.",
+    "marker_close": "marker distance < threshold (goal condition).",
+}
+
+def _load_profiles(path: Path) -> Dict[str, Dict[str, object]]:
+    if not path.exists():
+        raise SystemExit(f"Profile file not found: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+GOAL_PROFILES = _load_profiles(DEFAULT_PROFILE_PATH)
 
 
 def read_api_key() -> str:
@@ -202,6 +173,25 @@ def build_prompt(
     lines.append("Uncontrollable events: " + ", ".join(uncontrollable))
     lines.append("Current states: " + ", ".join(states))
     lines.append("")
+    state_semantics = [
+        f"- {name}: {STATE_SEMANTICS[name]}"
+        for name in states
+        if name in STATE_SEMANTICS
+    ]
+    if state_semantics:
+        lines.append("State semantics:")
+        lines.extend(state_semantics)
+        lines.append("")
+
+    event_semantics = [
+        f"- {name}: {EVENT_SEMANTICS[name]}"
+        for name in controllable + uncontrollable
+        if name in EVENT_SEMANTICS
+    ]
+    if event_semantics:
+        lines.append("Event semantics:")
+        lines.extend(event_semantics)
+        lines.append("")
     if scenario:
         lines.append("Scenario context: " + scenario)
         lines.append("")
@@ -239,10 +229,7 @@ def build_prompt(
         '  "strategy": ["bullet list of goal-seeking ideas"]\n'
         "}"
     )
-    lines.append(
-        "Transitions must only use the listed events unless you introduce a "
-        "clearly documented new event."
-    )
+    
     return "\n".join(lines)
 
 
