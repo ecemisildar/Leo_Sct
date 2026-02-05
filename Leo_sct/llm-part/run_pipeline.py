@@ -24,7 +24,7 @@ import yaml
 
 THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(THIS_DIR))
-DEFAULT_NADZORU_ROOT = Path.home() / "Documents" / "Nadzoru2"
+DEFAULT_NADZORU_ROOT = Path.home() / "Nadzoru2"
 DEFAULT_SOURCE_AUTOMATA_DIR = THIS_DIR / "hardcoded_find_obj"
 DEFAULT_SOURCE_AUTOMATA_DIR_EXPLORE = THIS_DIR / "hardcoded_coverage"
 DEFAULT_SOURCE_AUTOMATA_DIR_WALL_FOLLOW = THIS_DIR / "hardcoded_wall_follow"
@@ -41,8 +41,7 @@ DEFAULT_OUTPUT_DIR = THIS_DIR / "full_pipeline"
 DEFAULT_LLM_DIR = THIS_DIR
 DEFAULT_LLM_PREFIX = "latest_"
 DEFAULT_LLM_SUFFIX = "_nadzoru.json"
-DEFAULT_YAML_OUT_DIR = Path("/home/ecem/ros2_ws/src/Leo_sct/swarm_basics/config")
-DEFAULT_REAL_YAML_OUT_DIR = Path("/home/ecem/ros2_ws/src/Leo_sct/leo_real/config")
+DEFAULT_REAL_YAML_OUT_DIR = Path.home() / "ros_ws/src/Leo_Sct/Leo_Sct/leo_real/config"
 DEFAULT_YAML_PREFIX = "sup_gpt_"
 DEFAULT_SUPERVISOR_ID = "Sup_reactive_motion"
 
@@ -63,8 +62,12 @@ START_FROM_XML_INDEX = "1"
 def _ensure_nadzoru_imports(nadzoru_root: Path) -> None:
     if not nadzoru_root.exists():
         raise SystemExit(f"Nadzoru2 root not found: {nadzoru_root}")
+    print(f"[nadzoru] Using root: {nadzoru_root}")    
     sys.path.insert(0, str(nadzoru_root))
-
+    try:
+        from machine.automaton import Automaton  # noqa: F401
+    except Exception as e:
+        raise SystemExit(f"Failed to import Nadzoru Automaton from {nadzoru_root}: {e}")
 
 def _infer_index(json_path: Path, task: str) -> str:
     name = json_path.stem
@@ -152,7 +155,12 @@ def _load_automatons(xml_dirs: Sequence[Path]) -> Dict[str, "Automaton"]:
     return automatons
 
 
-def _run_nadzoru_script(script_path: Path, automata: Dict[str, "Automaton"], output_dir: Path) -> List[Path]:
+def _run_nadzoru_script(
+    script_path: Path,
+    automata: Dict[str, "Automaton"],
+    output_dir: Path,
+    save_names: List[str],
+) -> List[Path]:
     from machine.automaton import Automaton
 
     loc = {
@@ -163,7 +171,7 @@ def _run_nadzoru_script(script_path: Path, automata: Dict[str, "Automaton"], out
         "Coaccessible": Automaton.coaccessible,
         "Trim": Automaton.trim,
         "Minimize": Automaton.minimize,
-        "Supervisor Reduction": Automaton.supervisor_reduction,
+        "SupervisorReduction": Automaton.supervisor_reduction,
         "Labeller": Automaton.labeller,
         "Diagnoser": Automaton.diagnoser,
     }
@@ -173,18 +181,20 @@ def _run_nadzoru_script(script_path: Path, automata: Dict[str, "Automaton"], out
     exec(script, {}, loc)
 
     generated: List[Path] = []
-    for name, automaton in loc.items():
-        if not isinstance(automaton, Automaton):
-            continue
-        if name in automata:
-            continue
-        output_path = output_dir / f"{name}.xml"
-        automaton.set_name(name)
-        automaton.set_file_path_name(str(output_path))
-        automaton.arrange_states_position()
-        automaton.save()
-        generated.append(output_path)
+    for name in save_names:
+        obj = loc.get(name)
+        if not isinstance(obj, Automaton):
+            raise SystemExit(f"[nadzoru] '{name}' not created by script (or not an Automaton).")
+
+        out = output_dir / f"{name}.xml"
+        obj.set_name(name)
+        obj.set_file_path_name(str(out))
+        obj.arrange_states_position()
+        obj.save()
+        generated.append(out)
+
     return generated
+
 
 
 def _build_sct_yaml(automatons: Sequence["Automaton"]) -> Dict[str, object]:
@@ -429,7 +439,10 @@ def main() -> int:
 
     _ensure_nadzoru_imports(DEFAULT_NADZORU_ROOT)
     automata = _load_automatons([DEFAULT_OUTPUT_DIR, source_automata_dir])
-    _run_nadzoru_script(paths["script"], automata, DEFAULT_OUTPUT_DIR)
+    target = f"Sloc{index}"
+    _run_nadzoru_script(paths["script"], automata, DEFAULT_OUTPUT_DIR, save_names=["Gloc", "Kloc", target])
+
+    #_run_nadzoru_script(paths["script"], automata, DEFAULT_OUTPUT_DIR)
 
     if not paths["sloc_xml"].exists():
         raise SystemExit(f"Expected output not found: {paths['sloc_xml']}")
@@ -442,18 +455,11 @@ def main() -> int:
     sloc_automatons.append(automaton)
 
     yaml_payload = _build_sct_yaml(sloc_automatons)
-    yaml_out = DEFAULT_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}{index}.yaml"
-    yaml_latest = DEFAULT_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}latest.yaml"
-    yaml_default = DEFAULT_YAML_OUT_DIR / "sup_gpt.yaml"
     yaml_real_out = DEFAULT_REAL_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}{index}.yaml"
     yaml_real_latest = DEFAULT_REAL_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}latest.yaml"
     yaml_real_default = DEFAULT_REAL_YAML_OUT_DIR / "sup_gpt.yaml"
-    yaml_out.parent.mkdir(parents=True, exist_ok=True)
     yaml_real_out.parent.mkdir(parents=True, exist_ok=True)
     for path in (
-        yaml_out,
-        yaml_latest,
-        yaml_default,
         yaml_real_out,
         yaml_real_latest,
         yaml_real_default,
@@ -461,7 +467,7 @@ def main() -> int:
         with open(path, "w", encoding="utf-8") as f:
             yaml.safe_dump(yaml_payload, f, sort_keys=False, default_flow_style=True)
 
-    print(f"Wrote YAML to {yaml_out}")
+    print(f"Wrote YAML to {yaml_real_out}")
     return 0
 
 
