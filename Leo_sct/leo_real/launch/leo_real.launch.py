@@ -1,10 +1,18 @@
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 import os
 
 
 def generate_launch_description():
+    enable_supervisor = LaunchConfiguration("enable_supervisor")
+    enable_supervisor_arg = DeclareLaunchArgument(
+        "enable_supervisor",
+        default_value="false",
+        description="Start robot_supervisor enabled (true/false).",
+    )
 
     # List your real robots here
     robots = [
@@ -32,6 +40,7 @@ def generate_launch_description():
             parameters=[
                 {"spawn_x": sx},
                 {"spawn_y": sy},
+                {"enabled": enable_supervisor},
             ],
             # If your node uses *relative* 'cmd_vel' in this namespace,
             # topic becomes /robot_i/cmd_vel automatically and you can
@@ -101,4 +110,4 @@ def generate_launch_description():
 
         nodes += [supervisor_node, realsense_node, image_proc_node]
 
-    return LaunchDescription(nodes)
+    return LaunchDescription([enable_supervisor_arg, *nodes])

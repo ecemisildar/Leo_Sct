@@ -200,42 +200,42 @@ class RobotSupervisor(Node):
         twist = Twist()
 
         if ev_name == "EV_random_walk": # EV_V1
-            # self.get_logger().info("Supervisor decision: RANDOM WALK")
+            self.get_logger().info("Supervisor decision: RANDOM WALK")
             twist.linear.x = self.rng.uniform(0.1, 0.2)
             twist.angular.z = self.rng.uniform(-1.0, 1.0)
 
         elif ev_name == "EV_full_rotate": # EV_V0
-            # self.get_logger().info("Supervisor decision: FULL ROTATE")
+            self.get_logger().info("Supervisor decision: FULL ROTATE")
             twist.linear.x = 0.0
             twist.angular.z = 2.0
 
         elif ev_name == "EV_rotate_clockwise": # EV_V2    
-            # self.get_logger().info("Supervisor decision: CW")
+            self.get_logger().info("Supervisor decision: CW")
             twist.linear.x = 0.0
             twist.angular.z = -0.5
 
         elif ev_name == "EV_rotate_counterclockwise":  # EV_V3  
-            # self.get_logger().info("Supervisor decision: CCW")
+            self.get_logger().info("Supervisor decision: CCW")
             twist.linear.x = 0.0  
             twist.angular.z = 0.5
         
         elif ev_name == "EV_move_forward":   # EV_V4  
-            # self.get_logger().info("Supervisor decision: FORWARD")
+            self.get_logger().info("Supervisor decision: FORWARD")
             twist.linear.x = 0.2
             twist.angular.z = 0.0  
 
         elif ev_name == "EV_move_backward":  # EV_V5   
-            # self.get_logger().info("Supervisor decision: BACKWARD")
+            self.get_logger().info("Supervisor decision: BACKWARD")
             twist.linear.x = -0.5
             twist.angular.z = 0.0  
 
         elif ev_name == "EV_move_to_marker":  # EV_V5   
-            # self.get_logger().info("Supervisor decision: MOVE TO marker")
+            self.get_logger().info("Supervisor decision: MOVE TO marker")
             twist.linear.x = 0.2
             twist.angular.z = 0.0         
 
         elif ev_name == "EV_stop":
-            # self.get_logger().info("Supervisor decision: STOP")
+            self.get_logger().info("Supervisor decision: STOP")
             twist.linear.x = 0.0
             twist.angular.z = 0.0
 

@@ -504,12 +504,12 @@ private:
     const bool detected = detectAruco(gray, corners, ids);
     const int dict_report =
       (last_detected_dict_id_ >= 0) ? last_detected_dict_id_ : aruco_dictionary_id_;
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-      "ArUco detections on %s: %zu (dict=%d, inverted=%s)",
-      this->get_fully_qualified_name(),
-      ids.size(),
-      dict_report,
-      last_detected_inverted_ ? "true" : "false");
+    //RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+      //"ArUco detections on %s: %zu (dict=%d, inverted=%s)",
+      //this->get_fully_qualified_name(),
+      //ids.size(),
+      //dict_report,
+      //last_detected_inverted_ ? "true" : "false");
 
     if (detected) {
       const auto now = this->now();
