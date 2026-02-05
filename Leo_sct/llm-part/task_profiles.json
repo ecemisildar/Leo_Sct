@@ -1,0 +1,108 @@
+{
+  "explore": {
+    "goal": "Cover the entire arena efficiently while staying safe",
+    "controllable_events": [
+      "move_forward",
+      "move_backward",
+      "rotate_clockwise",
+      "rotate_counterclockwise",
+      "full_rotate",
+      "random_walk"
+    ],
+    "uncontrollable_events": [
+      "path_clear",
+      "obstacle_front",
+      "obstacle_left",
+      "obstacle_right"
+    ],
+    "constraints": [
+      "Focus on systematic exploration; avoid long dwell times in one spot.",
+      "Do not collide with obstacles and robots.",
+      "Prefer forward movement unless obstacle cues demand recovery."
+    ],
+    "include_default_constraints": true
+  },
+  "wall_follow": {
+    "goal": "Follow the wall consistently while staying safe and avoiding oscillations.",
+    "controllable_events": [
+      "move_forward",
+      "move_backward",
+      "rotate_clockwise",
+      "rotate_counterclockwise",
+      "full_rotate",
+      "random_walk"
+    ],
+    "uncontrollable_events": [
+      "path_clear",
+      "obstacle_front",
+      "obstacle_left",
+      "obstacle_right"
+    ],
+    "constraints": [
+      "Interpret 'wall on left' as obstacle_left while obstacle_front is false.",
+      "Prefer actions that keep obstacle_left active; if obstacle_left disappears, rotate left to re-acquire it.",
+      "If obstacle_front occurs, perform a right turn (or full rotate) to avoid collision, then re-acquire the left wall.",
+      "Avoid oscillation: never allow both rotate directions in the same state; keep a consistent turn direction until path_clear.",
+      "Use forward motion as the default only when path_clear and obstacle_left are true (wall present and front clear)."
+    ],
+    "include_default_constraints": true
+  },
+  "zigzag": {
+    "goal": "Explore the arena in a zigzag pattern while staying safe and avoiding oscillations.",
+    "controllable_events": [
+      "move_forward",
+      "move_backward",
+      "rotate_clockwise",
+      "rotate_counterclockwise",
+      "full_rotate",
+      "random_walk"
+    ],
+    "uncontrollable_events": [
+      "path_clear",
+      "obstacle_front",
+      "obstacle_left",
+      "obstacle_right"
+    ],
+    "constraints": [
+      "Alternate between forward movement and alternating turn directions to create a zigzag path.",
+      "After each forward commit, prefer a turn in the opposite direction from the last turn.",
+      "If obstacle_front occurs, perform a recovery turn and resume the zigzag pattern.",
+      "Avoid oscillation: do not allow both rotate directions in the same state; commit to a turn direction until path_clear."
+    ],
+    "include_default_constraints": true
+  },
+  "find_marker": {
+    "goal": "Find the marker object as soon as possible and get close to it and stop while staying safe.",
+    "controllable_events": [
+      "move_forward",
+      "move_backward",
+      "rotate_clockwise",
+      "rotate_counterclockwise",
+      "full_rotate",
+      "move_to_marker",
+      "stop"
+    ],
+    "uncontrollable_events": [
+      "path_clear",
+      "obstacle_front",
+      "obstacle_left",
+      "obstacle_right",
+      "marker_seen",
+      "marker_lost",
+      "marker_close"
+    ],
+    "constraints": [
+      "Prioritize reaching the marker object quickly; exploration is secondary.",
+      "When marker_seen occurs in clear or forward_commit, include a controllable transition to move_to_marker or a move_to_marker commit state.",
+      "Do NOT allow stop as a primary controllable action solely due to marker_seen; keep moving toward marker unless marker_close is active.",
+      "After marker_seen, avoid returning to exploration states unless the marker object is lost.",
+      "When close to the marker object, prefer stop as the primary controllable action to finish the task safely.",
+      "When marker_close occurs, transition to a marker_close/approach-complete state where stop is the primary or only controllable action.",
+      "When marker is NOT seen, exploration is primary: include an explicit scan state that performs full_rotate or a rotate commit before returning to forward.",
+      "In clear, do not always choose move_forward; allow a rotate commit (or full_rotate) as a primary controllable action for scanning.",
+      "Insert scan states after obstacle recovery or after a forward commit cycle to prevent long straight runs without scanning.",
+      "Use a search pattern: alternate between short forward commits and rotations until marker_seen."
+    ],
+    "include_default_constraints": true
+  }
+}
