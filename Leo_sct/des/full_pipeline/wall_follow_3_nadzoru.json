@@ -1,11 +1,10 @@
 {
-  "rationale": "This supervisor prioritizes left-wall following: the robot advances when the left wall is present and the front is clear, rotates right to avoid front obstacles, and rotates left to re-acquire the left wall if lost. Helper states ensure one-shot actions and recovery. Only one controllable is enabled per state (except obs_front, which allows both move_backward and full_rotate for robust escape). Oscillation is avoided by never enabling both rotate directions in the same state and by using clear recovery paths. All uncontrollables are total, and controllables are only enabled in safe, justified states.",
+  "rationale": "This supervisor prioritizes wall-following on the left, avoids oscillations by consistently preferring right turns for obstacle avoidance, and uses helper commit states to ensure one-shot actions. It is total on uncontrollables, deterministic, and avoids infinite controllable loops. Recovery from obstacles is handled via right turns and full scans if blocked. Forward motion is only allowed when the left wall is present and the path ahead is clear.",
   "new_states": [
     "forward_commit",
     "rotate_commit_cw",
     "rotate_commit_ccw",
-    "scan_full",
-    "recover_back"
+    "scan_full"
   ],
   "transitions": [
     "(\"clear\", \"path_clear\", \"clear\")",
@@ -15,9 +14,9 @@
     "(\"clear\", \"move_forward\", \"forward_commit\")",
     "(\"obs_front\", \"path_clear\", \"clear\")",
     "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
-    "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
-    "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
-    "(\"obs_front\", \"move_backward\", \"recover_back\")",
+    "(\"obs_front\", \"obstacle_left\", \"obs_front\")",
+    "(\"obs_front\", \"obstacle_right\", \"obs_front\")",
+    "(\"obs_front\", \"rotate_clockwise\", \"rotate_commit_cw\")",
     "(\"obs_front\", \"full_rotate\", \"scan_full\")",
     "(\"obs_left\", \"path_clear\", \"clear\")",
     "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
@@ -48,21 +47,16 @@
     "(\"scan_full\", \"obstacle_front\", \"obs_front\")",
     "(\"scan_full\", \"obstacle_left\", \"obs_left\")",
     "(\"scan_full\", \"obstacle_right\", \"obs_right\")",
-    "(\"scan_full\", \"full_rotate\", \"clear\")",
-    "(\"recover_back\", \"path_clear\", \"clear\")",
-    "(\"recover_back\", \"obstacle_front\", \"obs_front\")",
-    "(\"recover_back\", \"obstacle_left\", \"obs_left\")",
-    "(\"recover_back\", \"obstacle_right\", \"obs_right\")",
-    "(\"recover_back\", \"move_backward\", \"scan_full\")"
+    "(\"scan_full\", \"full_rotate\", \"clear\")"
   ],
   "strategy": [
-    "Advance forward only when the left wall is present and the front is clear.",
-    "If the left wall is lost (obs_right), rotate left to re-acquire it.",
-    "If an obstacle is detected in front, move backward or perform a full scan to escape.",
-    "After moving backward, perform a full scan to reorient and re-acquire the wall.",
-    "Never enable both rotate directions in the same state to avoid oscillation.",
-    "All helper states are one-shot: after their action, transition to a perception/decision state.",
-    "All uncontrollable events are total; non-critical ones self-loop in action states.",
-    "No infinite controllable loops; recovery and scan actions always lead to a decision state."
+    "Default to moving forward only when the left wall is present and the path ahead is clear.",
+    "If an obstacle is detected in front, perform a right turn (rotate_clockwise) to avoid collision.",
+    "If the left wall is lost, perform a left turn (rotate_counterclockwise) to re-acquire it.",
+    "If blocked after a right turn, perform a full 360-degree scan to find a new path.",
+    "Use commit states to ensure one-shot actions and avoid oscillations.",
+    "Never enable both rotate directions in the same state.",
+    "Transitions on uncontrollable events are total and deterministic.",
+    "No infinite controllable loops; all commit actions return to a perception/decision state."
   ]
 }

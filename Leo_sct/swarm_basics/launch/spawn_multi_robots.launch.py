@@ -133,7 +133,7 @@ def generate_launch_description():
             # Controller node (per robot)
             behavior_node = Node(
                 package="swarm_basics",
-                executable="robot_supervisor_3_movements",
+                executable="robot_supervisor",
                 name="robot_supervisor",
                 namespace=ns,
                 parameters=[

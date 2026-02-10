@@ -64,8 +64,11 @@ python3 run_pipeline.py --task wall_follow --run-llm
 
 Notes:
 - Output YAMLs are written under `../swarm_basics/config` and `../leo_real/config`.
-- LLM settings can be overridden via `--llm-profile`, `--llm-goal`,
-  `--llm-constraint`, and `--llm-no-default-constraints`.
+- `--run-llm` always generates a new JSON via the LLM step.
+- Output indices (`E*.xml`, `Sloc*.xml`, `*_sup_gpt_*.yaml`) always increment
+  per run, even if the JSON is reused.
+- The pipeline loads `G1.xml`/`G2.xml` explicitly from the task’s hardcoded
+  automata folder, and avoids loading unrelated XMLs to prevent name collisions.
 
 ### Dependencies
 

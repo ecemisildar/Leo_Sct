@@ -67,8 +67,11 @@ class SCT:
         return ce_exists, ce
 
     def input_read(self, ev):
-        if ev < self.num_events and self.callback[ev]:
-            return self.callback[ev]['check_input'](self.callback[ev]['sup_data'])
+        if ev < self.num_events and self.callback.get(ev):
+            check = self.callback[ev].get('check_input')
+            if check is None:
+                return False
+            return check(self.callback[ev].get('sup_data'))
         return False
 
 
@@ -111,8 +114,10 @@ class SCT:
 
 
     def exec_callback(self, ev):
-        if ev < self.num_events and self.callback[ev]['callback']:
-            self.callback[ev]['callback'](self.callback[ev]['sup_data'])
+        if ev < self.num_events and self.callback.get(ev):
+            cb = self.callback[ev].get('callback')
+            if cb:
+                cb(self.callback[ev].get('sup_data'))
 
 
     def get_next_controllable(self):

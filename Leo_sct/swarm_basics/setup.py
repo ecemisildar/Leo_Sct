@@ -12,8 +12,6 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', ['launch/spawn_multi_robots.launch.py']),
         ('share/' + package_name + '/launch', ['launch/leo_gz.launch.py']),
-        # Archive only the configuration files that actually exist in config/
-        ('share/' + package_name + '/config', ['config/supervisor2.yaml']),
         ('share/' + package_name + '/config', ['config/sup_gpt.yaml']),
         ('share/' + package_name + '/config', ['config/cylinder_positions.json']),
         ('share/' + package_name + '/worlds', ['worlds/random_world.sdf']),
@@ -39,7 +37,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'robot_supervisor_3_movements = swarm_basics.robot_supervisor_3_movements:main',
+            'robot_supervisor = swarm_basics.robot_supervisor:main',
             'coverage_counter = swarm_basics.coverage_counter:main',
             'bump_counter = swarm_basics.bump_counter:main',
         ],

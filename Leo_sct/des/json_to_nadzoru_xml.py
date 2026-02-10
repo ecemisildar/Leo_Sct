@@ -19,21 +19,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence
 
-DEFAULT_CONTROLLABLE = [
-    "move_forward",
-    "move_backward",
-    "rotate_clockwise",
-    "rotate_counterclockwise",
-    "full_rotate",
-    # "random_walk",
-]
-
-DEFAULT_UNCONTROLLABLE = [
-    "path_clear",
-    "obstacle_front",
-    "obstacle_left",
-    "obstacle_right",
-]
+THIS_DIR = Path(__file__).resolve().parent
+DEFAULT_PROFILE_PATH = THIS_DIR / "task_profiles.json"
 
 
 def _parse_transition_line(line: object) -> Dict[str, str]:
@@ -138,6 +125,36 @@ def _event_entries(
     return events
 
 
+def _load_profiles(path: Path) -> Dict[str, Dict[str, object]]:
+    if not path.exists():
+        raise SystemExit(f"Profile file not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise SystemExit("Profile file must contain a JSON object at the top level.")
+    return payload
+
+
+def _events_from_profile(profile_name: str, profile_path: Path) -> tuple[List[str], List[str]]:
+    profiles = _load_profiles(profile_path)
+    profile = profiles.get(profile_name)
+    if profile is None:
+        raise SystemExit(
+            f"Profile '{profile_name}' not found in {profile_path}. "
+            f"Available: {sorted(profiles.keys())}"
+        )
+    controllable = profile.get("controllable_events")
+    uncontrollable = profile.get("uncontrollable_events")
+    if not isinstance(controllable, list) or not all(isinstance(x, str) for x in controllable):
+        raise SystemExit(
+            f"Profile '{profile_name}' missing valid controllable_events list."
+        )
+    if not isinstance(uncontrollable, list) or not all(isinstance(x, str) for x in uncontrollable):
+        raise SystemExit(
+            f"Profile '{profile_name}' missing valid uncontrollable_events list."
+        )
+    return list(controllable), list(uncontrollable)
+
+
 def _build_xml(
     supervisor_id: str,
     states: Sequence[Dict[str, str]],
@@ -222,11 +239,23 @@ def convert_json_to_xml(args: argparse.Namespace) -> None:
         raise SystemExit(f"Marked states not found: {sorted(missing_marked)}")
 
     states = _states_with_flags(state_names, initial, marked)
-    events = _event_entries(
-        args.controllable or DEFAULT_CONTROLLABLE,
-        args.uncontrollable or DEFAULT_UNCONTROLLABLE,
-        transitions,
-    )
+    controllable = args.controllable
+    uncontrollable = args.uncontrollable
+    if not controllable or not uncontrollable:
+        if not args.profile:
+            raise SystemExit(
+                "Provide --profile to read events from task_profiles.json, "
+                "or pass both --controllable and --uncontrollable explicitly."
+            )
+        profile_controllable, profile_uncontrollable = _events_from_profile(
+            args.profile, Path(args.profile_path)
+        )
+        if not controllable:
+            controllable = profile_controllable
+        if not uncontrollable:
+            uncontrollable = profile_uncontrollable
+
+    events = _event_entries(controllable, uncontrollable, transitions)
     xml_payload = _build_xml(args.supervisor_id, states, events, transitions)
     Path(args.output).write_bytes(xml_payload)
 
@@ -256,12 +285,21 @@ def main(argv: List[str]) -> int:
     parser.add_argument(
         "--controllable",
         nargs="+",
-        help="Controllable event names (default: standard list).",
+        help="Controllable event names (overrides profile list).",
     )
     parser.add_argument(
         "--uncontrollable",
         nargs="+",
-        help="Uncontrollable event names (default: standard list).",
+        help="Uncontrollable event names (overrides profile list).",
+    )
+    parser.add_argument(
+        "--profile",
+        help="Profile name in task_profiles.json for event lists.",
+    )
+    parser.add_argument(
+        "--profile-path",
+        default=str(DEFAULT_PROFILE_PATH),
+        help="Path to task_profiles.json (default: des/task_profiles.json).",
     )
     parser.add_argument(
         "--supervisor-id",

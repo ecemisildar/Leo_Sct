@@ -1,5 +1,5 @@
 {
-  "rationale": "This supervisor prioritizes left-wall following: the robot advances when the left wall is present and the front is clear, rotates right to avoid front obstacles, and rotates left to re-acquire the left wall if lost. Helper states ensure one-shot actions and recovery. Only one controllable is enabled per state (except obs_front, which allows both move_backward and full_rotate for robust escape). Oscillation is avoided by never enabling both rotate directions in the same state and by using clear recovery paths. All uncontrollables are total, and controllables are only enabled in safe, justified states.",
+  "rationale": "This supervisor structure prioritizes safe, efficient exploration by preferring forward motion in clear conditions, using deterministic recovery and scan behaviors when obstacles are detected, and avoiding oscillatory or ambiguous control choices. Helper states (forward_commit, rotate_commit_cw, rotate_commit_ccw, scan_full, recover_back) ensure one-shot actions and clear transitions. All uncontrollable events are handled in every state, and only one controllable is enabled per state (except obs_front, which allows both move_backward and full_rotate for robust escape). The design avoids infinite loops and ensures the robot does not get stuck or oscillate between states.",
   "new_states": [
     "forward_commit",
     "rotate_commit_cw",
@@ -22,11 +22,11 @@
     "(\"obs_left\", \"path_clear\", \"clear\")",
     "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
     "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
-    "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
-    "(\"obs_left\", \"move_forward\", \"forward_commit\")",
+    "(\"obs_left\", \"obstacle_right\", \"obs_front\")",
+    "(\"obs_left\", \"rotate_clockwise\", \"rotate_commit_cw\")",
     "(\"obs_right\", \"path_clear\", \"clear\")",
     "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
-    "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_right\", \"obstacle_left\", \"obs_front\")",
     "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
     "(\"obs_right\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
     "(\"forward_commit\", \"path_clear\", \"clear\")",
@@ -56,13 +56,14 @@
     "(\"recover_back\", \"move_backward\", \"scan_full\")"
   ],
   "strategy": [
-    "Advance forward only when the left wall is present and the front is clear.",
-    "If the left wall is lost (obs_right), rotate left to re-acquire it.",
-    "If an obstacle is detected in front, move backward or perform a full scan to escape.",
-    "After moving backward, perform a full scan to reorient and re-acquire the wall.",
-    "Never enable both rotate directions in the same state to avoid oscillation.",
-    "All helper states are one-shot: after their action, transition to a perception/decision state.",
-    "All uncontrollable events are total; non-critical ones self-loop in action states.",
-    "No infinite controllable loops; recovery and scan actions always lead to a decision state."
+    "Prefer forward movement in clear state to maximize coverage.",
+    "On front obstacle, escape by moving backward or performing a full scan to find a new direction.",
+    "If obstacle is on the left, prefer rotating clockwise to avoid oscillation and clear the path.",
+    "If obstacle is on the right, prefer rotating counterclockwise for the same reason.",
+    "Helper states (commit/recover/scan) ensure one-shot actions and prevent infinite loops.",
+    "All uncontrollable events are handled in every state to ensure robustness.",
+    "No direct move_forward after obstacle_front; always pass through a recovery or scan.",
+    "No oscillatory choices: only one rotation direction is enabled per side-obstacle state.",
+    "Systematic exploration is achieved by alternating between forward, scan, and recovery as needed."
   ]
 }

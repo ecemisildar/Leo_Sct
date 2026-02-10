@@ -1,226 +1,69 @@
 {
-  "rationale": "This supervisor structure ensures safe wall-following by prioritizing left-wall tracking, robust obstacle avoidance, and non-oscillatory, commit-based turning. It uses commit states to enforce consistent actions, avoids simultaneous left/right turns, and always passes through recovery states after obstacle encounters.",
+  "rationale": "This supervisor prioritizes wall-following on the left, avoids oscillations by consistently preferring right turns for obstacle avoidance, and uses helper states for atomic actions and recovery. Only one controllable is enabled per state (except obs_front, which allows both move_backward and full_rotate for robust escape). Uncontrollable events are total, and commit states are one-shot. The design ensures safe, deterministic, and consistent wall-following behavior.",
   "new_states": [
+    "forward_commit",
     "rotate_commit_cw",
     "rotate_commit_ccw",
-    "forward_commit",
-    "reacquire_left_wall"
+    "scan_full",
+    "recover_back"
   ],
   "transitions": [
-    [
-      "clear",
-      "obstacle_left",
-      "forward_commit"
-    ],
-    [
-      "clear",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "clear",
-      "obstacle_right",
-      "rotate_commit_ccw"
-    ],
-    [
-      "clear",
-      "path_clear",
-      "reacquire_left_wall"
-    ],
-    [
-      "clear",
-      "rotate_counterclockwise",
-      "rotate_commit_ccw"
-    ],
-    [
-      "obs_left",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "obs_left",
-      "obstacle_right",
-      "rotate_commit_ccw"
-    ],
-    [
-      "obs_left",
-      "path_clear",
-      "forward_commit"
-    ],
-    [
-      "obs_left",
-      "obstacle_left",
-      "forward_commit"
-    ],
-    [
-      "obs_left",
-      "rotate_counterclockwise",
-      "rotate_commit_ccw"
-    ],
-    [
-      "obs_right",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "obs_right",
-      "obstacle_left",
-      "forward_commit"
-    ],
-    [
-      "obs_right",
-      "path_clear",
-      "rotate_commit_ccw"
-    ],
-    [
-      "obs_right",
-      "obstacle_right",
-      "rotate_commit_ccw"
-    ],
-    [
-      "obs_right",
-      "rotate_counterclockwise",
-      "rotate_commit_ccw"
-    ],
-    [
-      "obs_front",
-      "obstacle_left",
-      "rotate_commit_cw"
-    ],
-    [
-      "obs_front",
-      "obstacle_right",
-      "full_rotate"
-    ],
-    [
-      "obs_front",
-      "path_clear",
-      "reacquire_left_wall"
-    ],
-    [
-      "obs_front",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "obs_front",
-      "move_backward",
-      "obs_front"
-    ],
-    [
-      "obs_front",
-      "full_rotate",
-      "obs_front"
-    ],
-    [
-      "rotate_commit_ccw",
-      "path_clear",
-      "reacquire_left_wall"
-    ],
-    [
-      "rotate_commit_ccw",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "rotate_commit_ccw",
-      "obstacle_left",
-      "rotate_commit_ccw"
-    ],
-    [
-      "rotate_commit_ccw",
-      "obstacle_right",
-      "rotate_commit_ccw"
-    ],
-    [
-      "rotate_commit_ccw",
-      "rotate_counterclockwise",
-      "rotate_commit_ccw"
-    ],
-    [
-      "rotate_commit_cw",
-      "path_clear",
-      "reacquire_left_wall"
-    ],
-    [
-      "rotate_commit_cw",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "rotate_commit_cw",
-      "obstacle_left",
-      "rotate_commit_cw"
-    ],
-    [
-      "rotate_commit_cw",
-      "obstacle_right",
-      "rotate_commit_cw"
-    ],
-    [
-      "rotate_commit_cw",
-      "rotate_clockwise",
-      "rotate_commit_cw"
-    ],
-    [
-      "forward_commit",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "forward_commit",
-      "obstacle_left",
-      "forward_commit"
-    ],
-    [
-      "forward_commit",
-      "obstacle_right",
-      "rotate_commit_ccw"
-    ],
-    [
-      "forward_commit",
-      "path_clear",
-      "forward_commit"
-    ],
-    [
-      "forward_commit",
-      "move_forward",
-      "forward_commit"
-    ],
-    [
-      "reacquire_left_wall",
-      "obstacle_left",
-      "forward_commit"
-    ],
-    [
-      "reacquire_left_wall",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "reacquire_left_wall",
-      "obstacle_right",
-      "rotate_commit_ccw"
-    ],
-    [
-      "reacquire_left_wall",
-      "path_clear",
-      "rotate_commit_ccw"
-    ],
-    [
-      "reacquire_left_wall",
-      "rotate_counterclockwise",
-      "rotate_commit_ccw"
-    ]
+    "(\"clear\", \"path_clear\", \"clear\")",
+    "(\"clear\", \"obstacle_front\", \"obs_front\")",
+    "(\"clear\", \"obstacle_left\", \"obs_left\")",
+    "(\"clear\", \"obstacle_right\", \"obs_right\")",
+    "(\"clear\", \"move_forward\", \"forward_commit\")",
+    "(\"obs_front\", \"path_clear\", \"clear\")",
+    "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_front\", \"move_backward\", \"recover_back\")",
+    "(\"obs_front\", \"full_rotate\", \"scan_full\")",
+    "(\"obs_left\", \"path_clear\", \"clear\")",
+    "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_left\", \"move_forward\", \"forward_commit\")",
+    "(\"obs_right\", \"path_clear\", \"clear\")",
+    "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_right\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+    "(\"forward_commit\", \"path_clear\", \"clear\")",
+    "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+    "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+    "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+    "(\"forward_commit\", \"move_forward\", \"clear\")",
+    "(\"rotate_commit_cw\", \"path_clear\", \"clear\")",
+    "(\"rotate_commit_cw\", \"obstacle_front\", \"obs_front\")",
+    "(\"rotate_commit_cw\", \"obstacle_left\", \"obs_left\")",
+    "(\"rotate_commit_cw\", \"obstacle_right\", \"obs_right\")",
+    "(\"rotate_commit_cw\", \"rotate_clockwise\", \"clear\")",
+    "(\"rotate_commit_ccw\", \"path_clear\", \"clear\")",
+    "(\"rotate_commit_ccw\", \"obstacle_front\", \"obs_front\")",
+    "(\"rotate_commit_ccw\", \"obstacle_left\", \"obs_left\")",
+    "(\"rotate_commit_ccw\", \"obstacle_right\", \"obs_right\")",
+    "(\"rotate_commit_ccw\", \"rotate_counterclockwise\", \"clear\")",
+    "(\"scan_full\", \"path_clear\", \"clear\")",
+    "(\"scan_full\", \"obstacle_front\", \"obs_front\")",
+    "(\"scan_full\", \"obstacle_left\", \"obs_left\")",
+    "(\"scan_full\", \"obstacle_right\", \"obs_right\")",
+    "(\"scan_full\", \"full_rotate\", \"clear\")",
+    "(\"recover_back\", \"path_clear\", \"clear\")",
+    "(\"recover_back\", \"obstacle_front\", \"obs_front\")",
+    "(\"recover_back\", \"obstacle_left\", \"obs_left\")",
+    "(\"recover_back\", \"obstacle_right\", \"obs_right\")",
+    "(\"recover_back\", \"move_backward\", \"scan_full\")"
   ],
   "strategy": [
-    "Prioritize left-wall following: always try to keep obstacle_left active.",
-    "If wall on left disappears, rotate left to reacquire it.",
-    "If obstacle_front occurs, escape by turning right or full rotate, then reacquire left wall.",
-    "Use commit states to enforce consistent rotation or forward motion until a new observation is made.",
-    "Never allow both rotate directions in any state; avoid oscillations.",
-    "Only allow move_forward when path is clear and wall is present on the left.",
-    "After obstacle_front, always pass through a recovery state before resuming forward motion.",
-    "If wall is detected on right but not left, rotate left to reacquire left wall."
+    "Default to move_forward when path is clear and wall is present on the left.",
+    "If obstacle_front is detected, escape by moving backward or performing a full scan.",
+    "If obstacle_left is lost, rotate left (counterclockwise) to re-acquire the wall.",
+    "If obstacle_right is detected (but not front), rotate left to avoid right-side collision.",
+    "Commit states ensure atomic actions and prevent oscillations.",
+    "Uncontrollable events are always handled first and are total for all states.",
+    "No state enables both rotate directions or both move_forward and move_backward, except obs_front for robust escape.",
+    "After recovery (move_backward), perform a scan to reorient before resuming wall-following.",
+    "Transitions are deterministic and avoid infinite controllable loops."
   ]
 }

@@ -1,250 +1,80 @@
 {
-  "rationale": "This supervisor enforces a zigzag exploration by alternating between forward movement and committed turns, always using commit states to avoid oscillation and ensure safe, non-redundant reactions to obstacles. After each forward advance, the robot alternates its turn direction. Recovery from obstacles always passes through a committed turn before resuming forward motion.",
+  "rationale": "This supervisor structure enables safe zigzag exploration by alternating forward movement and turns, using helper states to enforce one-shot actions and avoid oscillations. Recovery from obstacles is handled via backward and scan actions, and turn direction alternates after each forward commit. All uncontrollable events are handled deterministically, and only one controllable is enabled per state (except obs_front, which allows both move_backward and full_rotate for robust recovery).",
   "new_states": [
     "forward_commit",
     "rotate_commit_cw",
     "rotate_commit_ccw",
-    "recovery_turn_cw",
-    "recovery_turn_ccw"
+    "scan_full",
+    "recover_back",
+    "zigzag_left",
+    "zigzag_right"
   ],
   "transitions": [
-    [
-      "clear",
-      "move_forward",
-      "forward_commit"
-    ],
-    [
-      "clear",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "clear",
-      "obstacle_left",
-      "obs_left"
-    ],
-    [
-      "clear",
-      "obstacle_right",
-      "obs_right"
-    ],
-    [
-      "clear",
-      "path_clear",
-      "clear"
-    ],
-    [
-      "forward_commit",
-      "move_forward",
-      "forward_commit"
-    ],
-    [
-      "forward_commit",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "forward_commit",
-      "obstacle_left",
-      "obs_left"
-    ],
-    [
-      "forward_commit",
-      "obstacle_right",
-      "obs_right"
-    ],
-    [
-      "forward_commit",
-      "path_clear",
-      "rotate_commit_ccw"
-    ],
-    [
-      "rotate_commit_ccw",
-      "rotate_counterclockwise",
-      "rotate_commit_ccw"
-    ],
-    [
-      "rotate_commit_ccw",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "rotate_commit_ccw",
-      "obstacle_left",
-      "obs_left"
-    ],
-    [
-      "rotate_commit_ccw",
-      "obstacle_right",
-      "obs_right"
-    ],
-    [
-      "rotate_commit_ccw",
-      "path_clear",
-      "forward_commit"
-    ],
-    [
-      "rotate_commit_cw",
-      "rotate_clockwise",
-      "rotate_commit_cw"
-    ],
-    [
-      "rotate_commit_cw",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "rotate_commit_cw",
-      "obstacle_left",
-      "obs_left"
-    ],
-    [
-      "rotate_commit_cw",
-      "obstacle_right",
-      "obs_right"
-    ],
-    [
-      "rotate_commit_cw",
-      "path_clear",
-      "forward_commit"
-    ],
-    [
-      "obs_front",
-      "move_backward",
-      "recovery_turn_cw"
-    ],
-    [
-      "obs_front",
-      "full_rotate",
-      "recovery_turn_ccw"
-    ],
-    [
-      "obs_front",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "obs_front",
-      "obstacle_left",
-      "obs_left"
-    ],
-    [
-      "obs_front",
-      "obstacle_right",
-      "obs_right"
-    ],
-    [
-      "obs_front",
-      "path_clear",
-      "clear"
-    ],
-    [
-      "recovery_turn_cw",
-      "rotate_clockwise",
-      "rotate_commit_cw"
-    ],
-    [
-      "recovery_turn_cw",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "recovery_turn_cw",
-      "obstacle_left",
-      "obs_left"
-    ],
-    [
-      "recovery_turn_cw",
-      "obstacle_right",
-      "obs_right"
-    ],
-    [
-      "recovery_turn_cw",
-      "path_clear",
-      "rotate_commit_cw"
-    ],
-    [
-      "recovery_turn_ccw",
-      "rotate_counterclockwise",
-      "rotate_commit_ccw"
-    ],
-    [
-      "recovery_turn_ccw",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "recovery_turn_ccw",
-      "obstacle_left",
-      "obs_left"
-    ],
-    [
-      "recovery_turn_ccw",
-      "obstacle_right",
-      "obs_right"
-    ],
-    [
-      "recovery_turn_ccw",
-      "path_clear",
-      "rotate_commit_ccw"
-    ],
-    [
-      "obs_left",
-      "rotate_clockwise",
-      "rotate_commit_cw"
-    ],
-    [
-      "obs_left",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "obs_left",
-      "obstacle_left",
-      "obs_left"
-    ],
-    [
-      "obs_left",
-      "obstacle_right",
-      "obs_right"
-    ],
-    [
-      "obs_left",
-      "path_clear",
-      "forward_commit"
-    ],
-    [
-      "obs_right",
-      "rotate_counterclockwise",
-      "rotate_commit_ccw"
-    ],
-    [
-      "obs_right",
-      "obstacle_front",
-      "obs_front"
-    ],
-    [
-      "obs_right",
-      "obstacle_left",
-      "obs_left"
-    ],
-    [
-      "obs_right",
-      "obstacle_right",
-      "obs_right"
-    ],
-    [
-      "obs_right",
-      "path_clear",
-      "forward_commit"
-    ]
+    "(\"clear\", \"path_clear\", \"clear\")",
+    "(\"clear\", \"obstacle_front\", \"obs_front\")",
+    "(\"clear\", \"obstacle_left\", \"obs_left\")",
+    "(\"clear\", \"obstacle_right\", \"obs_right\")",
+    "(\"clear\", \"move_forward\", \"forward_commit\")",
+    "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+    "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+    "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+    "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+    "(\"forward_commit\", \"move_forward\", \"zigzag_left\")",
+    "(\"zigzag_left\", \"path_clear\", \"zigzag_left\")",
+    "(\"zigzag_left\", \"obstacle_front\", \"obs_front\")",
+    "(\"zigzag_left\", \"obstacle_left\", \"obs_left\")",
+    "(\"zigzag_left\", \"obstacle_right\", \"obs_right\")",
+    "(\"zigzag_left\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+    "(\"rotate_commit_cw\", \"path_clear\", \"rotate_commit_cw\")",
+    "(\"rotate_commit_cw\", \"obstacle_front\", \"obs_front\")",
+    "(\"rotate_commit_cw\", \"obstacle_left\", \"obs_left\")",
+    "(\"rotate_commit_cw\", \"obstacle_right\", \"obs_right\")",
+    "(\"rotate_commit_cw\", \"rotate_clockwise\", \"zigzag_right\")",
+    "(\"zigzag_right\", \"path_clear\", \"zigzag_right\")",
+    "(\"zigzag_right\", \"obstacle_front\", \"obs_front\")",
+    "(\"zigzag_right\", \"obstacle_left\", \"obs_left\")",
+    "(\"zigzag_right\", \"obstacle_right\", \"obs_right\")",
+    "(\"zigzag_right\", \"move_forward\", \"forward_commit\")",
+    "(\"obs_front\", \"path_clear\", \"clear\")",
+    "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_front\", \"move_backward\", \"recover_back\")",
+    "(\"obs_front\", \"full_rotate\", \"scan_full\")",
+    "(\"recover_back\", \"path_clear\", \"recover_back\")",
+    "(\"recover_back\", \"obstacle_front\", \"obs_front\")",
+    "(\"recover_back\", \"obstacle_left\", \"obs_left\")",
+    "(\"recover_back\", \"obstacle_right\", \"obs_right\")",
+    "(\"recover_back\", \"move_backward\", \"scan_full\")",
+    "(\"scan_full\", \"path_clear\", \"clear\")",
+    "(\"scan_full\", \"obstacle_front\", \"obs_front\")",
+    "(\"scan_full\", \"obstacle_left\", \"obs_left\")",
+    "(\"scan_full\", \"obstacle_right\", \"obs_right\")",
+    "(\"scan_full\", \"full_rotate\", \"clear\")",
+    "(\"obs_left\", \"path_clear\", \"clear\")",
+    "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_left\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+    "(\"obs_right\", \"path_clear\", \"clear\")",
+    "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+    "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+    "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+    "(\"obs_right\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+    "(\"rotate_commit_ccw\", \"path_clear\", \"rotate_commit_ccw\")",
+    "(\"rotate_commit_ccw\", \"obstacle_front\", \"obs_front\")",
+    "(\"rotate_commit_ccw\", \"obstacle_left\", \"obs_left\")",
+    "(\"rotate_commit_ccw\", \"obstacle_right\", \"obs_right\")",
+    "(\"rotate_commit_ccw\", \"rotate_counterclockwise\", \"zigzag_left\")"
   ],
   "strategy": [
-    "Alternate between forward movement and committed turns to enforce zigzag exploration.",
+    "Alternate between forward movement and turns to create a zigzag path.",
     "After each forward commit, switch to a turn in the opposite direction from the last turn.",
-    "Use commit states for all turns to avoid oscillation and ensure the robot completes the turn before resuming forward motion.",
-    "On obstacle_front, never allow immediate forward; require a recovery turn or backward movement first.",
-    "For obs_left/obs_right, always prefer turning away from the obstacle using a committed turn.",
-    "All uncontrollable events are handled in every state to ensure supervisor completeness and safety."
+    "If an obstacle is detected in front, perform a recovery by moving backward and then scanning (full_rotate) before resuming exploration.",
+    "If an obstacle is detected on the left, prefer a clockwise turn; if on the right, prefer a counterclockwise turn.",
+    "Only one controllable action is enabled per state (except obs_front, which allows both move_backward and full_rotate for robust recovery).",
+    "All uncontrollable events are handled deterministically and transitions are total with respect to uncontrollables.",
+    "Helper states (forward_commit, rotate_commit_cw/ccw, scan_full, recover_back, zigzag_left/right) enforce one-shot actions and prevent oscillations.",
+    "No infinite controllable loops; all commit and recovery states transition out after their primary action."
   ]
 }
