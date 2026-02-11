@@ -23,7 +23,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'robot_supervisor_3_movements = leo_real.robot_supervisor_3_movements:main',
+            'robot_supervisor = leo_real.robot_supervisor:main',
         ],
     },
 )

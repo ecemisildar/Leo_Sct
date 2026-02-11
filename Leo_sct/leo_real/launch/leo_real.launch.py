@@ -34,7 +34,7 @@ def generate_launch_description():
         # --- Supervisor node (publishes cmd_vel) ---
         supervisor_node = Node(
             package="leo_real",
-            executable="robot_supervisor_3_movements",
+            executable="robot_supervisor",
             name="robot_supervisor",
             namespace=ns,
             parameters=[

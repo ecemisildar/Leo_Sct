@@ -1,73 +1,106 @@
-## GPT-based Supervisor Design Helper
+## DES Pipeline (`run_pipeline.py`)
 
-This folder contains two entry points:
-- `request_supervisor_updates_manual.py` asks the GPT API for DES supervisor
-  transitions when you already know the state/event lists (no C++ parsing).
-- `run_pipeline.py` runs the full DES -> Nadzoru -> SCT pipeline, optionally
-  calling the GPT helper first and then emitting YAML for the ROS node.
+This directory is centered on `run_pipeline.py`, which builds a supervisor YAML
+for ROS from task profiles and automata models.
 
-### Manual GPT helper
+## What `run_pipeline.py` does
 
-Quick start:
+For a selected `--task`, the pipeline executes:
 
-```
-cd Leo_sct/des
-python3 request_supervisor_updates_manual.py --profile find_marker
-```
+1. Optional LLM generation of a supervisor JSON (`*_nadzoru.json`).
+2. Validation of JSON transitions (event alphabet, determinism, uncontrollable
+   totality, controllable presence, loop guards).
+3. JSON to Nadzoru XML conversion via `json_to_nadzoru_xml.py` (`E*.xml`).
+4. Headless Nadzoru script execution (`Sync`, `SupC`) to produce `Sloc*.xml`.
+5. `Sloc*.xml` to SCT YAML export for ROS runtime.
 
-Key flags:
+It does not build or run C++ nodes directly.
 
-- `--profile NAME` – use a predefined goal/event set from `task_profiles.json`.
-- `--states ...` – override the state list (defaults to clear/obs_*).
-- `--controllable-events ...`, `--uncontrollable-events ...` – override event lists.
-- `--existing-transition "state event next"` – include known transitions
-  (repeatable), or provide `--transitions-file`.
-- `--scenario "..."` – describe the operating context.
-- `--constraint "..."` – add guidance bullets (repeatable).
-- `--no-default-constraints` – drop the baked-in obstacle handling guidance.
-- `--no-current` – ignore existing transitions even if provided.
-- `--dry-run` – print the prompt without calling the API.
-- `--save path.json` – store the returned JSON.
-- `--model`, `--temperature`, `--timeout`, `--retries` – API tuning.
-- `--list-profiles` – list available profiles and exit.
+## Files used by the pipeline
 
-Example (dry-run prompt):
+- `run_pipeline.py`: main entry point.
+- `task_profiles.json`: per-task goal and event lists.
+- `json_to_nadzoru_xml.py`: JSON to XML converter used by the pipeline.
+- `hardcoded_find_obj/G1.xml`, `hardcoded_find_obj/G2.xml` (and task-specific
+  variants): source plant/spec automata.
+- `full_pipeline/`: generated intermediate artifacts (`E*.xml`, `Sloc*.xml`,
+  `script.txt`, `*_nadzoru.json`).
 
-```
-python3 request_supervisor_updates_manual.py \
-  --profile find_marker \
-  --scenario "Robot is in a crowded environment" \
-  --constraint "Prefer slowing down or waiting instead of backing up" \
-  --constraint "Avoid fast movements near people" \
-  --dry-run
-```
+Related but separate:
 
-The script expects an API key via `OPENAI_API_KEY` or `../api_key.txt`. The
-response JSON contains `transitions` lines (also echoed verbatim at the end)
-that can be pasted into a DES file or fed into the pipeline.
+- `convert_to_nadzoru_xml.py` converts a `robot_navigation.cpp`-style source to
+  XML, but it is not called by `des/run_pipeline.py`.
 
-### End-to-end pipeline
+## Task to automata mapping
 
-`run_pipeline.py` runs:
-1) (Optional) GPT call to produce a JSON supervisor.
-2) JSON -> Nadzoru XML.
-3) Headless Nadzoru script to compute Sloc*.xml.
-4) SCT YAML export for ROS.
+- `find_marker` -> `hardcoded_find_obj`
+- `explore` -> `hardcoded_coverage`
+- `wall_follow` -> `hardcoded_wall_follow`
+- `zigzag` -> `hardcoded_zigzag`
 
-Quick runs:
+## Usage
 
-```
+From `Leo_sct/des`:
+
+```bash
 python3 run_pipeline.py --task explore --run-llm
 python3 run_pipeline.py --task find_marker --skip-llm
 python3 run_pipeline.py --task wall_follow --run-llm
+python3 run_pipeline.py --task zigzag --run-llm
 ```
 
-Notes:
-- Output YAMLs are written under `../swarm_basics/config` and `../leo_real/config`.
-- LLM settings can be overridden via `--llm-profile`, `--llm-goal`,
-  `--llm-constraint`, and `--llm-no-default-constraints`.
+Required flag:
 
-### Dependencies
+- `--task {find_marker|explore|wall_follow|zigzag}`
 
-- `requests` for the GPT API helper.
-- `PyYAML` for the SCT YAML output in `run_pipeline.py`.
+LLM control flags:
+
+- `--run-llm`: generate a new JSON from the built-in LLM step.
+- `--skip-llm`: skip LLM and reuse latest JSON for the selected task.
+
+Note: `RUN_LLM` defaults to `True` in code, so `--skip-llm` is the explicit way
+to bypass LLM generation.
+
+## Inputs and outputs
+
+Input key source:
+
+- `OPENAI_API_KEY` environment variable, or
+- `../api_key.txt`
+
+Generated files:
+
+- `des/full_pipeline/<task>_<N>_nadzoru.json`
+- `des/full_pipeline/E<N>.xml`
+- `des/full_pipeline/Sloc<N>.xml`
+- `des/full_pipeline/script.txt`
+
+YAML outputs written to:
+
+- `swarm_basics/config/<task>_sup_gpt_<N>.yaml`
+- `swarm_basics/config/sup_gpt.yaml` (latest copy)
+- `leo_real/config/<task>_sup_gpt_<N>.yaml`
+- `leo_real/config/sup_gpt.yaml` (latest copy)
+
+## Important behavior
+
+- Output index `<N>` auto-increments based on existing `E*.xml` and `Sloc*.xml`.
+- `G1`/`G2` are loaded explicitly from the selected task folder to avoid
+  collisions with unrelated XMLs.
+- If LLM output is invalid, pipeline stops before XML generation.
+- If Nadzoru script fails or `Sloc<N>.xml` is missing, pipeline exits with a
+  detailed error message.
+
+## Prerequisites
+
+- Python packages: `requests`, `PyYAML`
+- Nadzoru2 source available at:
+  `~/Documents/Nadzoru2`
+  (used to import `machine.automaton`)
+
+## Troubleshooting
+
+- `Unknown task`: verify the name exists in `task_profiles.json`.
+- `Expected input not found` with `--skip-llm`: no prior JSON exists for task.
+- `Profile ... missing valid ... events list`: fix malformed profile schema.
+- Nadzoru import errors: check `DEFAULT_NADZORU_ROOT` in `run_pipeline.py`.

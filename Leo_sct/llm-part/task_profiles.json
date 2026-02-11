@@ -26,7 +26,6 @@
     "goal": "Follow the wall consistently while staying safe and avoiding oscillations.",
     "controllable_events": [
       "move_forward",
-      "move_backward",
       "rotate_clockwise",
       "rotate_counterclockwise",
       "full_rotate",
@@ -41,7 +40,7 @@
     "constraints": [
       "Interpret 'wall on left' as obstacle_left while obstacle_front is false.",
       "Prefer actions that keep obstacle_left active; if obstacle_left disappears, rotate left to re-acquire it.",
-      "If obstacle_front occurs, perform a right turn (or full rotate) to avoid collision, then re-acquire the left wall.",
+      "If obstacle_front occurs, perform a right turn to avoid collision, then re-acquire the left wall.",
       "Avoid oscillation: never allow both rotate directions in the same state; keep a consistent turn direction until path_clear.",
       "Use forward motion as the default only when path_clear and obstacle_left are true (wall present and front clear)."
     ],
@@ -54,8 +53,7 @@
       "move_backward",
       "rotate_clockwise",
       "rotate_counterclockwise",
-      "full_rotate",
-      "random_walk"
+      "full_rotate"
     ],
     "uncontrollable_events": [
       "path_clear",
@@ -76,6 +74,7 @@
     "controllable_events": [
       "move_forward",
       "move_backward",
+      "random_walk",
       "rotate_clockwise",
       "rotate_counterclockwise",
       "full_rotate",
