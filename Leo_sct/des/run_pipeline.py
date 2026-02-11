@@ -709,7 +709,7 @@ def _run_llm(task: str, llm_json: Path) -> None:
         api_key,
         prompt,
         DEFAULT_MODEL,
-        0.0,
+        0.2,
         DEFAULT_TIMEOUT_S,
         DEFAULT_RETRIES,
     )
