@@ -5,6 +5,11 @@ from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 import os
 
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import GroupAction
+from launch_ros.actions import PushRosNamespace
+
 
 def generate_launch_description():
     enable_supervisor = LaunchConfiguration("enable_supervisor")
@@ -29,6 +34,8 @@ def generate_launch_description():
 
     pkg_leo_real = get_package_share_directory("leo_real")
     camera_params_file = os.path.join(pkg_leo_real, "config", "real_camera.yaml")
+    pkg_rs = get_package_share_directory("realsense2_camera")
+    realsense_launch = os.path.join(pkg_rs, "launch", "rs_launch.py")
 
     for robot in robots:
         ns = robot["ns"]
@@ -67,33 +74,17 @@ def generate_launch_description():
         )
 
         # --- Image processor (reads depth) ---
-        # In sim you had /robot_i/depth_camera/depth_image.
-        # Here we connect that to the REAL rover's depth topic.
-        # --- RealSense camera driver ---
-        realsense_node = Node(
-            package="realsense2_camera",
-            executable="realsense2_camera_node",
-            name="realsense",
-            namespace=ns,  # => /rob_2/...
-            parameters=[{
-		"camera_name": "camera",
-		"enable_color": True,
-		"enable_depth": True,
-		"enable_infra1": False,
-		"enable_infra2": False,
-		"align_depth": True,
-
-		"depth_width": 424,
-		"depth_height": 240,
-		"depth_fps": 15,
-
-		"color_width": 640,
-		"color_height": 480,
-		"color_fps": 15,
-
-		"initial_reset": True,
-	    }],
-            output="screen",
+        realsense_node = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(realsense_launch),
+            launch_arguments={
+                "camera_name": "camera",
+                "enable_color": "true",
+                "enable_depth": "true",
+                "align_depth": "true",
+                "depth_module.profile": "424x240x15",
+                "rgb_camera.profile": "640x480x15",
+                "initial_reset": "true",
+            }.items()
         )
         
         image_proc_node = Node(
@@ -113,7 +104,12 @@ def generate_launch_description():
             output="screen",
         )
 
+        realsense_group = GroupAction([
+            PushRosNamespace(ns),
+            realsense_node,
+        ])
 
-        nodes += [supervisor_node, realsense_node, image_proc_node]
+
+        nodes += [supervisor_node, realsense_group, image_proc_node]
 
     return LaunchDescription([enable_supervisor_arg, static_mode_arg, *nodes])
