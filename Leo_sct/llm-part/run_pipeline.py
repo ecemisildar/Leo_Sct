@@ -840,7 +840,6 @@ def main() -> int:
     yaml_payload = _build_sct_yaml(sloc_automatons)
     yaml_real_out = DEFAULT_REAL_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}{index}.yaml"
     yaml_real_default = DEFAULT_REAL_YAML_OUT_DIR / "sup_gpt.yaml"
-    yaml_out.parent.mkdir(parents=True, exist_ok=True)
     yaml_real_out.parent.mkdir(parents=True, exist_ok=True)
     for path in (
         yaml_real_out,
@@ -849,7 +848,7 @@ def main() -> int:
         with open(path, "w", encoding="utf-8") as f:
             yaml.safe_dump(yaml_payload, f, sort_keys=False, default_flow_style=True)
 
-    print(f"Wrote YAML to {yaml_out}")
+    print(f"Wrote YAML to {yaml_real_out}")
     return 0
 
 
