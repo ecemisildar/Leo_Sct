@@ -81,11 +81,16 @@ def generate_launch_description():
                 "enable_color": "true",
                 "enable_depth": "true",
                 "align_depth": "true",
-                "depth_module.profile": "424x240x15",
-                "rgb_camera.profile": "640x480x15",
-                "initial_reset": "true",
+
+                # ✅ correct parameter names
+                "depth_module.depth_profile": "424x240x15",
+                "rgb_camera.color_profile": "640x480x15",
+
+                # ✅ recommend false on Jetson for stability
+                "initial_reset": "false",
             }.items()
         )
+
         
         image_proc_node = Node(
             package="leo_image",
