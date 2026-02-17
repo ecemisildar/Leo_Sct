@@ -854,7 +854,7 @@ def main() -> int:
         with open(path, "w", encoding="utf-8") as f:
             yaml.safe_dump(yaml_payload, f, sort_keys=False, default_flow_style=True)
 
-    print(f"Wrote YAML to {yaml_real_out}")
+    print(f"Wrote YAML to {yaml_real_out} and {yaml_real_default}")
     return 0
 
 
