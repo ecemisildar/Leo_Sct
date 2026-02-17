@@ -80,16 +80,13 @@ def generate_launch_description():
                 "camera_name": "camera",
                 "enable_color": "true",
                 "enable_depth": "true",
-                "align_depth": "true",
-
-                # ✅ correct parameter names
+                "align_depth.enable": "true",          # ✅ correct
                 "depth_module.depth_profile": "424x240x15",
                 "rgb_camera.color_profile": "640x480x15",
-
-                # ✅ recommend false on Jetson for stability
                 "initial_reset": "false",
             }.items()
         )
+
 
         
         image_proc_node = Node(
