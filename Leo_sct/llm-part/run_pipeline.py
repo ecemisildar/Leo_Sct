@@ -27,6 +27,9 @@ from typing import Dict, List, Sequence, Set, Tuple
 from collections import defaultdict
 from dataclasses import dataclass
 
+from pathlib import Path
+from ament_index_python.packages import get_package_share_directory
+
 import requests
 import yaml
 
@@ -44,11 +47,15 @@ TASK_AUTOMATA_DIRS = {
     "wall_follow": DEFAULT_SOURCE_AUTOMATA_DIR_WALL_FOLLOW,
     "zigzag": DEFAULT_SOURCE_AUTOMATA_DIR_ZIGZAG,
 }
+
+DEFAULT_REAL_YAML_OUT_DIR = Path(
+    get_package_share_directory("leo_real")
+) / "config"
+
 DEFAULT_PROFILE_PATH = THIS_DIR / "task_profiles.json"
 DEFAULT_OUTPUT_DIR = THIS_DIR / "full_pipeline"
 DEFAULT_LLM_DIR = THIS_DIR
 DEFAULT_LLM_SUFFIX = "_nadzoru.json"
-DEFAULT_REAL_YAML_OUT_DIR = Path("/home/ecem/ros2_ws/src/Leo_sct/leo_real/config")
 DEFAULT_YAML_PREFIX = "sup_gpt_"
 DEFAULT_SUPERVISOR_ID = "Sup_reactive_motion"
 
