@@ -43,9 +43,11 @@ public:
     const auto now = clock_->now();
 
     zones_pub_ = this->create_publisher<std_msgs::msg::String>("detected_zones", 10);
-    marker_seen_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_seen", 10);
-    marker_lost_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_lost", 10);
-    marker_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("marker_distance", 10);
+    if (marker_enabled_) {
+      marker_seen_pub_->publish(marker_seen_msg);
+      marker_lost_pub_->publish(marker_lost_msg);
+      marker_distance_pub_->publish(marker_distance_msg);
+    }
 
     // --- Parameters (safe defaults) ---
     enter_thresh_     = this->declare_parameter<double>("enter_thresh", 0.70);  // start avoiding
@@ -90,7 +92,7 @@ public:
     );
 
     // ArUco detection (publishes on existing "marker_*" topics for compatibility)
-    marker_enabled_ = this->declare_parameter<bool>("marker_enabled", true);
+    marker_enabled_ = this->declare_parameter<bool>("marker_enabled", false);
     rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", "depth_camera/image");
     marker_label_ = this->declare_parameter<std::string>("marker_label", "marker");
     aruco_dictionary_id_ = this->declare_parameter<int>("aruco_dictionary_id", cv::aruco::DICT_6X6_250);
@@ -478,7 +480,8 @@ private:
   }
 
   void rgbCallback(const sensor_msgs::msg::Image::ConstSharedPtr& rgb_msg)
-  {
+  { 
+    if (!marker_enabled_) return;
     cv::Mat bgr;
     std::string encoding;
 
@@ -704,7 +707,7 @@ private:
   int clear_skip_counter_{0};
 
   // ArUco detection (publish on marker topics)
-  bool marker_enabled_{true};
+  bool marker_enabled_{false};
   std::string rgb_topic_{"camera/image_raw"};
   std::string marker_label_{"marker"};
   int aruco_dictionary_id_{cv::aruco::DICT_6X6_250};
