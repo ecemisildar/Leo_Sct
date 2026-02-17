@@ -96,17 +96,16 @@ def generate_launch_description():
             namespace=ns,
             parameters=[
                 camera_params_file,
-                {"rgb_topic": f"/{ns}/realsense/color/image_raw"},
+                {"rgb_topic": f"/{ns}/camera/color/image_raw"},
             ],
             remappings=[
-                # left side: what your node expects (sim convention)
-                # right side: REAL depth topic for this robot
-                (f"/{ns}/depth_camera/depth_image",
-                 f"/{ns}/realsense/depth/image_rect_raw"),
-                # adjust right side to match your camera driver topics
+                ("depth_camera/depth_image", f"/{ns}/camera/aligned_depth_to_color/image_raw"),
+                # fallback if aligned topic doesn't exist:
+                # ("depth_camera/depth_image", f"/{ns}/camera/depth/image_rect_raw"),
             ],
             output="screen",
         )
+
 
         nodes += [supervisor_node, realsense_node, image_proc_node]
 
