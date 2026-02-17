@@ -32,7 +32,7 @@ import yaml
 
 THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(THIS_DIR))
-DEFAULT_NADZORU_ROOT = Path.home() / "Documents" / "Nadzoru2"
+DEFAULT_NADZORU_ROOT = Path.home() / "Nadzoru2"
 DEFAULT_SOURCE_AUTOMATA_DIR = THIS_DIR / "hardcoded_find_obj"
 DEFAULT_SOURCE_AUTOMATA_DIR_EXPLORE = THIS_DIR / "hardcoded_coverage"
 DEFAULT_SOURCE_AUTOMATA_DIR_WALL_FOLLOW = THIS_DIR / "hardcoded_wall_follow"
