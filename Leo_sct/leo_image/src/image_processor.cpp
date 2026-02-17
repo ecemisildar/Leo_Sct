@@ -395,42 +395,62 @@ private:
     if (front_emergency) {
       last_state_ = "CORNER";
       safe_frames_ = 0;
-      return "CORNER";
+      return last_state_;
     }
 
-    // If we are avoiding, require EXIT threshold to return to CLEAR
+    // -------------------------
+    // AVOID MODE (not CLEAR): use EXIT threshold, but allow re-targeting
+    // -------------------------
     if (last_state_ != "CLEAR") {
-        const bool still_close =
-        zoneIsObstacle(zs.front, exit_thresh_) ||
-        zoneIsObstacle(zs.left,  exit_thresh_) ||
-        zoneIsObstacle(zs.right, exit_thresh_);
+      const bool front_close = zoneIsObstacle(zs.front, exit_thresh_);
+      const bool left_close  = zoneIsObstacle(zs.left,  exit_thresh_);
+      const bool right_close = zoneIsObstacle(zs.right, exit_thresh_);
 
-        if (still_close) {
-        safe_frames_ = 0;           // not safe yet
-        return last_state_;         // keep avoiding
+      const bool still_close = front_close || left_close || right_close;
+
+      if (still_close) {
+        safe_frames_ = 0;
+
+        if (front_close) {
+          last_state_ = "CORNER";
+          return last_state_;
         }
 
-        // looks safe this frame
-        safe_frames_++;
+        // If not front, pick the closer side by percentile depth (smaller p = closer)
+        const float lp = (zs.left.p  > 0.0f) ? zs.left.p  : 1e9f;
+        const float rp = (zs.right.p > 0.0f) ? zs.right.p : 1e9f;
 
-        if (safe_frames_ >= std::max(1, safe_frames_required_)) {
+        if (left_close || right_close) {
+          if (left_close && !right_close) last_state_ = "LEFT";
+          else if (right_close && !left_close) last_state_ = "RIGHT";
+          else last_state_ = (lp <= rp) ? "LEFT" : "RIGHT";  // both close -> closest ROI
+        }
+
+        return last_state_;
+      }
+
+      // looks safe this frame (no close obstacles under EXIT threshold)
+      safe_frames_++;
+      if (safe_frames_ >= std::max(1, safe_frames_required_)) {
         last_state_ = "CLEAR";
         safe_frames_ = 0;
-        return "CLEAR";
-        }
-
-        // Not enough consecutive safe frames yet → keep previous avoid state
         return last_state_;
+      }
+
+      // Not enough consecutive safe frames yet -> keep last avoid state
+      return last_state_;
     }
 
-    // If clear, use ENTER threshold to trigger
-    if (zoneIsObstacle(zs.front, enter_thresh_)) { last_state_ = "CORNER"; safe_frames_ = 0; return "CORNER"; }
-    if (zoneIsObstacle(zs.left,  enter_thresh_)) { last_state_ = "LEFT";   safe_frames_ = 0; return "LEFT";   }
-    if (zoneIsObstacle(zs.right, enter_thresh_)) { last_state_ = "RIGHT";  safe_frames_ = 0; return "RIGHT";  }
-
+    // -------------------------
+    // CLEAR MODE: use ENTER threshold to trigger
+    // -------------------------
+    if (zoneIsObstacle(zs.front, enter_thresh_)) { last_state_ = "CORNER"; safe_frames_ = 0; return last_state_; }
+    if (zoneIsObstacle(zs.left,  enter_thresh_)) { last_state_ = "LEFT";   safe_frames_ = 0; return last_state_; }
+    if (zoneIsObstacle(zs.right, enter_thresh_)) { last_state_ = "RIGHT";  safe_frames_ = 0; return last_state_; }
 
     return "CLEAR";
   }
+
 
   void drawROIs(cv::Mat& vis)
   {
