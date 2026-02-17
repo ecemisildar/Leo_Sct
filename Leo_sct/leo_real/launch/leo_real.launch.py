@@ -94,10 +94,10 @@ def generate_launch_description():
             namespace=ns,
             parameters=[
                 camera_params_file,
-                {"rgb_topic": f"/{ns}/camera/color/image_raw"},
+                {"rgb_topic": f"/{ns}/camera/camera/color/image_raw"},
             ],
             remappings=[
-                ("depth_camera/depth_image", f"/{ns}/camera/aligned_depth_to_color/image_raw"),
+                ("depth_camera/depth_image", f"/{ns}/camera/camera/aligned_depth_to_color/image_raw"),
                 # fallback if aligned topic doesn't exist:
                 # ("depth_camera/depth_image", f"/{ns}/camera/depth/image_rect_raw"),
             ],
