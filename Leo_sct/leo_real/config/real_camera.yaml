@@ -1,9 +1,9 @@
 image_processor:
   ros__parameters:
     # Depth-based obstacle detection tuning for RealSense (FINAL tuned values)
-    enter_thresh: 0.75
+    enter_thresh: 0.55 #0.75
     exit_thresh: 0.95
-    emergency_thresh: 0.45
+    emergency_thresh: 0.25 #0.45
 
     # Depth range in meters
     min_depth: 0.20
@@ -14,8 +14,8 @@ image_processor:
     percentile: 0.05
     near_count_k: 6
     valid_count_min: 120
-    crop_y0_frac: 0.45
-    crop_y1_frac: 0.75
+    crop_y0_frac: 0.25 #0.45
+    crop_y1_frac: 0.55 #0.75
     front_gain: 1.40   # keep unless you later want narrower front
 
     # Stability / responsiveness (REAL CAMERA tuned)
