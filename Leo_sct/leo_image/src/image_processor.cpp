@@ -43,11 +43,9 @@ public:
     const auto now = clock_->now();
 
     zones_pub_ = this->create_publisher<std_msgs::msg::String>("detected_zones", 10);
-    if (marker_enabled_) {
-      marker_seen_pub_->publish(marker_seen_msg);
-      marker_lost_pub_->publish(marker_lost_msg);
-      marker_distance_pub_->publish(marker_distance_msg);
-    }
+    marker_seen_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_seen", 10);
+    marker_lost_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_lost", 10);
+    marker_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("marker_distance", 10);
 
     // --- Parameters (safe defaults) ---
     enter_thresh_     = this->declare_parameter<double>("enter_thresh", 0.70);  // start avoiding
@@ -257,11 +255,11 @@ private:
 
     std_msgs::msg::Bool marker_seen_msg;
     marker_seen_msg.data = marker_now;
-    marker_seen_pub_->publish(marker_seen_msg);
+    // marker_seen_pub_->publish(marker_seen_msg);
 
     std_msgs::msg::Bool marker_lost_msg;
     marker_lost_msg.data = markerLostNow(now);
-    marker_lost_pub_->publish(marker_lost_msg);
+    // marker_lost_pub_->publish(marker_lost_msg);
 
     std_msgs::msg::Float32 marker_distance_msg;
     if (marker_seen_msg.data && markerDistanceValid(now)) {
@@ -269,7 +267,12 @@ private:
     } else {
       marker_distance_msg.data = std::numeric_limits<float>::quiet_NaN();
     }
-    marker_distance_pub_->publish(marker_distance_msg);
+    // marker_distance_pub_->publish(marker_distance_msg);
+    if (marker_enabled_) {
+      marker_seen_pub_->publish(marker_seen_msg);
+      marker_lost_pub_->publish(marker_lost_msg);
+      marker_distance_pub_->publish(marker_distance_msg);
+    }
 
     // Throttled debug log
     // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), debug_throttle_ms_,
