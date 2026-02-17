@@ -14,7 +14,7 @@ from std_srvs.srv import SetBool
 from nav_msgs.msg import Odometry
 
 from ament_index_python.packages import get_package_share_directory
-from swarm_basics.sct import SCT
+from leo_real.sct import SCT
 
 
 @dataclass
@@ -113,7 +113,7 @@ class RobotSupervisor(Node):
         # Load SCT YAML
         # -------------------------------
         config_path = os.path.join(
-            get_package_share_directory("swarm_basics"),
+            get_package_share_directory("leo_real"),
             "config",
             "sup_gpt.yaml",
         )
