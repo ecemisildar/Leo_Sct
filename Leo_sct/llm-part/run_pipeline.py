@@ -30,6 +30,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from ament_index_python.packages import get_package_share_directory
 
+
+
+
+
 import requests
 import yaml
 
@@ -48,9 +52,11 @@ TASK_AUTOMATA_DIRS = {
     "zigzag": DEFAULT_SOURCE_AUTOMATA_DIR_ZIGZAG,
 }
 
-DEFAULT_REAL_YAML_OUT_DIR = Path(
-    get_package_share_directory("leo_real")
-) / "config"
+
+DEFAULT_REAL_YAML_OUT_DIR = (
+    Path.home()
+    / "ros_ws/src/Leo_Sct/leo_real/config"
+)
 
 DEFAULT_PROFILE_PATH = THIS_DIR / "task_profiles.json"
 DEFAULT_OUTPUT_DIR = THIS_DIR / "full_pipeline"
