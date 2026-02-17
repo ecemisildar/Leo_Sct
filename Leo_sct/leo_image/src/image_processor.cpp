@@ -80,7 +80,7 @@ public:
 
     // QoS: match your bridge publisher.
     // If your depth publisher is BEST_EFFORT, switch this to .best_effort().
-    auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable();
+    auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
     auto rgb_qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
 
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
