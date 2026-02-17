@@ -55,7 +55,7 @@ TASK_AUTOMATA_DIRS = {
 
 DEFAULT_REAL_YAML_OUT_DIR = (
     Path.home()
-    / "ros_ws/src/Leo_Sct/leo_real/config"
+    / "ros_ws/src/Leo_Sct/Leo_sct/leo_real/config"
 )
 
 DEFAULT_PROFILE_PATH = THIS_DIR / "task_profiles.json"
