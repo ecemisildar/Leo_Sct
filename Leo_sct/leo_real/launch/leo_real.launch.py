@@ -8,10 +8,16 @@ import os
 
 def generate_launch_description():
     enable_supervisor = LaunchConfiguration("enable_supervisor")
+    static_mode = LaunchConfiguration("static")
     enable_supervisor_arg = DeclareLaunchArgument(
         "enable_supervisor",
         default_value="false",
         description="Start robot_supervisor enabled (true/false).",
+    )
+    static_mode_arg = DeclareLaunchArgument(
+        "static",
+        default_value="false",
+        description="Force robot_supervisor cmd_vel output to zero for testing.",
     )
 
     # List your real robots here
@@ -41,6 +47,7 @@ def generate_launch_description():
                 {"spawn_x": sx},
                 {"spawn_y": sy},
                 {"enabled": enable_supervisor},
+                {"static": static_mode},
             ],
             # If your node uses *relative* 'cmd_vel' in this namespace,
             # topic becomes /robot_i/cmd_vel automatically and you can
@@ -109,4 +116,4 @@ def generate_launch_description():
 
         nodes += [supervisor_node, realsense_node, image_proc_node]
 
-    return LaunchDescription([enable_supervisor_arg, *nodes])
+    return LaunchDescription([enable_supervisor_arg, static_mode_arg, *nodes])

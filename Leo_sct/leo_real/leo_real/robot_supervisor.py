@@ -108,6 +108,7 @@ class RobotSupervisor(Node):
         self.rng = random.Random(base_seed + self._namespace_index())
 
         self.enabled = bool(self.declare_parameter("enabled", False).value)
+        self.static_mode = bool(self.declare_parameter("static", False).value)
 
         # -------------------------------
         # Load SCT YAML
@@ -209,6 +210,13 @@ class RobotSupervisor(Node):
             # full_rotate is executed as an atomic rotation using odom; target is full_rotate_target_rad (≤ π here).
             "EV_full_rotate": ActionSpec(linear_x=0.0, angular_z=self.full_rotate_omega, is_full_rotate=True),
         }
+
+    def _publish_cmd(self, twist: Twist):
+        # Testing mode: clamp all outgoing cmd_vel values to zero.
+        if self.static_mode:
+            self.cmd_pub.publish(Twist())
+            return
+        self.cmd_pub.publish(twist)
 
     # -------------------------------
     # Subscriptions
@@ -334,7 +342,7 @@ class RobotSupervisor(Node):
     # -------------------------------
     def _publish_stop(self):
         self.active_twist = Twist()
-        self.cmd_pub.publish(self.active_twist)
+        self._publish_cmd(self.active_twist)
 
     def _cancel_all_motion(self):
         self.active_event = None
@@ -367,7 +375,7 @@ class RobotSupervisor(Node):
         twist.linear.x = 0.0
         twist.angular.z = omega
         self.active_twist = twist
-        self.cmd_pub.publish(self.active_twist)
+        self._publish_cmd(self.active_twist)
 
     def _update_full_rotate(self) -> bool:
         """
@@ -404,7 +412,7 @@ class RobotSupervisor(Node):
         twist.linear.x = 0.0
         twist.angular.z = omega
         self.active_twist = twist
-        self.cmd_pub.publish(self.active_twist)
+        self._publish_cmd(self.active_twist)
 
     def _update_rotate_90(self) -> bool:
         now = time.time()
@@ -440,7 +448,7 @@ class RobotSupervisor(Node):
             self.active_event = ev_name
             self.active_twist = twist
             self.motion_until = time.time() + self.motion_hold_duration
-            self.cmd_pub.publish(self.active_twist)
+            self._publish_cmd(self.active_twist)
             return
 
         if ev_name in ("EV_rotate_clockwise", "EV_rotate_counterclockwise"):
@@ -469,7 +477,7 @@ class RobotSupervisor(Node):
         self.active_event = ev_name
         self.active_twist = twist
         self.motion_until = time.time() + hold
-        self.cmd_pub.publish(self.active_twist)
+        self._publish_cmd(self.active_twist)
 
     # -------------------------------
     # Supervisor tick
@@ -487,7 +495,7 @@ class RobotSupervisor(Node):
 
         # If we’re in the middle of a true full_rotate, keep executing until complete.
         if self.full_rotate_active:
-            self.cmd_pub.publish(self.active_twist)
+            self._publish_cmd(self.active_twist)
             if self._update_full_rotate():
                 # stop rotation and resume supervisor next tick
                 self.full_rotate_active = False
@@ -498,7 +506,7 @@ class RobotSupervisor(Node):
 
         # If doing a 90-degree rotate
         if self.rotate_90_active:
-            self.cmd_pub.publish(self.active_twist)
+            self._publish_cmd(self.active_twist)
             if self._update_rotate_90():
                 self.rotate_90_active = False
                 self.active_event = None
@@ -509,7 +517,7 @@ class RobotSupervisor(Node):
 
         # Normal pulse-hold: keep publishing until hold expires
         if self.active_event and now < self.motion_until:
-            self.cmd_pub.publish(self.active_twist)
+            self._publish_cmd(self.active_twist)
             return
 
         # Otherwise: pick next event from SCT
