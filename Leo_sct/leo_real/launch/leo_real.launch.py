@@ -42,9 +42,6 @@ def generate_launch_description():
     pkg_rs = get_package_share_directory("realsense2_camera")
     realsense_launch = os.path.join(pkg_rs, "launch", "rs_launch.py")
 
-    # Use the namespace in topic strings too
-    cmd_vel_topic = ["/", robot_ns, "/cmd_vel"]
-
     # --- Supervisor node (publishes cmd_vel) ---
     supervisor_node = Node(
         package="leo_real",
@@ -56,9 +53,6 @@ def generate_launch_description():
             {"spawn_y": spawn_y},
             {"enabled": enable_supervisor},
             {"static": static_mode},
-        ],
-        remappings=[
-            ("cmd_vel", cmd_vel_topic),
         ],
         output="screen",
     )
@@ -90,10 +84,10 @@ def generate_launch_description():
         namespace=robot_ns,
         parameters=[
             camera_params_file,
-            {"rgb_topic": ["/", robot_ns, "/camera/camera/color/image_raw"]},
+            {"rgb_topic": "camera/camera/color/image_raw"},
         ],
         remappings=[
-            ("depth_camera/depth_image", ["/", robot_ns, "/camera/camera/aligned_depth_to_color/image_raw"]),
+            ("depth_camera/depth_image", "camera/camera/aligned_depth_to_color/image_raw"),
         ],
         output="screen",
     )
