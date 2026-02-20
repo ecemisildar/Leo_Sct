@@ -1,15 +1,13 @@
-const ROSBRIDGE_URL = `ws://${window.location.hostname}:9090`;
+const DEFAULT_ROSBRIDGE_URL = "ws://192.168.178.141:9090";
 
-const robots = Array.from({ length: 4 }, (_, index) => ({
-  id: index + 1,
-  name: `Leo-${index + 1}`,
-  ns: `robot_${index}`,
-  isOn: false,
-}));
+const ROBOT_CONFIG_PATH = "./robots.json";
+const TWIST_MSG_TYPE = "geometry_msgs/msg/Twist";
+
+let robots = [];
 
 const state = {
   mode: "startup",
-  manualRobotId: 1,
+  manualRobotId: null,
   autonomousRobotIds: new Set(),
   autonomousActiveIds: new Set(),
 };
@@ -21,44 +19,142 @@ const cmdPreview = document.getElementById("cmdPreview");
 const activeSummary = document.getElementById("activeSummary");
 const connectionStatus = document.getElementById("connectionStatus");
 
-let rosSocket = null;
-let rosConnected = false;
-const advertisedTopics = new Set();
+const rosSockets = new Map();
+const connectedRobotIds = new Set();
+const advertisedTopicsByRobot = new Map();
+let activeManualCommand = null;
+let manualCommandTimer = null;
 
-function setConnectionStatus(connected) {
-  rosConnected = connected;
-  connectionStatus.textContent = connected ? "ROS2: Connected" : "ROS2: Disconnected";
+function buildFallbackRobots() {
+  return Array.from({ length: 4 }, (_, index) => ({
+    name: `Leo-${index + 1}`,
+    ns: `robot_${index}`,
+    cmd_topic: `/robot_${index}/cmd_vel`,
+    ws_url: DEFAULT_ROSBRIDGE_URL,
+  }));
 }
 
-function sendRosMessage(payload) {
-  if (!rosSocket || !rosConnected) return;
-  rosSocket.send(JSON.stringify(payload));
+function normalizeRobots(configRobots) {
+  return configRobots.map((robot, index) => ({
+    id: index + 1,
+    name: String(robot.name ?? `Leo-${index + 1}`),
+    ns: String(robot.ns ?? robot.namespace ?? `robot_${index}`).replace(/^\/+|\/+$/g, ""),
+    cmdTopic: String(robot.cmd_topic ?? robot.cmdTopic ?? `/${robot.ns ?? robot.namespace ?? `robot_${index}`}/cmd_vel`),
+    wsUrl: String(robot.ws_url ?? robot.wsUrl ?? robot.rosbridge_url ?? DEFAULT_ROSBRIDGE_URL),
+    isOn: false,
+  }));
 }
 
-function advertiseTopic(topic, type) {
-  if (advertisedTopics.has(topic)) return;
-  sendRosMessage({ op: "advertise", topic, type });
-  advertisedTopics.add(topic);
+function cmdVelTopic(robot) {
+  return `/${String(robot.cmdTopic ?? `/${robot.ns}/cmd_vel`).replace(/^\/+|\/+$/g, "")}`;
 }
 
-function connectRosBridge() {
-  if (rosSocket) {
-    rosSocket.close();
+async function loadRobotsConfig() {
+  try {
+    const response = await fetch(ROBOT_CONFIG_PATH, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const config = await response.json();
+    const rawRobots = Array.isArray(config?.robots) ? config.robots : [];
+    if (!rawRobots.length) {
+      throw new Error("robots list is empty");
+    }
+    robots = normalizeRobots(rawRobots);
+    appendConsoleLine(`[cfg] Loaded ${robots.length} robots from robots.json`);
+  } catch (error) {
+    robots = normalizeRobots(buildFallbackRobots());
+    appendConsoleLine(
+      `[cfg] Using fallback robot config (${robots.length} robots). Reason: ${error.message}`
+    );
   }
-  rosSocket = new WebSocket(ROSBRIDGE_URL);
-  rosSocket.addEventListener("open", () => {
-    setConnectionStatus(true);
-    robots.forEach((robot) => {
-      advertiseTopic(`/${robot.ns}/cmd_vel`, "geometry_msgs/msg/Twist");
-    });
+}
+
+function initializeRobotState() {
+  state.autonomousRobotIds.clear();
+  state.autonomousActiveIds.clear();
+  state.manualRobotId = robots[0]?.id ?? null;
+}
+
+function updateConnectionStatus() {
+  const connectedCount = connectedRobotIds.size;
+  const total = robots.length;
+  if (!total) {
+    connectionStatus.textContent = "ROS2: No robots configured";
+    return;
+  }
+  connectionStatus.textContent = `ROS2: ${connectedCount}/${total} connected`;
+}
+
+function sendRosMessage(robotId, payload) {
+  const socket = rosSockets.get(robotId);
+  if (!socket) {
+    return { ok: false, reason: "socket_not_created" };
+  }
+  if (socket.readyState !== WebSocket.OPEN) {
+    return { ok: false, reason: `socket_not_open(state=${socket.readyState})` };
+  }
+  try {
+    socket.send(JSON.stringify(payload));
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, reason: `send_failed(${error.message})` };
+  }
+}
+
+function advertiseTopic(robotId, topic, type) {
+  let advertisedTopics = advertisedTopicsByRobot.get(robotId);
+  if (!advertisedTopics) {
+    advertisedTopics = new Set();
+    advertisedTopicsByRobot.set(robotId, advertisedTopics);
+  }
+  if (advertisedTopics.has(topic)) return;
+  const result = sendRosMessage(robotId, { op: "advertise", topic, type });
+  if (result.ok) {
+    advertisedTopics.add(topic);
+  } else {
+    appendConsoleLine(`[drop] advertise ${topic}: ${result.reason}`);
+  }
+}
+
+function connectRobotBridge(robot) {
+  const existingSocket = rosSockets.get(robot.id);
+  if (existingSocket) {
+    existingSocket.close();
+  }
+  const socket = new WebSocket(robot.wsUrl);
+  rosSockets.set(robot.id, socket);
+  socket.addEventListener("open", () => {
+    connectedRobotIds.add(robot.id);
+    updateConnectionStatus();
+    advertiseTopic(robot.id, cmdVelTopic(robot), TWIST_MSG_TYPE);
+    appendConsoleLine(`[ros] Connected ${robot.name} via ${robot.wsUrl}`);
   });
-  rosSocket.addEventListener("close", () => {
-    setConnectionStatus(false);
-    advertisedTopics.clear();
+  socket.addEventListener("message", (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data?.op === "status" && data?.level === "error") {
+        appendConsoleLine(`[ros] ${robot.name} status error: ${data.msg ?? "unknown"}`);
+      }
+    } catch (error) {
+      // ignore non-JSON payloads from bridge
+    }
   });
-  rosSocket.addEventListener("error", () => {
-    setConnectionStatus(false);
+  socket.addEventListener("close", () => {
+    connectedRobotIds.delete(robot.id);
+    advertisedTopicsByRobot.delete(robot.id);
+    updateConnectionStatus();
+    appendConsoleLine(`[ros] Disconnected ${robot.name}`);
   });
+  socket.addEventListener("error", () => {
+    connectedRobotIds.delete(robot.id);
+    updateConnectionStatus();
+    appendConsoleLine(`[ros] Error on ${robot.name} (${robot.wsUrl})`);
+  });
+}
+
+function connectRosBridges() {
+  robots.forEach((robot) => connectRobotBridge(robot));
 }
 
 function renderStartupCards() {
@@ -98,6 +194,9 @@ function renderAutonomousOptions() {
 
 function renderManualSelect() {
   manualRobotSelect.innerHTML = "";
+  if (state.manualRobotId === null && robots.length) {
+    state.manualRobotId = robots[0].id;
+  }
   robots.forEach((robot) => {
     const option = document.createElement("option");
     option.value = robot.id;
@@ -137,21 +236,26 @@ function switchMode(nextMode) {
 }
 
 function publishCmdVel(robot, linearX, angularZ) {
-  if (!rosConnected) {
-    appendConsoleLine("ROS bridge not connected. Start rosbridge_websocket.");
+  if (!connectedRobotIds.has(robot.id)) {
+    appendConsoleLine(`[ros] ${robot.name} bridge not connected.`);
     return;
   }
-  const topic = `/${robot.ns}/cmd_vel`;
+  const topic = cmdVelTopic(robot);
   const msg = {
     linear: { x: linearX, y: 0.0, z: 0.0 },
     angular: { x: 0.0, y: 0.0, z: angularZ },
   };
-  sendRosMessage({ op: "publish", topic, msg });
+  const result = sendRosMessage(robot.id, { op: "publish", topic, type: TWIST_MSG_TYPE, msg });
+  if (result.ok) {
+    appendConsoleLine(`[pub] ${topic} -> linear.x=${linearX.toFixed(2)}, angular.z=${angularZ.toFixed(2)}`);
+  } else {
+    appendConsoleLine(`[drop] ${topic}: ${result.reason}`);
+  }
 }
 
 function callSupervisorService(enabled, robotIds) {
-  if (!rosConnected) {
-    appendConsoleLine("ROS bridge not connected. Start rosbridge_websocket.");
+  if (!connectedRobotIds.size) {
+    appendConsoleLine("No ROS bridges connected.");
     return;
   }
   if (!robotIds.length) {
@@ -175,12 +279,15 @@ function callSupervisorService(enabled, robotIds) {
     .map((id) => robots.find((robot) => robot.id === id))
     .filter(Boolean);
   names.forEach((robot) => {
-    sendRosMessage({
+    const result = sendRosMessage(robot.id, {
       op: "call_service",
       service: `/${robot.ns}/enable_supervisor`,
       type: "std_srvs/SetBool",
       args: { data: enabled },
     });
+    if (!result.ok) {
+      appendConsoleLine(`[drop] service /${robot.ns}/enable_supervisor: ${result.reason}`);
+    }
   });
   names.forEach((robot) => {
     if (enabled) {
@@ -205,11 +312,8 @@ function sendCmdVel(command) {
   const linear = Number(document.getElementById("linearSpeed").value);
   const angular = Number(document.getElementById("angularSpeed").value);
   const robot = robots.find((entry) => entry.id === state.manualRobotId);
-  if (!robot?.isOn) {
-    if (robot) {
-      stopRobotMotion(robot);
-    }
-    appendConsoleLine("[cmd_vel] Manual drive blocked: robot is stopped.");
+  if (!robot) {
+    appendConsoleLine("[cmd_vel] Manual drive blocked: no robot selected.");
     return;
   }
   if (state.autonomousActiveIds.has(robot.id)) {
@@ -229,6 +333,37 @@ function sendCmdVel(command) {
   }
 }
 
+function startManualCommand(command) {
+  if (!command || command === "stop") {
+    stopManualCommand();
+    return;
+  }
+  if (activeManualCommand === command && manualCommandTimer) {
+    return;
+  }
+  if (manualCommandTimer) {
+    clearInterval(manualCommandTimer);
+    manualCommandTimer = null;
+  }
+  activeManualCommand = command;
+  sendCmdVel(command);
+  manualCommandTimer = setInterval(() => {
+    sendCmdVel(command);
+  }, 100);
+  appendConsoleLine(`[manual] Holding '${command}' (press Stop to release).`);
+}
+
+function stopManualCommand() {
+  if (manualCommandTimer) {
+    clearInterval(manualCommandTimer);
+    manualCommandTimer = null;
+  }
+  if (activeManualCommand === null) return;
+  sendCmdVel("stop");
+  activeManualCommand = null;
+  appendConsoleLine("[manual] Released.");
+}
+
 function updateRobotPower(id, power) {
   const robot = robots.find((entry) => entry.id === id);
   if (!robot) return;
@@ -238,10 +373,8 @@ function updateRobotPower(id, power) {
 
 function initHandlers() {
   connectionStatus.addEventListener("click", () => {
-    if (!rosConnected) {
-      appendConsoleLine("Reconnecting to ROS bridge...");
-      connectRosBridge();
-    }
+    appendConsoleLine("Reconnecting all robot bridges...");
+    connectRosBridges();
   });
   document.querySelectorAll(".mode-btn").forEach((button) => {
     button.addEventListener("click", () => switchMode(button.dataset.mode));
@@ -253,11 +386,10 @@ function initHandlers() {
     const id = Number(target.dataset.id);
     if (target.dataset.action === "start") {
       updateRobotPower(id, true);
-      callSupervisorService(false, [id]);
+      appendConsoleLine("[ui] Robot marked active for manual control.");
     }
     if (target.dataset.action === "stop") {
       updateRobotPower(id, false);
-      callSupervisorService(false, [id]);
       state.autonomousActiveIds.delete(id);
       const robot = robots.find((entry) => entry.id === id);
       if (robot) {
@@ -269,7 +401,6 @@ function initHandlers() {
   document.getElementById("allStopBtn").addEventListener("click", () => {
     robots.forEach((robot) => {
       robot.isOn = false;
-      callSupervisorService(false, [robot.id]);
       state.autonomousActiveIds.delete(robot.id);
       stopRobotMotion(robot);
     });
@@ -295,10 +426,37 @@ function initHandlers() {
   });
 
   document.querySelectorAll(".dpad-btn").forEach((button) => {
-    button.addEventListener("click", () => {
-      sendCmdVel(button.dataset.cmd);
+    const command = button.dataset.cmd;
+
+    if (command === "stop") {
+      button.addEventListener("click", stopManualCommand);
+      return;
+    }
+
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      startManualCommand(command);
+    });
+
+    button.addEventListener("mouseup", (event) => {
+      event.preventDefault();
+      stopManualCommand();
+    });
+
+    button.addEventListener("mouseleave", stopManualCommand);
+
+    // optional for touchscreens
+    button.addEventListener("touchstart", (event) => {
+      event.preventDefault();
+      startManualCommand(command);
+    });
+
+    button.addEventListener("touchend", (event) => {
+      event.preventDefault();
+      stopManualCommand();
     });
   });
+
 
   document.getElementById("startAutoBtn").addEventListener("click", () => {
     const preset = document.getElementById("missionPreset").value;
@@ -314,9 +472,20 @@ function initHandlers() {
   });
 }
 
-renderStartupCards();
-renderAutonomousOptions();
-renderManualSelect();
-updateSummary();
-initHandlers();
-connectRosBridge();
+async function initializeApp() {
+  await loadRobotsConfig();
+  initializeRobotState();
+  updateConnectionStatus();
+  renderStartupCards();
+  renderAutonomousOptions();
+  renderManualSelect();
+  updateSummary();
+  initHandlers();
+  connectRosBridges();
+}
+
+initializeApp();
+
+window.addEventListener("beforeunload", () => {
+  robots.forEach(robot => publishCmdVel(robot, 0.0, 0.0));
+});
