@@ -1,8 +1,9 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, GroupAction
-from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node, PushRosNamespace
+from launch.conditions import IfCondition, UnlessCondition
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node, PushRosNamespace
 from ament_index_python.packages import get_package_share_directory
 import os
 
@@ -18,8 +19,8 @@ def generate_launch_description():
 
     robot_ns_arg = DeclareLaunchArgument(
         "robot_ns",
-        default_value="rob_1",
-        description="Robot namespace, e.g. rob_1, rob_2, rob_3, rob_4",
+        default_value="",  # IMPORTANT: empty by default
+        description="Robot namespace (rob_1, rob_2, ...). Leave empty for no namespace.",
     )
     spawn_x_arg = DeclareLaunchArgument("spawn_x", default_value="0.0")
     spawn_y_arg = DeclareLaunchArgument("spawn_y", default_value="0.0")
@@ -35,6 +36,10 @@ def generate_launch_description():
         description="Force robot_supervisor cmd_vel output to zero for testing.",
     )
 
+    # --- Conditions ---
+    # True if robot_ns is NOT empty
+    use_ns = PythonExpression(["'", robot_ns, "' != ''"])
+
     # --- Paths ---
     pkg_leo_real = get_package_share_directory("leo_real")
     camera_params_file = os.path.join(pkg_leo_real, "config", "real_camera.yaml")
@@ -42,22 +47,7 @@ def generate_launch_description():
     pkg_rs = get_package_share_directory("realsense2_camera")
     realsense_launch = os.path.join(pkg_rs, "launch", "rs_launch.py")
 
-    # --- Supervisor node (publishes cmd_vel) ---
-    supervisor_node = Node(
-        package="leo_real",
-        executable="robot_supervisor",
-        name="robot_supervisor",
-        namespace=robot_ns,
-        parameters=[
-            {"spawn_x": spawn_x},
-            {"spawn_y": spawn_y},
-            {"enabled": enable_supervisor},
-            {"static": static_mode},
-        ],
-        output="screen",
-    )
-
-    # --- RealSense launch (namespaced) ---
+    # --- RealSense include ---
     realsense_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(realsense_launch),
         launch_arguments={
@@ -71,17 +61,26 @@ def generate_launch_description():
         }.items(),
     )
 
-    realsense_group = GroupAction([
-        PushRosNamespace(robot_ns),
-        realsense_node,
-    ])
+    # --- Supervisor node (publishes cmd_vel) ---
+    supervisor_node = Node(
+        package="leo_real",
+        executable="robot_supervisor",
+        name="robot_supervisor",
+        parameters=[
+            {"spawn_x": spawn_x},
+            {"spawn_y": spawn_y},
+            {"enabled": enable_supervisor},
+            {"static": static_mode},
+        ],
+        output="screen",
+    )
 
     # --- Image processor (reads depth) ---
+    # NOTE: rgb_topic and remappings are relative; if namespaced, they become /<ns>/camera/...
     image_proc_node = Node(
         package="leo_image",
         executable="image_processor",
         name="image_processor",
-        namespace=robot_ns,
         parameters=[
             camera_params_file,
             {"rgb_topic": "camera/camera/color/image_raw"},
@@ -92,8 +91,30 @@ def generate_launch_description():
         output="screen",
     )
 
+    # --- Group when namespace is used ---
+    group_with_ns = GroupAction(
+        actions=[
+            PushRosNamespace(robot_ns),
+            realsense_node,
+            supervisor_node,
+            image_proc_node,
+        ],
+        condition=IfCondition(use_ns),
+    )
+
+    # --- Group when NO namespace (root topics) ---
+    group_no_ns = GroupAction(
+        actions=[
+            realsense_node,
+            supervisor_node,
+            image_proc_node,
+        ],
+        condition=UnlessCondition(use_ns),
+    )
+
     return LaunchDescription([
         robot_ns_arg, spawn_x_arg, spawn_y_arg,
         enable_supervisor_arg, static_mode_arg,
-        supervisor_node, realsense_group, image_proc_node
+        group_with_ns,
+        group_no_ns,
     ])
