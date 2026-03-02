@@ -47,10 +47,10 @@ public:
     marker_lost_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_lost", 10);
     marker_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("marker_distance", 10);
 
-    // --- Parameters (safe defaults) ---
-    enter_thresh_     = this->declare_parameter<double>("enter_thresh", 0.70);  // start avoiding
-    exit_thresh_      = this->declare_parameter<double>("exit_thresh",  0.90);  // return to clear
-    emergency_thresh_ = this->declare_parameter<double>("emergency_thresh", 0.50);
+    // --- Parameters (safe conservative defaults for real robots) ---
+    enter_thresh_     = this->declare_parameter<double>("enter_thresh", 0.80);  // start avoiding earlier
+    exit_thresh_      = this->declare_parameter<double>("exit_thresh",  1.05);  // return to clear later
+    emergency_thresh_ = this->declare_parameter<double>("emergency_thresh", 0.45);
 
     min_depth_ = this->declare_parameter<double>("min_depth", 0.08);
     max_depth_ = this->declare_parameter<double>("max_depth", 10.0);
@@ -58,8 +58,8 @@ public:
     // Sampling / robustness
     stride_ = this->declare_parameter<int>("stride", 2);                // sampling step in px
     percentile_ = this->declare_parameter<double>("percentile", 0.10);  // 0.10 = 10th percentile
-    near_count_k_ = this->declare_parameter<int>("near_count_k", 6);    // near pixels required
-    valid_count_min_ = this->declare_parameter<int>("valid_count_min", 20);
+    near_count_k_ = this->declare_parameter<int>("near_count_k", 4);    // near pixels required
+    valid_count_min_ = this->declare_parameter<int>("valid_count_min", 60);
 
     // Crop middle band to reduce floor/ceiling artifacts
     crop_y0_frac_ = this->declare_parameter<double>("crop_y0_frac", 0.30); // start at 30% height
@@ -69,7 +69,7 @@ public:
     front_gain_ = this->declare_parameter<double>("front_gain", 1.40);
 
     // Stability: hold last non-clear decision briefly to prevent flicker
-    hold_ms_ = this->declare_parameter<int>("hold_ms", 300);
+    hold_ms_ = this->declare_parameter<int>("hold_ms", 250);
 
     // Debug controls
     show_debug_ = this->declare_parameter<bool>("show_debug", false);
@@ -150,7 +150,7 @@ public:
     last_depth_time_ = now;
     last_marker_distance_time_ = now;
     // Stability: require N consecutive safe frames before exiting avoid mode
-    safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 4);
+    safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 5);
 
     // RCLCPP_INFO(this->get_logger(),
     //   "DepthZoneDetector: enter=%.2f exit=%.2f emergency=%.2f p=%.2f stride=%d K=%d crop=[%.2f..%.2f] front_gain=%.2f",
@@ -159,7 +159,7 @@ public:
   }
 
 private:
-    int safe_frames_required_{4};
+    int safe_frames_required_{5};
     int safe_frames_{0};
   struct RoiStats
   {
@@ -685,24 +685,24 @@ private:
   rclcpp::Clock::SharedPtr clock_;
 
   // Parameters
-  double enter_thresh_{0.8};
-  double exit_thresh_{1.00};
-  double emergency_thresh_{0.60};
+  double enter_thresh_{0.80};
+  double exit_thresh_{1.05};
+  double emergency_thresh_{0.45};
 
   double min_depth_{0.08};
   double max_depth_{10.0};
 
   int stride_{2};
   double percentile_{0.10};
-  int near_count_k_{6};
-  int valid_count_min_{20};
+  int near_count_k_{4};
+  int valid_count_min_{60};
 
   double crop_y0_frac_{0.30};
   double crop_y1_frac_{0.80};
 
   double front_gain_{1.40};
 
-  int hold_ms_{300};
+  int hold_ms_{250};
 
   bool show_debug_{false};
   int debug_throttle_ms_{500};

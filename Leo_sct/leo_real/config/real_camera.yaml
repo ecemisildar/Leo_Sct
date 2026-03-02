@@ -1,27 +1,28 @@
 image_processor:
   ros__parameters:
-    # Depth-based obstacle detection tuning for RealSense (FINAL tuned values)
-    enter_thresh: 0.55 #0.75
-    exit_thresh: 0.95
-    emergency_thresh: 0.25 #0.45
+    # Depth-based obstacle detection tuning for RealSense
+    # Conservative real-world profile: detect earlier, clear later.
+    enter_thresh: 0.80
+    exit_thresh: 1.05
+    emergency_thresh: 0.45
 
     # Depth range in meters
     min_depth: 0.20
     max_depth: 6.00
 
-    # ROI / robustness tuning (REAL CAMERA tuned)
+    # ROI / robustness tuning (conservative)
     stride: 1
     percentile: 0.05
-    near_count_k: 6
-    valid_count_min: 120
-    crop_y0_frac: 0.25 #0.45
-    crop_y1_frac: 0.55 #0.75
-    front_gain: 1.40   # keep unless you later want narrower front
+    near_count_k: 4
+    valid_count_min: 60
+    crop_y0_frac: 0.25
+    crop_y1_frac: 0.55
+    front_gain: 1.40
 
-    # Stability / responsiveness (REAL CAMERA tuned)
-    hold_ms: 80
+    # Stability / responsiveness (conservative)
+    hold_ms: 250
     clear_skip: 1
-    safe_frames_required: 3
+    safe_frames_required: 5
 
     # ArUco detection (optional)
     marker_enabled: false
