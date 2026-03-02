@@ -21,7 +21,6 @@ from typing import Dict, Iterable, List, Sequence
 
 DEFAULT_CONTROLLABLE = [
     "move_forward",
-    "move_backward",
     "rotate_clockwise",
     "rotate_counterclockwise",
     "full_rotate",
