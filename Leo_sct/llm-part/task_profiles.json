@@ -89,16 +89,16 @@
       "marker_close"
     ],
     "constraints": [
-      "Prioritize reaching the marker object quickly; exploration is secondary.",
-      "When marker_seen occurs in clear or forward_commit, include a controllable transition to move_to_marker or a move_to_marker commit state.",
-      "Do NOT allow stop as a primary controllable action solely due to marker_seen; keep moving toward marker unless marker_close is active.",
-      "After marker_seen, avoid returning to exploration states unless the marker object is lost.",
-      "When close to the marker object, prefer stop as the primary controllable action to finish the task safely.",
-      "When marker_close occurs, transition to a marker_close/approach-complete state where stop is the primary or only controllable action.",
-      "When marker is NOT seen, exploration is primary: include an explicit scan state that performs full_rotate or a rotate commit before returning to forward.",
-      "In clear, do not always choose move_forward; allow a rotate commit (or full_rotate) as a primary controllable action for scanning.",
-      "Insert scan states after obstacle recovery or after a forward commit cycle to prevent long straight runs without scanning.",
-      "Use a search pattern: alternate between short forward commits and rotations until marker_seen."
+      "Prioritize finding and approaching the marker quickly; exploration is only for reacquisition when marker is not visible.",
+      "Transition tuple format is strict: (\"state\", \"event\", \"next\"). The second field MUST be one of the allowed controllable/uncontrollable events.",
+      "Helper names such as forward_commit, rotate_commit_cw, rotate_commit_ccw, scan_full, marker_track are state names only; never place helper names in the event field.",
+      "When marker_seen occurs in clear/scan/search states, switch to marker tracking where move_to_marker is the primary controllable action.",
+      "Do not use stop as the primary controllable action when only marker_seen is true; continue approach until marker_close.",
+      "When marker_lost occurs during tracking, return to search/scan behavior instead of continuing move_to_marker blindly.",
+      "When marker_close occurs in any state, transition to a terminal goal state where stop is the only controllable action.",
+      "In search mode, alternate short forward progress with scan/rotate actions; avoid long straight runs without scanning.",
+      "In clear, do not force move_forward only; allow rotate/full_rotate or commit-based scanning to improve marker reacquisition.",
+      "After obstacle recovery, pass through a scan/search state before resuming forward exploration."
     ],
     "include_default_constraints": true
   }
