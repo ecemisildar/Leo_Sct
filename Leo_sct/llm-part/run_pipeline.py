@@ -654,6 +654,8 @@ def _convert_json_to_xml(
     output_path: Path,
     profile: str,
     supervisor_id: str,
+    controllable_events: Sequence[str],
+    uncontrollable_events: Sequence[str],
 ) -> None:
     import json_to_nadzoru_xml
 
@@ -663,8 +665,8 @@ def _convert_json_to_xml(
         states=None,
         initial=["clear"],
         marked=None,
-        controllable=None,
-        uncontrollable=None,
+        controllable=list(controllable_events),
+        uncontrollable=list(uncontrollable_events),
         profile=profile,
         profile_path=str(DEFAULT_PROFILE_PATH),
         supervisor_id=supervisor_id,
@@ -801,6 +803,8 @@ def main() -> int:
             paths["e_xml"],
             args.task,
             DEFAULT_SUPERVISOR_ID,
+            controllable_events,
+            uncontrollable_events,
         )
     elif not paths["e_xml"].exists():
         raise SystemExit(f"Expected input not found: {paths['e_xml']}")
