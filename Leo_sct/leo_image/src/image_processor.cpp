@@ -97,6 +97,7 @@ public:
 
     // ArUco detection (publishes on existing "marker_*" topics for compatibility)
     marker_enabled_ = this->declare_parameter<bool>("marker_enabled", false);
+    marker_debug_ = this->declare_parameter<bool>("marker_debug", false);
     rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", "depth_camera/image");
     marker_label_ = this->declare_parameter<std::string>("marker_label", "marker");
     aruco_dictionary_id_ = this->declare_parameter<int>("aruco_dictionary_id", cv::aruco::DICT_6X6_250);
@@ -139,12 +140,14 @@ public:
     aruco_params_->polygonalApproxAccuracyRate = static_cast<float>(aruco_polygonal_accuracy_);
 
     if (marker_enabled_) {
-      RCLCPP_WARN(this->get_logger(), "RGB subscription topic: %s", rgb_topic_.c_str());
+      RCLCPP_INFO(this->get_logger(), "Marker detection enabled. RGB topic: %s", rgb_topic_.c_str());
       rgb_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
         rgb_topic_,
         rgb_qos,
         std::bind(&DepthZoneDetector::rgbCallback, this, std::placeholders::_1)
       );
+    } else {
+      RCLCPP_WARN(this->get_logger(), "Marker detection disabled (marker_enabled=false).");
     }
 
     last_state_ = "CLEAR";
@@ -278,6 +281,17 @@ private:
       marker_seen_pub_->publish(marker_seen_msg);
       marker_lost_pub_->publish(marker_lost_msg);
       marker_distance_pub_->publish(marker_distance_msg);
+      if (marker_debug_) {
+        const bool has_valid_distance = marker_seen_msg.data && markerDistanceValid(now);
+        const std::string distance_str =
+          has_valid_distance ? std::to_string(marker_distance_msg.data) : "NaN";
+        RCLCPP_INFO_THROTTLE(
+          this->get_logger(), *this->get_clock(), 1000,
+          "Marker pubs: seen=%s lost=%s distance=%s",
+          marker_seen_msg.data ? "true" : "false",
+          marker_lost_msg.data ? "true" : "false",
+          distance_str.c_str());
+      }
     }
 
     // Throttled debug log
@@ -522,6 +536,12 @@ private:
     }
 
     if (bgr.empty()) return;
+    if (marker_debug_) {
+      RCLCPP_INFO_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "RGB callback on %s: %dx%d (%s)",
+        rgb_topic_.c_str(), bgr.cols, bgr.rows, encoding.c_str());
+    }
     // RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), debug_throttle_ms_,
     //   "RGB frame received: %dx%d (%s)", bgr.cols, bgr.rows, encoding.c_str());
     // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
@@ -551,6 +571,12 @@ private:
       const auto now = this->now();
       last_marker_time_ = now;
       marker_seen_ = true;
+      if (marker_debug_) {
+        RCLCPP_INFO_THROTTLE(
+          this->get_logger(), *this->get_clock(), 1000,
+          "ArUco detected: count=%zu dict=%d inverted=%s",
+          ids.size(), dict_report, last_detected_inverted_ ? "true" : "false");
+      }
       if (!ids.empty()) {
         std::ostringstream id_stream;
         for (size_t i = 0; i < ids.size(); ++i) {
@@ -562,6 +588,11 @@ private:
         //   this->get_fully_qualified_name(), id_stream.str().c_str());
       }
       updateMarkerDistance(corners, now, bgr.size());
+    } else if (marker_debug_) {
+      RCLCPP_INFO_THROTTLE(
+        this->get_logger(), *this->get_clock(), 2000,
+        "No ArUco detected in RGB frame (dict=%d, try_inverted=%s)",
+        aruco_dictionary_id_, aruco_try_inverted_ ? "true" : "false");
     }
   }
 
@@ -633,12 +664,31 @@ private:
                             const rclcpp::Time& now,
                             const cv::Size& rgb_size)
   {
-    if (last_depth_.empty()) return;
+    if (last_depth_.empty()) {
+      if (marker_debug_) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000, "Marker distance skipped: no depth frame yet");
+      }
+      return;
+    }
     if (last_depth_.rows <= 0 || last_depth_.cols <= 0) return;
-    if (last_depth_.rows != rgb_size.height || last_depth_.cols != rgb_size.width) return;
+    if (last_depth_.rows != rgb_size.height || last_depth_.cols != rgb_size.width) {
+      if (marker_debug_) {
+        RCLCPP_WARN_THROTTLE(
+          this->get_logger(), *this->get_clock(), 2000,
+          "Marker distance skipped: RGB/Depth size mismatch rgb=%dx%d depth=%dx%d",
+          rgb_size.width, rgb_size.height, last_depth_.cols, last_depth_.rows);
+      }
+      return;
+    }
 
     const double depth_age_ms = (now - last_depth_time_).seconds() * 1000.0;
     if (depth_age_ms < 0.0 || depth_age_ms > static_cast<double>(marker_depth_max_age_ms_)) {
+      if (marker_debug_) {
+        RCLCPP_WARN_THROTTLE(
+          this->get_logger(), *this->get_clock(), 2000,
+          "Marker distance skipped: stale depth (age=%.1f ms > %d ms)",
+          depth_age_ms, marker_depth_max_age_ms_);
+      }
       return;
     }
 
@@ -681,6 +731,17 @@ private:
       last_marker_distance_ = best;
       last_marker_distance_time_ = now;
       marker_distance_valid_ = true;
+      if (marker_debug_) {
+        RCLCPP_INFO_THROTTLE(
+          this->get_logger(), *this->get_clock(), 1000,
+          "Marker distance updated: %.3f m (%d samples)",
+          last_marker_distance_, count);
+      }
+    } else if (marker_debug_) {
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 2000,
+        "Marker distance invalid: only %d valid samples (min=%d), best=%f",
+        count, marker_distance_min_count_, best);
     }
   }
 
@@ -727,6 +788,7 @@ private:
 
   // ArUco detection (publish on marker topics)
   bool marker_enabled_{false};
+  bool marker_debug_{false};
   std::string rgb_topic_{"camera/image_raw"};
   std::string marker_label_{"marker"};
   int aruco_dictionary_id_{cv::aruco::DICT_6X6_250};

@@ -8,6 +8,8 @@ from typing import Dict, Optional, Tuple
 
 import rclpy
 from rclpy.node import Node
+from rclpy.parameter import Parameter
+from rclpy.parameter_client import AsyncParametersClient
 
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String, Bool, Float32
@@ -99,6 +101,9 @@ class RobotSupervisor(Node):
         self.marker_stop_distance = float(self.declare_parameter("marker_stop_distance", 0.5).value)
         self.marker_distance_timeout = float(self.declare_parameter("marker_distance_timeout", 0.6).value)
         self.marker_lost_timeout = float(self.declare_parameter("marker_lost_timeout", 0.8).value)
+        self.marker_debug = bool(self.declare_parameter("marker_debug", True).value)
+        self.marker_debug_throttle_s = float(self.declare_parameter("marker_debug_throttle_s", 1.0).value)
+        self._marker_debug_last: Dict[str, float] = {}
 
         # Throttle zone updates to match supervisor cadence
         self.zone_update_min_dt = self.supervisor_period
@@ -117,6 +122,11 @@ class RobotSupervisor(Node):
         self.config_dir = os.path.join(get_package_share_directory("leo_real"), "config")
         self.current_mission = "explore"
         self.current_yaml_path = ""
+        self.desired_marker_enabled = False
+        self.applied_marker_enabled: Optional[bool] = None
+        self.marker_param_future = None
+        self.last_marker_param_attempt = 0.0
+        self.last_marker_param_service_warn = 0.0
         self._load_initial_sct()
 
         # -------------------------------
@@ -176,6 +186,7 @@ class RobotSupervisor(Node):
             "enable_supervisor_find_marker",
             self.handle_enable_supervisor_find_marker,
         )
+        self.image_processor_params = AsyncParametersClient(self, "image_processor")
 
         # -------------------------------
         # Action table (data-driven)
@@ -259,6 +270,7 @@ class RobotSupervisor(Node):
         self.get_logger().info(
             f"Loaded initial mission '{self.current_mission}' from {os.path.basename(config_path)}"
         )
+        self._set_desired_marker_mode_for_mission(self.current_mission)
 
     def _switch_mission(self, mission: str) -> Tuple[bool, str]:
         mission_key = self._canonical_mission_name(mission)
@@ -272,10 +284,65 @@ class RobotSupervisor(Node):
             return False, f"Failed to load {os.path.basename(config_path)}: {exc}"
         self.current_mission = mission_key
         self.current_yaml_path = config_path
+        self._set_desired_marker_mode_for_mission(mission_key)
         self.get_logger().info(
             f"Switched mission to '{mission_key}' using {os.path.basename(config_path)}"
         )
         return True, os.path.basename(config_path)
+
+    def _set_desired_marker_mode_for_mission(self, mission: str):
+        mission_key = self._canonical_mission_name(mission)
+        desired = (mission_key == "find_marker")
+        if self.desired_marker_enabled != desired:
+            self.get_logger().info(
+                f"Marker detection target for mission '{mission_key}': {'enabled' if desired else 'disabled'}"
+            )
+        self.desired_marker_enabled = desired
+
+    def _sync_marker_mode(self):
+        if self.applied_marker_enabled == self.desired_marker_enabled:
+            return
+        if self.marker_param_future is not None and not self.marker_param_future.done():
+            return
+
+        now = time.time()
+        if now - self.last_marker_param_attempt < 1.0:
+            return
+        self.last_marker_param_attempt = now
+
+        if not self.image_processor_params.service_is_ready():
+            if now - self.last_marker_param_service_warn > 5.0:
+                self.last_marker_param_service_warn = now
+                self.get_logger().warn(
+                    "image_processor parameter service not ready; will retry marker mode sync"
+                )
+            return
+
+        desired = bool(self.desired_marker_enabled)
+        params = [
+            Parameter("marker_enabled", value=desired),
+            Parameter("marker_debug", value=(desired and self.marker_debug)),
+        ]
+        self.marker_param_future = self.image_processor_params.set_parameters(params)
+        self.marker_param_future.add_done_callback(self._on_marker_mode_set)
+
+    def _on_marker_mode_set(self, future):
+        try:
+            result = future.result()
+        except Exception as exc:
+            self.get_logger().warn(f"Failed to set image_processor marker params: {exc}")
+            return
+
+        if not all(r.successful for r in result):
+            reasons = [r.reason for r in result if not r.successful]
+            detail = "; ".join(reason for reason in reasons if reason) or "unknown reason"
+            self.get_logger().warn(f"image_processor rejected marker params: {detail}")
+            return
+
+        self.applied_marker_enabled = bool(self.desired_marker_enabled)
+        self.get_logger().info(
+            f"image_processor marker mode synced: {'enabled' if self.applied_marker_enabled else 'disabled'}"
+        )
 
     def _set_enabled(self, enable: bool):
         self.enabled = bool(enable)
@@ -316,18 +383,35 @@ class RobotSupervisor(Node):
         self.marker_seen = seen
         if seen:
             self.last_marker_lost_time = 0.0
+        self._marker_debug_log("marker_seen_cb", f"marker_seen topic -> {seen}")
 
     def marker_lost_callback(self, msg: Bool):
         if bool(msg.data):
             self.last_marker_lost_time = time.time()
             self.marker_seen = False
+            self._marker_debug_log("marker_lost_cb", "marker_lost topic -> true")
 
     def marker_distance_callback(self, msg: Float32):
         if math.isfinite(msg.data):
             self.marker_distance = float(msg.data)
             self.last_marker_distance_time = time.time()
+            self._marker_debug_log(
+                "marker_dist_cb",
+                f"marker_distance topic -> {self.marker_distance:.3f} m",
+            )
         else:
             self.marker_distance = float("inf")
+            self._marker_debug_log("marker_dist_cb", "marker_distance topic -> NaN/inf")
+
+    def _marker_debug_log(self, key: str, message: str):
+        if not self.marker_debug:
+            return
+        now = time.time()
+        last = self._marker_debug_last.get(key, 0.0)
+        if now - last < self.marker_debug_throttle_s:
+            return
+        self._marker_debug_last[key] = now
+        self.get_logger().info(f"[marker-debug] {message}")
 
     # -------------------------------
     # SCT input check functions (uncontrollables)
@@ -354,23 +438,44 @@ class RobotSupervisor(Node):
         return "RIGHT" in self.obstacle_zones
 
     def marker_check(self, sup_data):
+        self._marker_debug_log("marker_seen_check", f"UCE marker_seen -> {self.marker_seen}")
         return self.marker_seen
 
     def marker_close_check(self, sup_data):
         if not self.marker_seen:
+            self._marker_debug_log("marker_close_check", "UCE marker_close -> false (marker_seen=false)")
             return False
         if not math.isfinite(self.marker_distance):
+            self._marker_debug_log("marker_close_check", "UCE marker_close -> false (distance invalid)")
             return False
-        if time.time() - self.last_marker_distance_time > self.marker_distance_timeout:
+        age = time.time() - self.last_marker_distance_time
+        if age > self.marker_distance_timeout:
+            self._marker_debug_log(
+                "marker_close_check",
+                f"UCE marker_close -> false (distance stale: {age:.2f}s > {self.marker_distance_timeout:.2f}s)",
+            )
             return False
-        return self.marker_distance <= self.marker_stop_distance
+        close = self.marker_distance <= self.marker_stop_distance
+        self._marker_debug_log(
+            "marker_close_check",
+            f"UCE marker_close -> {close} (distance={self.marker_distance:.3f}m, threshold={self.marker_stop_distance:.3f}m)",
+        )
+        return close
 
     def marker_lost_check(self, sup_data):
         if self.marker_seen:
+            self._marker_debug_log("marker_lost_check", "UCE marker_lost -> false (marker_seen=true)")
             return False
         if self.last_marker_lost_time <= 0.0:
+            self._marker_debug_log("marker_lost_check", "UCE marker_lost -> false (never received marker_lost)")
             return False
-        return (time.time() - self.last_marker_lost_time) <= self.marker_lost_timeout
+        age = time.time() - self.last_marker_lost_time
+        lost = age <= self.marker_lost_timeout
+        self._marker_debug_log(
+            "marker_lost_check",
+            f"UCE marker_lost -> {lost} (age={age:.2f}s, timeout={self.marker_lost_timeout:.2f}s)",
+        )
+        return lost
 
     def _install_uncontrollable_callbacks(self):
         # Attach callbacks only for events that exist in current supervisor YAML.
@@ -586,6 +691,8 @@ class RobotSupervisor(Node):
     # Supervisor tick
     # -------------------------------
     def timer_callback(self):
+        self._sync_marker_mode()
+
         if not self.enabled:
             if not self.stop_sent:
                 self._cancel_all_motion()
