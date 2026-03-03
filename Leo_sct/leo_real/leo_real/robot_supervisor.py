@@ -2,6 +2,7 @@ import os
 import random
 import math
 import time
+from glob import glob
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
@@ -113,29 +114,10 @@ class RobotSupervisor(Node):
         # -------------------------------
         # Load SCT YAML
         # -------------------------------
-        config_path = os.path.join(
-            get_package_share_directory("leo_real"),
-            "config",
-            "sup_gpt.yaml",
-        )
-        if not os.path.exists(config_path):
-            self.get_logger().error(f"YAML file not found: {config_path}")
-            raise SystemExit(1)
-
-        self.sct = SCT(config_path)
-
-        # Precompute fast event-id -> event-name mapping
-        # self.sct.EV maps name -> id, so invert it:
-        self.ev_name_by_id: Dict[int, str] = {ev_id: ev_name for ev_name, ev_id in self.sct.EV.items()}
-
-        # Ensure all events have a callback entry (avoid KeyErrors)
-        for ev_name, ev_id in self.sct.EV.items():
-            if ev_id not in self.sct.callback:
-                self.sct.callback[ev_id] = {
-                    "callback": None,
-                    "check_input": None,
-                    "sup_data": None,
-                }
+        self.config_dir = os.path.join(get_package_share_directory("leo_real"), "config")
+        self.current_mission = "explore"
+        self.current_yaml_path = ""
+        self._load_initial_sct()
 
         # -------------------------------
         # State (sensing)
@@ -181,11 +163,19 @@ class RobotSupervisor(Node):
         # -------------------------------
         # SCT callbacks for UCEs (data-driven, but still attaches known sensors)
         # -------------------------------
-        self._install_uncontrollable_callbacks()
-
         # Timer + service
         self.timer = self.create_timer(self.supervisor_period, self.timer_callback)
         self.enable_service = self.create_service(SetBool, "enable_supervisor", self.handle_enable_supervisor)
+        self.enable_service_explore = self.create_service(
+            SetBool,
+            "enable_supervisor_explore",
+            self.handle_enable_supervisor_explore,
+        )
+        self.enable_service_find_marker = self.create_service(
+            SetBool,
+            "enable_supervisor_find_marker",
+            self.handle_enable_supervisor_find_marker,
+        )
 
         # -------------------------------
         # Action table (data-driven)
@@ -210,6 +200,89 @@ class RobotSupervisor(Node):
             # full_rotate is executed as an atomic rotation using odom; target is full_rotate_target_rad (≤ π here).
             "EV_full_rotate": ActionSpec(linear_x=0.0, angular_z=self.full_rotate_omega, is_full_rotate=True),
         }
+
+    def _canonical_mission_name(self, mission: str) -> str:
+        key = str(mission or "").strip().lower().replace("-", "_").replace(" ", "_")
+        if key in {"find", "findmarker"}:
+            key = "find_marker"
+        if key not in {"explore", "find_marker"}:
+            key = "explore"
+        return key
+
+    def _mission_yaml_candidates(self, mission: str):
+        mission_key = self._canonical_mission_name(mission)
+        candidates = []
+        preferred = os.path.join(self.config_dir, f"{mission_key}_sup_gpt.yaml")
+        if os.path.exists(preferred):
+            candidates.append(preferred)
+        task_files = sorted(
+            glob(os.path.join(self.config_dir, f"{mission_key}_sup_gpt_*.yaml")),
+            key=os.path.getmtime,
+            reverse=True,
+        )
+        candidates.extend(task_files)
+        fallback = os.path.join(self.config_dir, "sup_gpt.yaml")
+        if os.path.exists(fallback):
+            candidates.append(fallback)
+
+        seen = set()
+        unique = []
+        for path in candidates:
+            if path not in seen:
+                unique.append(path)
+                seen.add(path)
+        return unique
+
+    def _load_sct_from_yaml(self, config_path: str):
+        self.sct = SCT(config_path)
+        self.ev_name_by_id = {ev_id: ev_name for ev_name, ev_id in self.sct.EV.items()}
+        for ev_id in self.sct.EV.values():
+            if ev_id not in self.sct.callback:
+                self.sct.callback[ev_id] = {
+                    "callback": None,
+                    "check_input": None,
+                    "sup_data": None,
+                }
+        self._install_uncontrollable_callbacks()
+
+    def _load_initial_sct(self):
+        paths = self._mission_yaml_candidates(self.current_mission)
+        if not paths:
+            self.get_logger().error(
+                f"No supervisor YAML found in {self.config_dir}. "
+                "Expected mission-specific files or sup_gpt.yaml."
+            )
+            raise SystemExit(1)
+        config_path = paths[0]
+        self._load_sct_from_yaml(config_path)
+        self.current_yaml_path = config_path
+        self.get_logger().info(
+            f"Loaded initial mission '{self.current_mission}' from {os.path.basename(config_path)}"
+        )
+
+    def _switch_mission(self, mission: str) -> Tuple[bool, str]:
+        mission_key = self._canonical_mission_name(mission)
+        paths = self._mission_yaml_candidates(mission_key)
+        if not paths:
+            return False, f"No YAML found for mission '{mission_key}' in {self.config_dir}"
+        config_path = paths[0]
+        try:
+            self._load_sct_from_yaml(config_path)
+        except Exception as exc:
+            return False, f"Failed to load {os.path.basename(config_path)}: {exc}"
+        self.current_mission = mission_key
+        self.current_yaml_path = config_path
+        self.get_logger().info(
+            f"Switched mission to '{mission_key}' using {os.path.basename(config_path)}"
+        )
+        return True, os.path.basename(config_path)
+
+    def _set_enabled(self, enable: bool):
+        self.enabled = bool(enable)
+        self.stop_sent = False
+        self._cancel_all_motion()
+        if not self.enabled:
+            self._publish_stop()
 
     def _publish_cmd(self, twist: Twist):
         # Testing mode: clamp all outgoing cmd_vel values to zero.
@@ -318,15 +391,45 @@ class RobotSupervisor(Node):
     # Enable service
     # -------------------------------
     def handle_enable_supervisor(self, request, response):
-        self.enabled = bool(request.data)
-        self.stop_sent = False
-        self._cancel_all_motion()
-        if not self.enabled:
-            self._publish_stop()
-            response.message = "Supervisor disabled."
+        # Backward-compatible entry point: keep current mission, only toggle enabled state.
+        self._set_enabled(request.data)
+        if self.enabled:
+            response.message = (
+                f"Supervisor enabled (mission={self.current_mission}, yaml={os.path.basename(self.current_yaml_path)})."
+            )
         else:
-            response.message = "Supervisor enabled."
+            response.message = "Supervisor disabled."
         response.success = True
+        return response
+
+    def handle_enable_supervisor_explore(self, request, response):
+        if bool(request.data):
+            ok, detail = self._switch_mission("explore")
+            if not ok:
+                response.success = False
+                response.message = detail
+                return response
+        self._set_enabled(request.data)
+        response.success = True
+        if self.enabled:
+            response.message = f"Supervisor enabled for explore ({detail})."
+        else:
+            response.message = "Supervisor disabled."
+        return response
+
+    def handle_enable_supervisor_find_marker(self, request, response):
+        if bool(request.data):
+            ok, detail = self._switch_mission("find_marker")
+            if not ok:
+                response.success = False
+                response.message = detail
+                return response
+        self._set_enabled(request.data)
+        response.success = True
+        if self.enabled:
+            response.message = f"Supervisor enabled for find_marker ({detail})."
+        else:
+            response.message = "Supervisor disabled."
         return response
 
     def _namespace_index(self) -> int:

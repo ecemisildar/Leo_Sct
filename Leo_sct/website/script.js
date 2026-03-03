@@ -3,6 +3,10 @@ const DEFAULT_ROSBRIDGE_URL = "ws://192.168.178.141:9090";
 const ROBOT_CONFIG_PATH = "./robots.json";
 const TWIST_MSG_TYPE = "geometry_msgs/msg/Twist";
 const SET_BOOL_SRV_TYPE = "std_srvs/srv/SetBool";
+const MISSION_LABELS = {
+  explore: "Explore",
+  find_marker: "Find Marker",
+};
 
 let robots = [];
 
@@ -12,6 +16,7 @@ const state = {
   autonomousRobotIds: new Set(),
   autonomousActiveIds: new Set(),
   autonomousRunning: false,
+  autonomousMissionPreset: "explore",
 };
 
 const autonomousGrid = document.getElementById("autonomousGrid");
@@ -50,10 +55,33 @@ function cmdVelTopic(robot) {
   return `/${String(robot.cmdTopic ?? `/${robot.ns}/cmd_vel`).replace(/^\/+|\/+$/g, "")}`;
 }
 
-function supervisorServiceCandidates(robot) {
+function missionServiceNames(missionPreset, enabled) {
+  if (missionPreset === "find_marker") return ["enable_supervisor_find_marker"];
+  if (missionPreset === "explore") return ["enable_supervisor_explore"];
+  if (!enabled) return ["enable_supervisor_explore", "enable_supervisor_find_marker"];
+  return ["enable_supervisor_explore"];
+}
+
+function supervisorServiceCandidates(robot, missionPreset, enabled) {
   const candidates = [];
   const ns = String(robot.ns ?? "").replace(/^\/+|\/+$/g, "");
   const topic = cmdVelTopic(robot);
+  const serviceNames = missionServiceNames(missionPreset, enabled);
+
+  serviceNames.forEach((serviceName) => {
+    if (ns) {
+      candidates.push(`/${ns}/${serviceName}`);
+    }
+
+    if (topic.endsWith("/cmd_vel")) {
+      const topicPrefix = topic.slice(0, -"/cmd_vel".length);
+      if (topicPrefix && topicPrefix !== "/") {
+        candidates.push(`${topicPrefix}/${serviceName}`);
+      } else {
+        candidates.push(`/${serviceName}`);
+      }
+    }
+  });
 
   if (ns) {
     candidates.push(`/${ns}/enable_supervisor`);
@@ -270,7 +298,7 @@ function publishCmdVel(robot, linearX, angularZ) {
   }
 }
 
-function callSupervisorService(enabled, robotIds) {
+function callSupervisorService(enabled, robotIds, missionPreset) {
   if (!connectedRobotIds.size) {
     appendConsoleLine("No ROS bridges connected.");
     return false;
@@ -283,7 +311,7 @@ function callSupervisorService(enabled, robotIds) {
     .map((id) => robots.find((robot) => robot.id === id))
     .filter(Boolean);
   names.forEach((robot) => {
-    const services = supervisorServiceCandidates(robot);
+    const services = supervisorServiceCandidates(robot, missionPreset, enabled);
     let sent = false;
     services.forEach((service, idx) => {
       const callId = `svc:${robot.id}:${Date.now()}:${idx}`;
@@ -397,7 +425,7 @@ function initHandlers() {
 
   document.getElementById("allStopBtn").addEventListener("click", () => {
     stopManualCommand();
-    callSupervisorService(false, robots.map((robot) => robot.id));
+    callSupervisorService(false, robots.map((robot) => robot.id), null);
     robots.forEach((robot) => {
       state.autonomousActiveIds.delete(robot.id);
       stopRobotMotion(robot);
@@ -459,15 +487,19 @@ function initHandlers() {
   });
   toggleAutoBtn.addEventListener("click", () => {
     const preset = document.getElementById("missionPreset").value;
+    const presetLabel = MISSION_LABELS[preset] ?? preset;
     if (!state.autonomousRunning) {
-      const started = callSupervisorService(true, Array.from(state.autonomousRobotIds));
+      const started = callSupervisorService(true, Array.from(state.autonomousRobotIds), preset);
       if (!started) return;
       state.autonomousRunning = true;
-      appendConsoleLine(
-        `[auto] Start ${preset} (SCT) on ${state.autonomousRobotIds.size || 0} robots.`
-      );
+      state.autonomousMissionPreset = preset;
+      appendConsoleLine(`[auto] Start ${presetLabel} on ${state.autonomousRobotIds.size || 0} robots.`);
     } else {
-      const stopped = callSupervisorService(false, Array.from(state.autonomousRobotIds));
+      const stopped = callSupervisorService(
+        false,
+        Array.from(state.autonomousRobotIds),
+        state.autonomousMissionPreset
+      );
       if (!stopped) return;
       state.autonomousRunning = false;
       appendConsoleLine("[auto] Stop autonomous pipeline.");
