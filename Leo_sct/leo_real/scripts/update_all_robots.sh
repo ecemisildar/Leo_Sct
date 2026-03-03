@@ -2,14 +2,14 @@
 set -u
 
 ROBOTS=(
-  "jetson@192.168.178.101"
-  "jetson@192.168.178.102"
-  "jetson@192.168.178.103"
-  "jetson@192.168.178.104"
+  "jetson-01@192.168.178.101"
+  "jetson-02@192.168.178.102"
+  "jetson-03@192.168.178.103"
+  "jetson-04@192.168.178.104"
 )
 
-WS="/home/ros2_real_ws"
-REPO="$WS/src/Leo_sct_real"
+WS="~/ros_ws"
+REPO="$WS/src/Leo_Sct"
 BRANCH="real"
 
 run_robot() {
