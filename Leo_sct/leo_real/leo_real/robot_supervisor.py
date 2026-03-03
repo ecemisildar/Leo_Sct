@@ -8,8 +8,6 @@ from typing import Dict, Optional, Tuple
 
 import rclpy
 from rclpy.node import Node
-from rclpy.parameter import Parameter
-from rclpy.parameter_client import AsyncParametersClient
 
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String, Bool, Float32
@@ -122,11 +120,6 @@ class RobotSupervisor(Node):
         self.config_dir = os.path.join(get_package_share_directory("leo_real"), "config")
         self.current_mission = "explore"
         self.current_yaml_path = ""
-        self.desired_marker_enabled = False
-        self.applied_marker_enabled: Optional[bool] = None
-        self.marker_param_future = None
-        self.last_marker_param_attempt = 0.0
-        self.last_marker_param_service_warn = 0.0
         self._load_initial_sct()
 
         # -------------------------------
@@ -186,7 +179,6 @@ class RobotSupervisor(Node):
             "enable_supervisor_find_marker",
             self.handle_enable_supervisor_find_marker,
         )
-        self.image_processor_params = AsyncParametersClient(self, "image_processor")
 
         # -------------------------------
         # Action table (data-driven)
@@ -270,7 +262,6 @@ class RobotSupervisor(Node):
         self.get_logger().info(
             f"Loaded initial mission '{self.current_mission}' from {os.path.basename(config_path)}"
         )
-        self._set_desired_marker_mode_for_mission(self.current_mission)
 
     def _switch_mission(self, mission: str) -> Tuple[bool, str]:
         mission_key = self._canonical_mission_name(mission)
@@ -284,65 +275,10 @@ class RobotSupervisor(Node):
             return False, f"Failed to load {os.path.basename(config_path)}: {exc}"
         self.current_mission = mission_key
         self.current_yaml_path = config_path
-        self._set_desired_marker_mode_for_mission(mission_key)
         self.get_logger().info(
             f"Switched mission to '{mission_key}' using {os.path.basename(config_path)}"
         )
         return True, os.path.basename(config_path)
-
-    def _set_desired_marker_mode_for_mission(self, mission: str):
-        mission_key = self._canonical_mission_name(mission)
-        desired = (mission_key == "find_marker")
-        if self.desired_marker_enabled != desired:
-            self.get_logger().info(
-                f"Marker detection target for mission '{mission_key}': {'enabled' if desired else 'disabled'}"
-            )
-        self.desired_marker_enabled = desired
-
-    def _sync_marker_mode(self):
-        if self.applied_marker_enabled == self.desired_marker_enabled:
-            return
-        if self.marker_param_future is not None and not self.marker_param_future.done():
-            return
-
-        now = time.time()
-        if now - self.last_marker_param_attempt < 1.0:
-            return
-        self.last_marker_param_attempt = now
-
-        if not self.image_processor_params.service_is_ready():
-            if now - self.last_marker_param_service_warn > 5.0:
-                self.last_marker_param_service_warn = now
-                self.get_logger().warn(
-                    "image_processor parameter service not ready; will retry marker mode sync"
-                )
-            return
-
-        desired = bool(self.desired_marker_enabled)
-        params = [
-            Parameter("marker_enabled", value=desired),
-            Parameter("marker_debug", value=(desired and self.marker_debug)),
-        ]
-        self.marker_param_future = self.image_processor_params.set_parameters(params)
-        self.marker_param_future.add_done_callback(self._on_marker_mode_set)
-
-    def _on_marker_mode_set(self, future):
-        try:
-            result = future.result()
-        except Exception as exc:
-            self.get_logger().warn(f"Failed to set image_processor marker params: {exc}")
-            return
-
-        if not all(r.successful for r in result):
-            reasons = [r.reason for r in result if not r.successful]
-            detail = "; ".join(reason for reason in reasons if reason) or "unknown reason"
-            self.get_logger().warn(f"image_processor rejected marker params: {detail}")
-            return
-
-        self.applied_marker_enabled = bool(self.desired_marker_enabled)
-        self.get_logger().info(
-            f"image_processor marker mode synced: {'enabled' if self.applied_marker_enabled else 'disabled'}"
-        )
 
     def _set_enabled(self, enable: bool):
         self.enabled = bool(enable)
@@ -691,8 +627,6 @@ class RobotSupervisor(Node):
     # Supervisor tick
     # -------------------------------
     def timer_callback(self):
-        self._sync_marker_mode()
-
         if not self.enabled:
             if not self.stop_sent:
                 self._cancel_all_motion()

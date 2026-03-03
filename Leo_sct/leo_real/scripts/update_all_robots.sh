@@ -19,7 +19,8 @@ run_robot() {
     set -e
     cd $REPO
     git fetch origin
-    git checkout -B $BRANCH origin/$BRANCH
+    git reset --hard
+    git checkout -f -B $BRANCH origin/$BRANCH
     git reset --hard origin/$BRANCH
     git clean -fd
 
