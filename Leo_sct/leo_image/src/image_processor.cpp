@@ -51,6 +51,12 @@ public:
     enter_thresh_     = this->declare_parameter<double>("enter_thresh", 0.80);  // start avoiding earlier
     exit_thresh_      = this->declare_parameter<double>("exit_thresh",  1.05);  // return to clear later
     emergency_thresh_ = this->declare_parameter<double>("emergency_thresh", 0.45);
+    side_enter_thresh_ = this->declare_parameter<double>("side_enter_thresh", enter_thresh_);
+    side_exit_thresh_  = this->declare_parameter<double>("side_exit_thresh", exit_thresh_);
+    left_enter_thresh_ = this->declare_parameter<double>("left_enter_thresh", side_enter_thresh_);
+    right_enter_thresh_ = this->declare_parameter<double>("right_enter_thresh", side_enter_thresh_);
+    left_exit_thresh_ = this->declare_parameter<double>("left_exit_thresh", side_exit_thresh_);
+    right_exit_thresh_ = this->declare_parameter<double>("right_exit_thresh", side_exit_thresh_);
 
     min_depth_ = this->declare_parameter<double>("min_depth", 0.08);
     max_depth_ = this->declare_parameter<double>("max_depth", 10.0);
@@ -334,10 +340,14 @@ private:
     zs.front_roi = front;
     zs.right_roi = right;
 
-    const float near_thr = static_cast<float>(enter_thresh_);
-    zs.left  = roiStats(depth, left,  percentile_, stride_, near_thr);
-    zs.front = roiStats(depth, front, percentile_, stride_, near_thr);
-    zs.right = roiStats(depth, right, percentile_, stride_, near_thr);
+    const float front_near_thr = static_cast<float>(std::max(enter_thresh_, exit_thresh_));
+    const float left_near_thr = static_cast<float>(
+      std::max({left_enter_thresh_, left_exit_thresh_, side_enter_thresh_, side_exit_thresh_}));
+    const float right_near_thr = static_cast<float>(
+      std::max({right_enter_thresh_, right_exit_thresh_, side_enter_thresh_, side_exit_thresh_}));
+    zs.left  = roiStats(depth, left,  percentile_, stride_, left_near_thr);
+    zs.front = roiStats(depth, front, percentile_, stride_, front_near_thr);
+    zs.right = roiStats(depth, right, percentile_, stride_, right_near_thr);
 
     return zs;
   }
@@ -408,8 +418,8 @@ private:
     // -------------------------
     if (last_state_ != "CLEAR") {
       const bool front_close = zoneIsObstacle(zs.front, exit_thresh_);
-      const bool left_close  = zoneIsObstacle(zs.left,  exit_thresh_);
-      const bool right_close = zoneIsObstacle(zs.right, exit_thresh_);
+      const bool left_close  = zoneIsObstacle(zs.left,  left_exit_thresh_);
+      const bool right_close = zoneIsObstacle(zs.right, right_exit_thresh_);
 
       const bool still_close = front_close || left_close || right_close;
 
@@ -450,8 +460,8 @@ private:
     // CLEAR MODE: use ENTER threshold to trigger
     // -------------------------
     if (zoneIsObstacle(zs.front, enter_thresh_)) { last_state_ = "CORNER"; safe_frames_ = 0; return last_state_; }
-    if (zoneIsObstacle(zs.left,  enter_thresh_)) { last_state_ = "LEFT";   safe_frames_ = 0; return last_state_; }
-    if (zoneIsObstacle(zs.right, enter_thresh_)) { last_state_ = "RIGHT";  safe_frames_ = 0; return last_state_; }
+    if (zoneIsObstacle(zs.left,  left_enter_thresh_)) { last_state_ = "LEFT";   safe_frames_ = 0; return last_state_; }
+    if (zoneIsObstacle(zs.right, right_enter_thresh_)) { last_state_ = "RIGHT";  safe_frames_ = 0; return last_state_; }
 
     return "CLEAR";
   }
@@ -688,6 +698,12 @@ private:
   double enter_thresh_{0.80};
   double exit_thresh_{1.05};
   double emergency_thresh_{0.45};
+  double side_enter_thresh_{0.80};
+  double side_exit_thresh_{1.05};
+  double left_enter_thresh_{0.80};
+  double right_enter_thresh_{0.80};
+  double left_exit_thresh_{1.05};
+  double right_exit_thresh_{1.05};
 
   double min_depth_{0.08};
   double max_depth_{10.0};

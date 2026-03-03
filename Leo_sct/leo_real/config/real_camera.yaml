@@ -5,6 +5,13 @@ image_processor:
     enter_thresh: 0.80
     exit_thresh: 1.05
     emergency_thresh: 0.45
+    # Side ROIs: increased to react earlier to walls/objects on left/right.
+    side_enter_thresh: 0.95
+    side_exit_thresh: 1.20
+    left_enter_thresh: 0.95
+    right_enter_thresh: 0.95
+    left_exit_thresh: 1.20
+    right_exit_thresh: 1.20
 
     # Depth range in meters
     min_depth: 0.20
