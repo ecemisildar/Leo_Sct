@@ -87,6 +87,10 @@ p {
   user-select: none;
 }
 
+#sessionStatus {
+  cursor: default;
+}
+
 .mode-switch {
   display: flex;
   gap: 12px;
@@ -152,6 +156,31 @@ p {
   border-radius: 16px;
   padding: 18px;
   border: 1px solid var(--outline);
+}
+
+.qr-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.qr-card[hidden] {
+  display: none !important;
+}
+
+.phone-qr-image {
+  width: 220px;
+  height: 220px;
+  border-radius: 10px;
+  border: 1px solid var(--outline);
+  background: #fff;
+}
+
+.phone-url-link {
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-all;
 }
 
 .robot-card {
@@ -351,6 +380,44 @@ p {
   gap: 12px;
   color: var(--muted);
   font-size: 14px;
+}
+
+.session-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 32, 37, 0.4);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 20;
+}
+
+.session-overlay[hidden] {
+  display: none !important;
+}
+
+.session-overlay-card {
+  max-width: 460px;
+  width: 100%;
+  background: var(--surface-strong);
+  border: 1px solid var(--outline);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.session-overlay-card h3 {
+  margin: 0;
+  font-family: var(--font-head);
+}
+
+body.session-expired .mode-switch,
+body.session-expired main,
+body.session-expired .site-footer,
+body.session-expired #connectionStatus,
+body.session-expired #allStopBtn {
+  pointer-events: none;
+  opacity: 0.45;
 }
 
 @keyframes fadeIn {

@@ -1,6 +1,19 @@
 const DEFAULT_ROSBRIDGE_URL = "ws://192.168.178.141:9090";
 
 const ROBOT_CONFIG_PATH = "./robots.json";
+const SESSION_ENDPOINT = "/api/session";
+const CONNECT_INFO_ENDPOINT = "/api/connect_info";
+const QR_ENDPOINT = "/api/qr";
+const CONTROL_CLAIM_ENDPOINT = "/api/control/claim";
+const CONTROL_RELEASE_ENDPOINT = "/api/control/release";
+const CONTROL_HEARTBEAT_ENDPOINT = "/api/control/heartbeat";
+const EMERGENCY_ACTIVATE_ENDPOINT = "/api/emergency/activate";
+
+const DEFAULT_REMOTE_SESSION_TIMEOUT_MS = 5 * 60 * 1000;
+const DEFAULT_LEASE_TIMEOUT_MS = 12 * 1000;
+const SESSION_POLL_MS = 2000;
+const LEASE_HEARTBEAT_MS = 4000;
+
 const TWIST_MSG_TYPE = "geometry_msgs/msg/Twist";
 const SET_BOOL_SRV_TYPE = "std_srvs/srv/SetBool";
 const MISSION_LABELS = {
@@ -17,6 +30,18 @@ const state = {
   autonomousActiveIds: new Set(),
   autonomousRunning: false,
   autonomousMissionPreset: "explore",
+  session: {
+    localEmergency: false,
+    timeoutMs: DEFAULT_REMOTE_SESSION_TIMEOUT_MS,
+    expiresAtMs: null,
+    expired: false,
+    source: "unknown",
+  },
+  control: {
+    leaseTimeoutMs: DEFAULT_LEASE_TIMEOUT_MS,
+    leasedRobotIds: new Set(),
+    emergencyActive: false,
+  },
 };
 
 const autonomousGrid = document.getElementById("autonomousGrid");
@@ -24,6 +49,13 @@ const manualRobotSelect = document.getElementById("manualRobotSelect");
 const cmdPreview = document.getElementById("cmdPreview");
 const activeSummary = document.getElementById("activeSummary");
 const connectionStatus = document.getElementById("connectionStatus");
+const sessionStatus = document.getElementById("sessionStatus");
+const sessionOverlay = document.getElementById("sessionOverlay");
+const allStopBtn = document.getElementById("allStopBtn");
+const phoneQrImage = document.getElementById("phoneQrImage");
+const phoneUrlLink = document.getElementById("phoneUrlLink");
+const qrStatus = document.getElementById("qrStatus");
+const phoneConnectCard = document.getElementById("phoneConnectCard");
 
 const rosSockets = new Map();
 const connectedRobotIds = new Set();
@@ -31,6 +63,356 @@ const advertisedTopicsByRobot = new Map();
 const pendingServiceCalls = new Map();
 let activeManualCommand = null;
 let manualCommandTimer = null;
+let sessionTickerTimer = null;
+let sessionExpiryTimer = null;
+let sessionPollTimer = null;
+let leaseHeartbeatTimer = null;
+
+function robotKey(robotId) {
+  return String(robotId);
+}
+
+function isLoopbackHostname() {
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
+}
+
+function formatCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function clearSessionTimers() {
+  if (sessionTickerTimer) {
+    clearInterval(sessionTickerTimer);
+    sessionTickerTimer = null;
+  }
+  if (sessionExpiryTimer) {
+    clearTimeout(sessionExpiryTimer);
+    sessionExpiryTimer = null;
+  }
+}
+
+function clearControlTimers() {
+  if (sessionPollTimer) {
+    clearInterval(sessionPollTimer);
+    sessionPollTimer = null;
+  }
+  if (leaseHeartbeatTimer) {
+    clearInterval(leaseHeartbeatTimer);
+    leaseHeartbeatTimer = null;
+  }
+}
+
+function updateSessionStatus() {
+  if (state.session.localEmergency) {
+    sessionStatus.textContent = "Session: local operator (no timeout)";
+    return;
+  }
+  if (state.session.expired) {
+    sessionStatus.textContent = "Session: expired";
+    return;
+  }
+  if (typeof state.session.expiresAtMs === "number") {
+    const remaining = state.session.expiresAtMs - Date.now();
+    sessionStatus.textContent = `Session: ${formatCountdown(remaining)} left`;
+    return;
+  }
+  sessionStatus.textContent = "Session: active";
+}
+
+function applySessionPolicyUI() {
+  if (state.session.localEmergency) {
+    allStopBtn.hidden = false;
+    allStopBtn.disabled = false;
+  } else {
+    allStopBtn.hidden = true;
+    allStopBtn.disabled = true;
+  }
+
+  document.body.classList.toggle("session-expired", state.session.expired);
+  if (sessionOverlay) {
+    sessionOverlay.hidden = !state.session.expired;
+  }
+  if (phoneConnectCard) {
+    phoneConnectCard.hidden = !state.session.localEmergency;
+  }
+  updateSessionStatus();
+}
+
+function sessionAllowsControls() {
+  return !state.session.expired;
+}
+
+function guardSession(actionLabel) {
+  if (sessionAllowsControls()) return true;
+  appendConsoleLine(`[session] ${actionLabel} blocked: session expired.`);
+  return false;
+}
+
+function hasLease(robotId) {
+  return state.control.leasedRobotIds.has(robotKey(robotId));
+}
+
+function canBypassLease() {
+  return state.session.localEmergency && state.control.emergencyActive;
+}
+
+function disconnectRosBridges() {
+  rosSockets.forEach((socket) => {
+    try {
+      socket.close();
+    } catch (error) {
+      // ignore
+    }
+  });
+}
+
+async function apiPost(url, body) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify(body ?? {}),
+  });
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch (error) {
+    payload = {};
+  }
+  return { ok: response.ok, status: response.status, payload };
+}
+
+function parseSessionResponse(payload) {
+  const timeoutSeconds = Number(payload?.session_timeout_seconds);
+  const leaseSeconds = Number(payload?.lease_timeout_seconds);
+  const timeoutMs = Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
+    ? timeoutSeconds * 1000
+    : DEFAULT_REMOTE_SESSION_TIMEOUT_MS;
+
+  state.session.localEmergency = Boolean(payload?.local_emergency);
+  state.session.timeoutMs = timeoutMs;
+  state.session.expiresAtMs = payload?.expires_at ? Date.parse(String(payload.expires_at)) : null;
+  state.session.expired = Boolean(payload?.expired);
+  state.session.source = "server";
+
+  state.control.leaseTimeoutMs = Number.isFinite(leaseSeconds) && leaseSeconds > 0
+    ? leaseSeconds * 1000
+    : DEFAULT_LEASE_TIMEOUT_MS;
+  state.control.emergencyActive = Boolean(payload?.emergency_active);
+  state.control.leasedRobotIds = new Set(
+    Array.isArray(payload?.owned_robot_ids) ? payload.owned_robot_ids.map((x) => String(x)) : []
+  );
+
+  if (typeof state.session.expiresAtMs === "number" && Number.isNaN(state.session.expiresAtMs)) {
+    state.session.expiresAtMs = Date.now() + state.session.timeoutMs;
+  }
+
+  if (!state.session.localEmergency && !state.session.expiresAtMs && !state.session.expired) {
+    state.session.expiresAtMs = Date.now() + state.session.timeoutMs;
+  }
+
+  if (!state.session.localEmergency && typeof state.session.expiresAtMs === "number") {
+    state.session.expired = state.session.expired || Date.now() >= state.session.expiresAtMs;
+  }
+
+  if (!state.session.localEmergency && state.control.emergencyActive) {
+    state.session.expired = true;
+  }
+}
+
+async function refreshSessionPolicy(renew = false) {
+  const sessionUrl = renew ? `${SESSION_ENDPOINT}?renew=1` : SESSION_ENDPOINT;
+  const response = await fetch(sessionUrl, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  const payload = await response.json();
+  parseSessionResponse(payload);
+  applySessionPolicyUI();
+  scheduleSessionTimeout();
+}
+
+async function loadSessionPolicy() {
+  try {
+    const localClient = isLoopbackHostname();
+    await refreshSessionPolicy(localClient);
+
+    appendConsoleLine(
+      state.session.localEmergency
+        ? "[session] Local operator session active."
+        : "[session] Remote session active (5-minute timeout)."
+    );
+  } catch (error) {
+    const localEmergency = isLoopbackHostname();
+    state.session.localEmergency = localEmergency;
+    state.session.timeoutMs = DEFAULT_REMOTE_SESSION_TIMEOUT_MS;
+    state.session.expiresAtMs = localEmergency ? null : Date.now() + state.session.timeoutMs;
+    state.session.expired = false;
+    state.session.source = "browser_fallback";
+    appendConsoleLine(
+      `[session] Fallback policy (${localEmergency ? "local" : "remote"}) due to session API error: ${error.message}`
+    );
+    applySessionPolicyUI();
+    scheduleSessionTimeout();
+  }
+
+  if (state.session.expired) {
+    expireSession(state.control.emergencyActive
+      ? "Emergency stop activated by local operator."
+      : "5-minute session window ended.");
+  }
+}
+
+function startSessionPolling() {
+  if (sessionPollTimer) clearInterval(sessionPollTimer);
+  sessionPollTimer = setInterval(async () => {
+    if (!sessionAllowsControls()) return;
+    try {
+      await refreshSessionPolicy(false);
+      if (state.session.expired) {
+        expireSession(state.control.emergencyActive
+          ? "Emergency stop activated by local operator."
+          : "5-minute session window ended.");
+      }
+    } catch (error) {
+      appendConsoleLine(`[session] poll failed: ${error.message}`);
+    }
+  }, SESSION_POLL_MS);
+}
+
+function startLeaseHeartbeat() {
+  if (leaseHeartbeatTimer) clearInterval(leaseHeartbeatTimer);
+  leaseHeartbeatTimer = setInterval(async () => {
+    if (!sessionAllowsControls()) return;
+    const robotIds = Array.from(state.control.leasedRobotIds);
+    if (!robotIds.length) return;
+    const result = await apiPost(CONTROL_HEARTBEAT_ENDPOINT, { robot_ids: robotIds });
+    if (!result.ok) {
+      const err = result.payload?.error ?? `HTTP ${result.status}`;
+      if (err === "session_expired" || err === "emergency_active") {
+        const sessionPayload = result.payload?.session;
+        if (sessionPayload) parseSessionResponse(sessionPayload);
+        expireSession(err === "emergency_active"
+          ? "Emergency stop activated by local operator."
+          : "5-minute session window ended.");
+      }
+      return;
+    }
+    if (result.payload?.session) {
+      parseSessionResponse(result.payload.session);
+      applySessionPolicyUI();
+    }
+  }, LEASE_HEARTBEAT_MS);
+}
+
+async function claimRobotLease(robotId, contextLabel) {
+  if (!guardSession(`Claim control for robot ${robotId}`)) return false;
+  if (hasLease(robotId)) return true;
+
+  const result = await apiPost(CONTROL_CLAIM_ENDPOINT, { robot_id: robotKey(robotId) });
+  if (!result.ok) {
+    const err = result.payload?.error ?? `HTTP ${result.status}`;
+    if (result.payload?.session) {
+      parseSessionResponse(result.payload.session);
+      applySessionPolicyUI();
+    }
+    if (err === "robot_busy") {
+      const robot = robots.find((entry) => entry.id === Number(robotId));
+      appendConsoleLine(`[lock] ${robot?.name ?? `Robot ${robotId}`} is controlled by another client.`);
+    } else if (err === "emergency_active") {
+      expireSession("Emergency stop activated by local operator.");
+    } else if (err === "session_expired") {
+      expireSession("5-minute session window ended.");
+    } else {
+      appendConsoleLine(`[lock] Could not claim robot ${robotId} for ${contextLabel}: ${err}`);
+    }
+    return false;
+  }
+
+  if (result.payload?.session) {
+    parseSessionResponse(result.payload.session);
+    applySessionPolicyUI();
+  }
+  state.control.leasedRobotIds.add(robotKey(robotId));
+  return true;
+}
+
+async function claimRobotLeases(robotIds, contextLabel) {
+  const granted = [];
+  for (const rid of robotIds) {
+    const ok = await claimRobotLease(rid, contextLabel);
+    if (ok) granted.push(rid);
+  }
+  return granted;
+}
+
+async function releaseRobotLeases(robotIds) {
+  const ids = Array.isArray(robotIds) ? robotIds.map((x) => robotKey(x)) : [];
+  if (!ids.length && !state.control.leasedRobotIds.size) return;
+  const result = await apiPost(CONTROL_RELEASE_ENDPOINT, { robot_ids: ids });
+  if (result.ok && result.payload?.session) {
+    parseSessionResponse(result.payload.session);
+    applySessionPolicyUI();
+  }
+  if (ids.length) {
+    ids.forEach((id) => state.control.leasedRobotIds.delete(id));
+  } else {
+    state.control.leasedRobotIds.clear();
+  }
+}
+
+async function activateEmergencyLatch() {
+  const result = await apiPost(EMERGENCY_ACTIVATE_ENDPOINT, {});
+  if (!result.ok) {
+    const err = result.payload?.error ?? `HTTP ${result.status}`;
+    appendConsoleLine(`[safety] Emergency activate failed: ${err}`);
+    return false;
+  }
+  if (result.payload?.session) {
+    parseSessionResponse(result.payload.session);
+    applySessionPolicyUI();
+  }
+  return true;
+}
+
+function expireSession(reason) {
+  if (state.session.expired) return;
+  clearSessionTimers();
+  clearControlTimers();
+  stopManualCommand();
+  disconnectRosBridges();
+  state.session.expired = true;
+  state.autonomousRunning = false;
+  pendingServiceCalls.clear();
+  state.control.leasedRobotIds.clear();
+  applySessionPolicyUI();
+  appendConsoleLine(`[session] ${reason}`);
+}
+
+function scheduleSessionTimeout() {
+  clearSessionTimers();
+
+  if (state.session.localEmergency || state.session.expired || typeof state.session.expiresAtMs !== "number") {
+    updateSessionStatus();
+    return;
+  }
+
+  const remainingMs = state.session.expiresAtMs - Date.now();
+  if (remainingMs <= 0) {
+    expireSession("5-minute session window ended.");
+    return;
+  }
+
+  sessionTickerTimer = setInterval(updateSessionStatus, 1000);
+  sessionExpiryTimer = setTimeout(() => {
+    expireSession("5-minute session window ended.");
+  }, remainingMs);
+  updateSessionStatus();
+}
 
 function buildFallbackRobots() {
   return Array.from({ length: 4 }, (_, index) => ({
@@ -96,9 +478,7 @@ function supervisorServiceCandidates(robot, missionPreset, enabled) {
     }
   }
 
-  // Last fallback when namespace and cmd topic are both ambiguous.
   candidates.push("/enable_supervisor");
-
   return [...new Set(candidates)];
 }
 
@@ -140,6 +520,9 @@ function updateConnectionStatus() {
 }
 
 function sendRosMessage(robotId, payload) {
+  if (!sessionAllowsControls()) {
+    return { ok: false, reason: "session_expired" };
+  }
   const socket = rosSockets.get(robotId);
   if (!socket) {
     return { ok: false, reason: "socket_not_created" };
@@ -171,18 +554,23 @@ function advertiseTopic(robotId, topic, type) {
 }
 
 function connectRobotBridge(robot) {
+  if (!sessionAllowsControls()) return;
+
   const existingSocket = rosSockets.get(robot.id);
   if (existingSocket) {
     existingSocket.close();
   }
+
   const socket = new WebSocket(robot.wsUrl);
   rosSockets.set(robot.id, socket);
+
   socket.addEventListener("open", () => {
     connectedRobotIds.add(robot.id);
     updateConnectionStatus();
     advertiseTopic(robot.id, cmdVelTopic(robot), TWIST_MSG_TYPE);
     appendConsoleLine(`[ros] Connected ${robot.name} via ${robot.wsUrl}`);
   });
+
   socket.addEventListener("message", (event) => {
     try {
       const data = JSON.parse(event.data);
@@ -205,12 +593,14 @@ function connectRobotBridge(robot) {
       // ignore non-JSON payloads from bridge
     }
   });
+
   socket.addEventListener("close", () => {
     connectedRobotIds.delete(robot.id);
     advertisedTopicsByRobot.delete(robot.id);
     updateConnectionStatus();
     appendConsoleLine(`[ros] Disconnected ${robot.name}`);
   });
+
   socket.addEventListener("error", () => {
     connectedRobotIds.delete(robot.id);
     updateConnectionStatus();
@@ -219,6 +609,7 @@ function connectRobotBridge(robot) {
 }
 
 function connectRosBridges() {
+  if (!guardSession("Reconnect ROS bridges")) return;
   robots.forEach((robot) => connectRobotBridge(robot));
 }
 
@@ -263,13 +654,39 @@ function updateSummary() {
 }
 
 function appendConsoleLine(text) {
+  cmdPreview.innerHTML = "";
   const line = document.createElement("div");
   line.className = "console-line";
   line.textContent = text;
-  cmdPreview.prepend(line);
+  cmdPreview.appendChild(line);
+}
+
+async function initializePhoneQr() {
+  if (!phoneQrImage || !phoneUrlLink || !qrStatus) return;
+  try {
+    const response = await fetch(CONNECT_INFO_ENDPOINT, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const info = await response.json();
+    const phoneUrl = String(info.phone_url || window.location.href);
+    phoneUrlLink.href = phoneUrl;
+    phoneUrlLink.textContent = phoneUrl;
+    qrStatus.textContent = "Scan this QR code from your phone.";
+
+    const localQrUrl = `${QR_ENDPOINT}?url=${encodeURIComponent(phoneUrl)}`;
+    phoneQrImage.src = localQrUrl;
+    phoneQrImage.alt = `QR code for ${phoneUrl}`;
+    phoneQrImage.onerror = () => {
+      const fallback = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(phoneUrl)}`;
+      phoneQrImage.src = fallback;
+      qrStatus.textContent = "Using online QR fallback.";
+    };
+  } catch (error) {
+    qrStatus.textContent = `QR unavailable: ${error.message}`;
+  }
 }
 
 function switchMode(nextMode) {
+  if (!guardSession("Switch mode")) return;
   state.mode = nextMode;
   document.querySelectorAll(".mode-btn").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mode === nextMode);
@@ -280,9 +697,14 @@ function switchMode(nextMode) {
   });
 }
 
-function publishCmdVel(robot, linearX, angularZ) {
+function publishCmdVel(robot, linearX, angularZ, bypassLease = false, logOutput = true) {
+  if (!guardSession("Publish cmd_vel")) return;
+  if (!bypassLease && !hasLease(robot.id) && !canBypassLease()) {
+    appendConsoleLine(`[lock] ${robot.name} blocked: this client does not hold control.`);
+    return;
+  }
   if (!connectedRobotIds.has(robot.id)) {
-    appendConsoleLine(`[ros] ${robot.name} bridge not connected.`);
+    if (logOutput) appendConsoleLine(`[ros] ${robot.name} bridge not connected.`);
     return;
   }
   const topic = cmdVelTopic(robot);
@@ -292,13 +714,16 @@ function publishCmdVel(robot, linearX, angularZ) {
   };
   const result = sendRosMessage(robot.id, { op: "publish", topic, type: TWIST_MSG_TYPE, msg });
   if (result.ok) {
-    appendConsoleLine(`[pub] ${topic} -> linear.x=${linearX.toFixed(2)}, angular.z=${angularZ.toFixed(2)}`);
+    if (logOutput) {
+      appendConsoleLine(`[pub] ${topic} -> linear.x=${linearX.toFixed(2)}, angular.z=${angularZ.toFixed(2)}`);
+    }
   } else {
-    appendConsoleLine(`[drop] ${topic}: ${result.reason}`);
+    if (logOutput) appendConsoleLine(`[drop] ${topic}: ${result.reason}`);
   }
 }
 
-function callSupervisorService(enabled, robotIds, missionPreset) {
+function callSupervisorService(enabled, robotIds, missionPreset, bypassLease = false) {
+  if (!guardSession("Supervisor service call")) return false;
   if (!connectedRobotIds.size) {
     appendConsoleLine("No ROS bridges connected.");
     return false;
@@ -309,7 +734,15 @@ function callSupervisorService(enabled, robotIds, missionPreset) {
   }
   const names = robotIds
     .map((id) => robots.find((robot) => robot.id === id))
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((robot) => {
+      if (bypassLease || hasLease(robot.id) || canBypassLease()) return true;
+      appendConsoleLine(`[lock] ${robot.name} blocked: no control lease.`);
+      return false;
+    });
+
+  if (!names.length) return false;
+
   names.forEach((robot) => {
     const services = supervisorServiceCandidates(robot, missionPreset, enabled);
     let sent = false;
@@ -333,6 +766,7 @@ function callSupervisorService(enabled, robotIds, missionPreset) {
       appendConsoleLine(`[auto] ${robot.name}: no service call sent.`);
     }
   });
+
   names.forEach((robot) => {
     if (enabled) {
       state.autonomousActiveIds.add(robot.id);
@@ -340,6 +774,7 @@ function callSupervisorService(enabled, robotIds, missionPreset) {
       state.autonomousActiveIds.delete(robot.id);
     }
   });
+
   appendConsoleLine(
     `[auto] Supervisor ${enabled ? "enabled" : "disabled"} for ${names
       .map((robot) => robot.name)
@@ -348,41 +783,51 @@ function callSupervisorService(enabled, robotIds, missionPreset) {
   return names.length > 0;
 }
 
-function stopRobotMotion(robot) {
-  publishCmdVel(robot, 0.0, 0.0);
+function stopRobotMotion(robot, bypassLease = false) {
+  publishCmdVel(robot, 0.0, 0.0, bypassLease);
   appendConsoleLine(`[cmd_vel] ${robot.name} stop (zero velocity).`);
 }
 
-function sendCmdVel(command) {
+function sendCmdVel(command, logOutput = true) {
+  if (!guardSession("Manual drive")) return;
   const linear = Number(document.getElementById("linearSpeed").value);
   const angular = Number(document.getElementById("angularSpeed").value);
   const robot = robots.find((entry) => entry.id === state.manualRobotId);
   if (!robot) {
-    appendConsoleLine("[cmd_vel] Manual drive blocked: no robot selected.");
+    if (logOutput) appendConsoleLine("[cmd_vel] Manual drive blocked: no robot selected.");
+    return;
+  }
+  if (!hasLease(robot.id) && !canBypassLease()) {
+    if (logOutput) appendConsoleLine(`[lock] Manual drive blocked: ${robot.name} lease not held.`);
     return;
   }
   if (state.autonomousActiveIds.has(robot.id)) {
-    appendConsoleLine("[cmd_vel] Manual drive blocked: robot is in autonomous mode.");
+    if (logOutput) appendConsoleLine("[cmd_vel] Manual drive blocked: robot is in autonomous mode.");
     return;
   }
-  const robotName = robot?.name;
   const payload = {
-    robot: robotName,
+    robot: robot.name,
     linear: command === "forward" ? linear : command === "backward" ? -linear : 0,
     angular: command === "left" ? angular : command === "right" ? -angular : 0,
     stamp: new Date().toISOString(),
   };
-  appendConsoleLine(`[cmd_vel] ${JSON.stringify(payload)}`);
-  if (robot) {
-    publishCmdVel(robot, payload.linear, payload.angular);
-  }
+  if (logOutput) appendConsoleLine(`[cmd_vel] ${JSON.stringify(payload)}`);
+  publishCmdVel(robot, payload.linear, payload.angular, false, logOutput);
 }
 
-function startManualCommand(command) {
+async function startManualCommand(command) {
+  if (!guardSession("Start manual command")) return;
   if (!command || command === "stop") {
-    stopManualCommand();
+    await stopManualCommand();
     return;
   }
+
+  const robot = robots.find((entry) => entry.id === state.manualRobotId);
+  if (!robot) return;
+
+  const claimed = await claimRobotLease(robot.id, "manual drive");
+  if (!claimed) return;
+
   if (activeManualCommand === command && manualCommandTimer) {
     return;
   }
@@ -390,23 +835,52 @@ function startManualCommand(command) {
     clearInterval(manualCommandTimer);
     manualCommandTimer = null;
   }
+
   activeManualCommand = command;
-  sendCmdVel(command);
+  sendCmdVel(command, true);
   manualCommandTimer = setInterval(() => {
-    sendCmdVel(command);
+    sendCmdVel(command, false);
   }, 100);
   appendConsoleLine(`[manual] Holding '${command}' (press Stop to release).`);
 }
 
-function stopManualCommand() {
+async function stopManualCommand() {
   if (manualCommandTimer) {
     clearInterval(manualCommandTimer);
     manualCommandTimer = null;
   }
   if (activeManualCommand === null) return;
+
   sendCmdVel("stop");
   activeManualCommand = null;
+
+  const robot = robots.find((entry) => entry.id === state.manualRobotId);
+  if (robot) {
+    await releaseRobotLeases([robot.id]);
+  }
+
   appendConsoleLine("[manual] Released.");
+}
+
+async function runEmergencyStop(updateAutoButton) {
+  if (!state.session.localEmergency) {
+    appendConsoleLine("[safety] Emergency stop is only available from local operator access.");
+    return;
+  }
+  if (!guardSession("Emergency stop")) return;
+
+  const activated = await activateEmergencyLatch();
+  if (!activated) return;
+
+  await stopManualCommand();
+  callSupervisorService(false, robots.map((robot) => robot.id), null, true);
+  robots.forEach((robot) => {
+    state.autonomousActiveIds.delete(robot.id);
+    stopRobotMotion(robot, true);
+  });
+  state.autonomousRunning = false;
+  if (typeof updateAutoButton === "function") updateAutoButton();
+  appendConsoleLine("Emergency stop: autonomous disabled and all robots halted. Remote clients are blocked.");
 }
 
 function initHandlers() {
@@ -416,41 +890,45 @@ function initHandlers() {
   };
 
   connectionStatus.addEventListener("click", () => {
+    if (!guardSession("Reconnect robot bridges")) return;
     appendConsoleLine("Reconnecting all robot bridges...");
     connectRosBridges();
   });
+
   document.querySelectorAll(".mode-btn").forEach((button) => {
     button.addEventListener("click", () => switchMode(button.dataset.mode));
   });
 
-  document.getElementById("allStopBtn").addEventListener("click", () => {
-    stopManualCommand();
-    callSupervisorService(false, robots.map((robot) => robot.id), null);
-    robots.forEach((robot) => {
-      state.autonomousActiveIds.delete(robot.id);
-      stopRobotMotion(robot);
-    });
-    state.autonomousRunning = false;
-    updateAutoButton();
-    appendConsoleLine("Emergency stop: autonomous disabled and all robots halted.");
+  allStopBtn.addEventListener("click", async () => {
+    await runEmergencyStop(updateAutoButton);
   });
 
-  autonomousGrid.addEventListener("click", (event) => {
+  autonomousGrid.addEventListener("click", async (event) => {
+    if (!guardSession("Select autonomous robots")) return;
     const target = event.target;
     if (!(target instanceof HTMLButtonElement)) return;
     const id = Number(target.dataset.id);
+
     if (state.autonomousRobotIds.has(id)) {
       state.autonomousRobotIds.delete(id);
       target.classList.remove("is-selected");
+      if (!state.autonomousRunning) {
+        await releaseRobotLeases([id]);
+      }
     } else {
+      const claimed = await claimRobotLease(id, "autonomous selection");
+      if (!claimed) return;
       state.autonomousRobotIds.add(id);
       target.classList.add("is-selected");
     }
     updateSummary();
   });
 
-  manualRobotSelect.addEventListener("change", (event) => {
+  manualRobotSelect.addEventListener("change", async (event) => {
+    if (!guardSession("Change manual robot")) return;
+    await stopManualCommand();
     state.manualRobotId = Number(event.target.value);
+    await claimRobotLease(state.manualRobotId, "manual selection");
     updateSummary();
   });
 
@@ -458,50 +936,65 @@ function initHandlers() {
     const command = button.dataset.cmd;
 
     if (command === "stop") {
-      button.addEventListener("click", stopManualCommand);
+      button.addEventListener("click", async () => {
+        if (!guardSession("Stop manual command")) return;
+        await stopManualCommand();
+      });
       return;
     }
 
-    button.addEventListener("mousedown", (event) => {
+    button.addEventListener("mousedown", async (event) => {
       event.preventDefault();
-      startManualCommand(command);
+      await startManualCommand(command);
     });
 
-    button.addEventListener("mouseup", (event) => {
+    button.addEventListener("mouseup", async (event) => {
       event.preventDefault();
-      stopManualCommand();
+      await stopManualCommand();
     });
 
-    button.addEventListener("mouseleave", stopManualCommand);
-
-    // optional for touchscreens
-    button.addEventListener("touchstart", (event) => {
-      event.preventDefault();
-      startManualCommand(command);
+    button.addEventListener("mouseleave", async () => {
+      await stopManualCommand();
     });
 
-    button.addEventListener("touchend", (event) => {
+    button.addEventListener("touchstart", async (event) => {
       event.preventDefault();
-      stopManualCommand();
+      await startManualCommand(command);
+    });
+
+    button.addEventListener("touchend", async (event) => {
+      event.preventDefault();
+      await stopManualCommand();
     });
   });
-  toggleAutoBtn.addEventListener("click", () => {
+
+  toggleAutoBtn.addEventListener("click", async () => {
+    if (!guardSession("Toggle autonomous mode")) return;
     const preset = document.getElementById("missionPreset").value;
     const presetLabel = MISSION_LABELS[preset] ?? preset;
+    const selectedIds = Array.from(state.autonomousRobotIds);
+
     if (!state.autonomousRunning) {
-      const started = callSupervisorService(true, Array.from(state.autonomousRobotIds), preset);
+      const granted = await claimRobotLeases(selectedIds, "autonomous start");
+      if (!granted.length) {
+        appendConsoleLine("[auto] No robot lease available to start autonomous.");
+        return;
+      }
+      const started = callSupervisorService(true, granted, preset);
       if (!started) return;
       state.autonomousRunning = true;
       state.autonomousMissionPreset = preset;
-      appendConsoleLine(`[auto] Start ${presetLabel} on ${state.autonomousRobotIds.size || 0} robots.`);
+      appendConsoleLine(`[auto] Start ${presetLabel} on ${granted.length} robots.`);
     } else {
+      const runningIds = Array.from(state.autonomousActiveIds);
       const stopped = callSupervisorService(
         false,
-        Array.from(state.autonomousRobotIds),
+        runningIds,
         state.autonomousMissionPreset
       );
       if (!stopped) return;
       state.autonomousRunning = false;
+      await releaseRobotLeases(runningIds);
       appendConsoleLine("[auto] Stop autonomous pipeline.");
     }
     updateAutoButton();
@@ -511,6 +1004,10 @@ function initHandlers() {
 }
 
 async function initializeApp() {
+  await loadSessionPolicy();
+  if (state.session.localEmergency) {
+    await initializePhoneQr();
+  }
   await loadRobotsConfig();
   initializeRobotState();
   updateConnectionStatus();
@@ -518,11 +1015,20 @@ async function initializeApp() {
   renderManualSelect();
   updateSummary();
   initHandlers();
-  connectRosBridges();
+  if (sessionAllowsControls()) {
+    connectRosBridges();
+    startSessionPolling();
+    startLeaseHeartbeat();
+    if (state.manualRobotId !== null) {
+      await claimRobotLease(state.manualRobotId, "manual default");
+    }
+  }
 }
 
 initializeApp();
 
 window.addEventListener("beforeunload", () => {
-  robots.forEach(robot => publishCmdVel(robot, 0.0, 0.0));
+  if (!sessionAllowsControls()) return;
+  robots.forEach((robot) => publishCmdVel(robot, 0.0, 0.0, true));
+  releaseRobotLeases([]);
 });

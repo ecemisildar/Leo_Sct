@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Leo Swarm Control</title>
-    <link rel="stylesheet" href="styles.css?v=5" />
+    <link rel="stylesheet" href="styles.css?v=11" />
   </head>
   <body>
     <div class="bg-glow"></div>
@@ -18,6 +18,7 @@
       <div class="button-row">
         <button class="ghost-btn emergency-btn" id="allStopBtn">Emergency Stop All</button>
         <div class="status-pill" id="connectionStatus">ROS2: Disconnected</div>
+        <div class="status-pill" id="sessionStatus">Session: pending...</div>
       </div>
     </header>
 
@@ -37,6 +38,14 @@
           <div class="tag">Pipeline: LLM → SCT → ROS2</div>
         </div>
         <div class="autonomous-layout">
+          <div class="card qr-card" id="phoneConnectCard">
+            <h3>Phone Connect</h3>
+            <p class="muted" id="qrStatus">Preparing QR...</p>
+            <img id="phoneQrImage" class="phone-qr-image" alt="Phone connection QR code" />
+            <a id="phoneUrlLink" class="phone-url-link" href="#" target="_blank" rel="noreferrer">
+              Loading URL...
+            </a>
+          </div>
           <div class="card">
             <h3>Select autonomous robots</h3>
             <p class="muted">Choose which robots will run the autonomous pipeline.</p>
@@ -100,6 +109,13 @@
       <span id="activeSummary"></span>
     </footer>
 
-    <script src="script.js"></script>
+    <div class="session-overlay" id="sessionOverlay" hidden>
+      <div class="session-overlay-card">
+        <h3>Session expired</h3>
+        <p>Phone/LAN access is limited to 5 minutes. Reload the page to request a new session.</p>
+      </div>
+    </div>
+
+    <script src="script.js?v=14"></script>
   </body>
 </html>
