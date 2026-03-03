@@ -102,6 +102,7 @@ class RobotSupervisor(Node):
         self.marker_debug = bool(self.declare_parameter("marker_debug", True).value)
         self.marker_debug_throttle_s = float(self.declare_parameter("marker_debug_throttle_s", 1.0).value)
         self._marker_debug_last: Dict[str, float] = {}
+        self.marker_override_enabled = bool(self.declare_parameter("marker_override_enabled", True).value)
 
         # Throttle zone updates to match supervisor cadence
         self.zone_update_min_dt = self.supervisor_period
@@ -121,6 +122,7 @@ class RobotSupervisor(Node):
         self.current_mission = "explore"
         self.current_yaml_path = ""
         self._load_initial_sct()
+        self._last_printed_sup_states: Optional[Tuple[int, ...]] = None
 
         # -------------------------------
         # State (sensing)
@@ -275,10 +277,21 @@ class RobotSupervisor(Node):
             return False, f"Failed to load {os.path.basename(config_path)}: {exc}"
         self.current_mission = mission_key
         self.current_yaml_path = config_path
+        self._last_printed_sup_states = None
         self.get_logger().info(
             f"Switched mission to '{mission_key}' using {os.path.basename(config_path)}"
         )
         return True, os.path.basename(config_path)
+
+    def _print_current_state(self):
+        states = tuple(int(s) for s in self.sct.sup_current_state)
+        if states == self._last_printed_sup_states:
+            return
+        self._last_printed_sup_states = states
+        print(
+            f"[robot_supervisor] mission={self.current_mission} current_state={states}",
+            flush=True,
+        )
 
     def _set_enabled(self, enable: bool):
         self.enabled = bool(enable)
@@ -664,10 +677,28 @@ class RobotSupervisor(Node):
             self._publish_cmd(self.active_twist)
             return
 
+        # Mission-level guardrail: if find_marker YAML is missing/fallback, still prioritize approach.
+        if self.current_mission == "find_marker" and self.marker_override_enabled:
+            if self.marker_close_check(None):
+                self._marker_debug_log(
+                    "marker_override",
+                    "find_marker override -> EV_stop (marker_close=true)",
+                )
+                self.publish_twist_for_event("EV_stop")
+                return
+            if self.marker_seen and self.clear_path_check(None):
+                self._marker_debug_log(
+                    "marker_override",
+                    "find_marker override -> EV_move_to_marker (marker_seen=true, clear_path=true)",
+                )
+                self.publish_twist_for_event("EV_move_to_marker")
+                return
+
         # Otherwise: pick next event from SCT
         self.active_event = None
         self.sct.input_buffer = []
         ce_exists, ce = self.sct.run_step()
+        self._print_current_state()
         if not ce_exists:
             # No controllable enabled -> stop
             self._publish_stop()
