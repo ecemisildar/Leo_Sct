@@ -20,6 +20,8 @@ const MISSION_LABELS = {
   explore: "Explore",
   find_marker: "Find Marker",
 };
+const ROBOT_COLOR_FALLBACKS = ["#7e57c2", "#2e7d32", "#c62828", "#1565c0"];
+const ROBOT_SQUARE_SYMBOLS = ["🟪", "🟩", "🟥", "🟦"];
 
 let robots = [];
 
@@ -51,6 +53,7 @@ const activeSummary = document.getElementById("activeSummary");
 const connectionStatus = document.getElementById("connectionStatus");
 const sessionStatus = document.getElementById("sessionStatus");
 const sessionOverlay = document.getElementById("sessionOverlay");
+const connectOptionRow = document.getElementById("connectOptionRow");
 const allStopBtn = document.getElementById("allStopBtn");
 const phoneQrImage = document.getElementById("phoneQrImage");
 const phoneUrlLink = document.getElementById("phoneUrlLink");
@@ -108,7 +111,7 @@ function clearControlTimers() {
 
 function updateSessionStatus() {
   if (state.session.localEmergency) {
-    sessionStatus.textContent = "Session: local operator (no timeout)";
+    sessionStatus.textContent = "Session: local operator";
     return;
   }
   if (state.session.expired) {
@@ -133,11 +136,15 @@ function applySessionPolicyUI() {
   }
 
   document.body.classList.toggle("session-expired", state.session.expired);
+  document.body.classList.toggle("local-operator", state.session.localEmergency);
   if (sessionOverlay) {
     sessionOverlay.hidden = !state.session.expired;
   }
   if (phoneConnectCard) {
     phoneConnectCard.hidden = !state.session.localEmergency;
+  }
+  if (connectOptionRow) {
+    connectOptionRow.hidden = !state.session.localEmergency;
   }
   updateSessionStatus();
 }
@@ -416,7 +423,8 @@ function scheduleSessionTimeout() {
 
 function buildFallbackRobots() {
   return Array.from({ length: 4 }, (_, index) => ({
-    name: `Leo-${index + 1}`,
+    name: ["Purple", "Green", "Red", "Blue"][index] ?? `Leo-${index + 1}`,
+    color: ROBOT_COLOR_FALLBACKS[index % ROBOT_COLOR_FALLBACKS.length],
     ns: `robot_${index}`,
     cmd_topic: `/robot_${index}/cmd_vel`,
     ws_url: DEFAULT_ROSBRIDGE_URL,
@@ -427,6 +435,7 @@ function normalizeRobots(configRobots) {
   return configRobots.map((robot, index) => ({
     id: index + 1,
     name: String(robot.name ?? `Leo-${index + 1}`),
+    color: String(robot.color ?? ROBOT_COLOR_FALLBACKS[index % ROBOT_COLOR_FALLBACKS.length]),
     ns: String(robot.ns ?? robot.namespace ?? `robot_${index}`).replace(/^\/+|\/+$/g, ""),
     cmdTopic: String(robot.cmd_topic ?? robot.cmdTopic ?? `/${robot.ns ?? robot.namespace ?? `robot_${index}`}/cmd_vel`),
     wsUrl: String(robot.ws_url ?? robot.wsUrl ?? robot.rosbridge_url ?? DEFAULT_ROSBRIDGE_URL),
@@ -506,17 +515,50 @@ async function loadRobotsConfig() {
 function initializeRobotState() {
   state.autonomousRobotIds.clear();
   state.autonomousActiveIds.clear();
-  state.manualRobotId = robots[0]?.id ?? null;
+  state.manualRobotId = null;
+}
+
+function robotSelectionMode(robotId) {
+  const isManual = state.manualRobotId === robotId;
+  const isAutonomous = state.autonomousRobotIds.has(robotId);
+  if (isManual && isAutonomous) return "manual/autonomous";
+  if (isManual) return "manual";
+  if (isAutonomous) return "autonomous";
+  return "idle";
 }
 
 function updateConnectionStatus() {
-  const connectedCount = connectedRobotIds.size;
-  const total = robots.length;
-  if (!total) {
-    connectionStatus.textContent = "ROS2: No robots configured";
+  if (!robots.length) {
+    connectionStatus.innerHTML = "";
+    const emptyCard = document.createElement("div");
+    emptyCard.className = "robot-status-card is-offline";
+    emptyCard.textContent = "No robots configured";
+    connectionStatus.appendChild(emptyCard);
     return;
   }
-  connectionStatus.textContent = `ROS2: ${connectedCount}/${total} connected`;
+
+  connectionStatus.innerHTML = "";
+  robots.forEach((robot) => {
+    const connected = connectedRobotIds.has(robot.id);
+    const card = document.createElement("div");
+    card.className = `robot-status-card ${connected ? "is-online" : "is-offline"}`;
+
+    const swatch = document.createElement("span");
+    swatch.className = "robot-status-swatch";
+    swatch.setAttribute("aria-hidden", "true");
+    swatch.style.background = robot.color;
+
+    const name = document.createElement("span");
+    name.className = "robot-status-name";
+    name.textContent = connected ? `${robot.name}:` : robot.name;
+
+    const meta = document.createElement("span");
+    meta.className = "robot-status-meta";
+    meta.textContent = connected ? robotSelectionMode(robot.id) : "";
+
+    card.append(swatch, name, meta);
+    connectionStatus.appendChild(card);
+  });
 }
 
 function sendRosMessage(robotId, payload) {
@@ -567,6 +609,9 @@ function connectRobotBridge(robot) {
   socket.addEventListener("open", () => {
     connectedRobotIds.add(robot.id);
     updateConnectionStatus();
+    renderAutonomousOptions();
+    renderManualSelect();
+    updateSummary();
     advertiseTopic(robot.id, cmdVelTopic(robot), TWIST_MSG_TYPE);
     appendConsoleLine(`[ros] Connected ${robot.name} via ${robot.wsUrl}`);
   });
@@ -598,12 +643,18 @@ function connectRobotBridge(robot) {
     connectedRobotIds.delete(robot.id);
     advertisedTopicsByRobot.delete(robot.id);
     updateConnectionStatus();
+    renderAutonomousOptions();
+    renderManualSelect();
+    updateSummary();
     appendConsoleLine(`[ros] Disconnected ${robot.name}`);
   });
 
   socket.addEventListener("error", () => {
     connectedRobotIds.delete(robot.id);
     updateConnectionStatus();
+    renderAutonomousOptions();
+    renderManualSelect();
+    updateSummary();
     appendConsoleLine(`[ros] Error on ${robot.name} (${robot.wsUrl})`);
   });
 }
@@ -614,8 +665,17 @@ function connectRosBridges() {
 }
 
 function renderAutonomousOptions() {
+  if (!autonomousGrid) return;
+  const connectedRobots = robots.filter((robot) => connectedRobotIds.has(robot.id));
+  const connectedIds = new Set(connectedRobots.map((robot) => robot.id));
+  state.autonomousRobotIds.forEach((id) => {
+    if (!connectedIds.has(id)) {
+      state.autonomousRobotIds.delete(id);
+    }
+  });
+
   autonomousGrid.innerHTML = "";
-  robots.forEach((robot) => {
+  connectedRobots.forEach((robot) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "auto-robot-btn";
@@ -623,21 +683,42 @@ function renderAutonomousOptions() {
       button.classList.add("is-selected");
     }
     button.dataset.id = String(robot.id);
-    button.textContent = robot.name;
+    button.style.setProperty("--robot-color", robot.color || ROBOT_COLOR_FALLBACKS[index % ROBOT_COLOR_FALLBACKS.length]);
+
+    const swatch = document.createElement("span");
+    swatch.className = "robot-color-swatch";
+    swatch.setAttribute("aria-hidden", "true");
+
+    const label = document.createElement("span");
+    label.textContent = robot.name;
+
+    button.append(swatch, label);
     autonomousGrid.appendChild(button);
   });
 }
 
 function renderManualSelect() {
-  manualRobotSelect.innerHTML = "";
-  if (state.manualRobotId === null && robots.length) {
-    state.manualRobotId = robots[0].id;
+  if (!manualRobotSelect) return;
+  const connectedRobots = robots.filter((robot) => connectedRobotIds.has(robot.id));
+  if (state.manualRobotId !== null && !connectedRobots.some((robot) => robot.id === state.manualRobotId)) {
+    state.manualRobotId = null;
   }
-  robots.forEach((robot) => {
+
+  manualRobotSelect.innerHTML = "";
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select Robot";
+  placeholder.disabled = true;
+  placeholder.selected = state.manualRobotId === null;
+  manualRobotSelect.appendChild(placeholder);
+
+  connectedRobots.forEach((robot, index) => {
+    const originalIndex = Math.max(0, robots.findIndex((entry) => entry.id === robot.id));
     const option = document.createElement("option");
     option.value = robot.id;
-    option.textContent = robot.name;
-    if (robot.id === state.manualRobotId) {
+    option.textContent = `${ROBOT_SQUARE_SYMBOLS[originalIndex % ROBOT_SQUARE_SYMBOLS.length]} ${robot.name}`;
+    if (state.manualRobotId !== null && robot.id === state.manualRobotId) {
       option.selected = true;
     }
     manualRobotSelect.appendChild(option);
@@ -651,6 +732,7 @@ function updateSummary() {
     .join(", ");
   const manualName = robots.find((robot) => robot.id === state.manualRobotId)?.name;
   activeSummary.textContent = `Manual: ${manualName || "-"} • Auto: ${autoList || "-"}`;
+  updateConnectionStatus();
 }
 
 function appendConsoleLine(text) {
@@ -695,6 +777,11 @@ function switchMode(nextMode) {
   document.querySelectorAll("[data-mode-panel]").forEach((panel) => {
     panel.classList.toggle("is-hidden", panel.dataset.modePanel !== nextMode);
   });
+}
+
+function getInitialModeFromQuery() {
+  const mode = new URLSearchParams(window.location.search).get("mode");
+  return mode === "manual" || mode === "autonomous" ? mode : null;
 }
 
 function publishCmdVel(robot, linearX, angularZ, bypassLease = false, logOutput = true) {
@@ -916,19 +1003,38 @@ function initHandlers() {
         await releaseRobotLeases([id]);
       }
     } else {
+      // Last selection wins: moving robot from manual to autonomous is allowed.
+      if (state.manualRobotId === id) {
+        await stopManualCommand();
+        state.manualRobotId = null;
+      }
       const claimed = await claimRobotLease(id, "autonomous selection");
       if (!claimed) return;
       state.autonomousRobotIds.add(id);
       target.classList.add("is-selected");
     }
+    renderManualSelect();
     updateSummary();
   });
 
   manualRobotSelect.addEventListener("change", async (event) => {
     if (!guardSession("Change manual robot")) return;
+    const nextValue = String(event.target.value ?? "");
+    if (!nextValue) {
+      await stopManualCommand();
+      state.manualRobotId = null;
+      updateSummary();
+      return;
+    }
+
+    const nextManualId = Number(nextValue);
+    // Last selection wins: moving robot from autonomous to manual is allowed.
+    state.autonomousRobotIds.delete(nextManualId);
+
     await stopManualCommand();
-    state.manualRobotId = Number(event.target.value);
+    state.manualRobotId = nextManualId;
     await claimRobotLease(state.manualRobotId, "manual selection");
+    renderAutonomousOptions();
     updateSummary();
   });
 
@@ -1015,6 +1121,10 @@ async function initializeApp() {
   renderManualSelect();
   updateSummary();
   initHandlers();
+  const initialMode = getInitialModeFromQuery();
+  if (initialMode) {
+    switchMode(initialMode);
+  }
   if (sessionAllowsControls()) {
     connectRosBridges();
     startSessionPolling();

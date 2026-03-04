@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Leo Swarm Control</title>
-    <link rel="stylesheet" href="styles.css?v=11" />
+    <link rel="stylesheet" href="styles.css?v=28" />
   </head>
   <body>
     <div class="bg-glow"></div>
@@ -16,38 +16,38 @@
         </div>
       </div>
       <div class="button-row">
-        <button class="ghost-btn emergency-btn" id="allStopBtn">Emergency Stop All</button>
-        <div class="status-pill" id="connectionStatus">ROS2: Disconnected</div>
-        <div class="status-pill" id="sessionStatus">Session: pending...</div>
+        <div class="robot-status-list" id="connectionStatus">
+          <div class="robot-status-card">Loading robots...</div>
+        </div>
+        <div class="control-column">
+          <div class="status-pill" id="sessionStatus">Session: pending...</div>
+          <button class="ghost-btn emergency-btn" id="allStopBtn">Emergency Stop All</button>
+        </div>
       </div>
     </header>
 
+    <section class="option-row" id="connectOptionRow">
+      <a class="option-link" href="./connect.html">Phone Connect</a>
+    </section>
+
     <section class="mode-switch" role="tablist" aria-label="Control modes">
       <button class="mode-btn is-active" data-mode="autonomous" role="tab" aria-selected="true">
-        1. Autonomous Drive
+        Autonomous Drive
       </button>
       <button class="mode-btn" data-mode="manual" role="tab" aria-selected="false">
-        2. Manual Drive
+        Manual Drive
       </button>
     </section>
 
     <main>
       <section class="mode-panel" id="mode-autonomous" data-mode-panel="autonomous">
         <div class="panel-header">
-          <h2>Autonomous Run (LLM + SCT + ROS)</h2>
-          <div class="tag">Pipeline: LLM → SCT → ROS2</div>
+          <h2>Autonomous Run</h2>
+          <div class="tag pipeline-tag">Pipeline: LLM → SCT → ROS2</div>
         </div>
         <div class="autonomous-layout">
-          <div class="card qr-card" id="phoneConnectCard">
-            <h3>Phone Connect</h3>
-            <p class="muted" id="qrStatus">Preparing QR...</p>
-            <img id="phoneQrImage" class="phone-qr-image" alt="Phone connection QR code" />
-            <a id="phoneUrlLink" class="phone-url-link" href="#" target="_blank" rel="noreferrer">
-              Loading URL...
-            </a>
-          </div>
           <div class="card">
-            <h3>Select autonomous robots</h3>
+            <h3>Select robots</h3>
             <p class="muted">Choose which robots will run the autonomous pipeline.</p>
             <div class="autonomous-button-grid" id="autonomousGrid"></div>
             <label class="field">
@@ -65,12 +65,12 @@
       <section class="mode-panel is-hidden" id="mode-manual" data-mode-panel="manual">
         <div class="panel-header">
           <h2>Manual Drive</h2>
-          <div class="tag">cmd_vel over ROS2</div>
+          <div class="tag">Velocity messages over ROS2</div>
         </div>
         <div class="manual-layout">
           <div class="card">
             <label class="field">
-              <span>Manual robot</span>
+              <span>Select Robot</span>
               <select id="manualRobotSelect"></select>
             </label>
             <div class="speed-row">
@@ -116,6 +116,6 @@
       </div>
     </div>
 
-    <script src="script.js?v=14"></script>
+    <script src="script.js?v=33"></script>
   </body>
 </html>
