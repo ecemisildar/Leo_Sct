@@ -97,7 +97,6 @@ class RobotSupervisor(Node):
 
         # Marker logic
         self.marker_stop_distance = float(self.declare_parameter("marker_stop_distance", 0.5).value)
-        self.marker_distance_timeout = float(self.declare_parameter("marker_distance_timeout", 0.6).value)
         self.marker_lost_timeout = float(self.declare_parameter("marker_lost_timeout", 0.8).value)
         self.marker_debug = bool(self.declare_parameter("marker_debug", True).value)
         self.marker_debug_throttle_s = float(self.declare_parameter("marker_debug_throttle_s", 1.0).value)
@@ -397,13 +396,6 @@ class RobotSupervisor(Node):
         if not math.isfinite(self.marker_distance):
             self._marker_debug_log("marker_close_check", "UCE marker_close -> false (distance invalid)")
             return False
-        age = time.time() - self.last_marker_distance_time
-        if age > self.marker_distance_timeout:
-            self._marker_debug_log(
-                "marker_close_check",
-                f"UCE marker_close -> false (distance stale: {age:.2f}s > {self.marker_distance_timeout:.2f}s)",
-            )
-            return False
         close = self.marker_distance <= self.marker_stop_distance
         self._marker_debug_log(
             "marker_close_check",
@@ -679,6 +671,7 @@ class RobotSupervisor(Node):
 
         # Mission-level guardrail: if find_marker YAML is missing/fallback, still prioritize approach.
         if self.current_mission == "find_marker" and self.marker_override_enabled:
+            front_blocked = "CORNER" in self.obstacle_zones
             if self.marker_close_check(None):
                 self._marker_debug_log(
                     "marker_override",
@@ -686,13 +679,18 @@ class RobotSupervisor(Node):
                 )
                 self.publish_twist_for_event("EV_stop")
                 return
-            if self.marker_seen and self.clear_path_check(None):
+            if self.marker_seen and not front_blocked:
                 self._marker_debug_log(
                     "marker_override",
-                    "find_marker override -> EV_move_to_marker (marker_seen=true, clear_path=true)",
+                    f"find_marker override -> EV_move_to_marker (marker_seen=true, front_blocked={front_blocked}, zones={self.obstacle_zones})",
                 )
                 self.publish_twist_for_event("EV_move_to_marker")
                 return
+            if self.marker_seen and front_blocked:
+                self._marker_debug_log(
+                    "marker_override",
+                    f"find_marker override skipped: front blocked (zones={self.obstacle_zones})",
+                )
 
         # Otherwise: pick next event from SCT
         self.active_event = None

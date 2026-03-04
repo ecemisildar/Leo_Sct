@@ -87,6 +87,10 @@ function formatCountdown(ms) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 720px)").matches;
+}
+
 function clearSessionTimers() {
   if (sessionTickerTimer) {
     clearInterval(sessionTickerTimer);
@@ -120,7 +124,10 @@ function updateSessionStatus() {
   }
   if (typeof state.session.expiresAtMs === "number") {
     const remaining = state.session.expiresAtMs - Date.now();
-    sessionStatus.textContent = `Session: ${formatCountdown(remaining)} left`;
+    const countdown = formatCountdown(remaining);
+    sessionStatus.textContent = isMobileViewport()
+      ? `Session ends in ${countdown}`
+      : `Session: ${countdown} left`;
     return;
   }
   sessionStatus.textContent = "Session: active";
