@@ -109,9 +109,7 @@ public:
     aruco_fallback_dicts_ = this->declare_parameter<std::vector<int64_t>>(
       "aruco_fallback_dicts",
       std::vector<int64_t>{
-        cv::aruco::DICT_6X6_250,
-        cv::aruco::DICT_4X4_50,
-        cv::aruco::DICT_5X5_100
+        cv::aruco::DICT_6X6_250
       });
     aruco_min_perimeter_rate_ = this->declare_parameter<double>("aruco_min_perimeter_rate", 0.01);
     aruco_adaptive_win_min_ = this->declare_parameter<int>("aruco_adaptive_win_min", 3);
