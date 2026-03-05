@@ -46,7 +46,7 @@ public:
     zones_pub_ = this->create_publisher<std_msgs::msg::String>("detected_zones", 10);
     marker_seen_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_seen", 10);
     marker_lost_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_lost", 10);
-    marker_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("marker_distance", 10);
+    // marker_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("marker_distance", 10);
     marker_front_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_front", 10);
 
     // --- Parameters (safe conservative defaults for real robots) ---
@@ -130,7 +130,7 @@ public:
     marker_distance_min_count_ = this->declare_parameter<int>("marker_distance_min_count", 6);
     marker_depth_max_age_ms_ = this->declare_parameter<int>("marker_depth_max_age_ms", 200);
     marker_front_hold_ms_ = this->declare_parameter<int>("marker_front_hold_ms", 600);
-    marker_front_center_tolerance_ = this->declare_parameter<double>("marker_front_center_tolerance", 0.25);
+    marker_forward_id_ = this->declare_parameter<int>("marker_forward_id", 0);
 
     aruco_dict_ = cv::aruco::getPredefinedDictionary(aruco_dictionary_id_);
     aruco_params_ = cv::aruco::DetectorParameters::create();
@@ -162,7 +162,7 @@ public:
     last_marker_lost_time_ = now;
     last_marker_front_time_ = now;
     last_depth_time_ = now;
-    last_marker_distance_time_ = now;
+    // last_marker_distance_time_ = now;
     // Stability: require N consecutive safe frames before exiting avoid mode
     safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 5);
 
@@ -275,30 +275,27 @@ private:
     marker_lost_msg.data = markerLostNow(now);
     // marker_lost_pub_->publish(marker_lost_msg);
 
-    std_msgs::msg::Float32 marker_distance_msg;
-    if (marker_seen_msg.data && markerDistanceValid(now)) {
-      marker_distance_msg.data = last_marker_distance_;
-    } else {
-      marker_distance_msg.data = std::numeric_limits<float>::quiet_NaN();
-    }
+    // Marker distance path disabled intentionally.
+    // std_msgs::msg::Float32 marker_distance_msg;
+    // if (marker_seen_msg.data && markerDistanceValid(now)) {
+    //   marker_distance_msg.data = last_marker_distance_;
+    // } else {
+    //   marker_distance_msg.data = std::numeric_limits<float>::quiet_NaN();
+    // }
     // marker_distance_pub_->publish(marker_distance_msg);
     if (marker_enabled_) {
       std_msgs::msg::Bool marker_front_msg;
       marker_front_msg.data = markerFrontNow(now);
       marker_seen_pub_->publish(marker_seen_msg);
       marker_lost_pub_->publish(marker_lost_msg);
-      marker_distance_pub_->publish(marker_distance_msg);
+      // marker_distance_pub_->publish(marker_distance_msg);
       marker_front_pub_->publish(marker_front_msg);
       if (marker_debug_) {
-        const bool has_valid_distance = marker_seen_msg.data && markerDistanceValid(now);
-        const std::string distance_str =
-          has_valid_distance ? std::to_string(marker_distance_msg.data) : "NaN";
         RCLCPP_INFO_THROTTLE(
           this->get_logger(), *this->get_clock(), 1000,
-          "Marker pubs: seen=%s lost=%s distance=%s front=%s",
+          "Marker pubs: seen=%s lost=%s front=%s",
           marker_seen_msg.data ? "true" : "false",
           marker_lost_msg.data ? "true" : "false",
-          distance_str.c_str(),
           marker_front_msg.data ? "true" : "false");
       }
     }
@@ -580,7 +577,7 @@ private:
       const auto now = this->now();
       last_marker_time_ = now;
       marker_seen_ = true;
-      const bool front_now = markerInFront(corners, bgr.cols);
+      const bool front_now = markerHasForwardId(ids);
       if (front_now) {
         marker_front_seen_ = true;
         last_marker_front_time_ = now;
@@ -602,7 +599,7 @@ private:
         //   "Marker detected on %s (ids=[%s])",
         //   this->get_fully_qualified_name(), id_stream.str().c_str());
       }
-      updateMarkerDistance(corners, now, bgr.size());
+      // updateMarkerDistance(corners, now, bgr.size());
     } else if (marker_debug_) {
       RCLCPP_INFO_THROTTLE(
         this->get_logger(), *this->get_clock(), 2000,
@@ -668,32 +665,17 @@ private:
     return age_ms >= 0.0 && age_ms < static_cast<double>(marker_front_hold_ms_);
   }
 
-  bool markerInFront(const std::vector<std::vector<cv::Point2f>>& corners, int image_width) const
+  bool markerHasForwardId(const std::vector<int>& ids) const
   {
-    if (corners.empty() || image_width <= 0) return false;
-    const float half = static_cast<float>(image_width) * 0.5f;
-    const float tol = static_cast<float>(
-      std::clamp(marker_front_center_tolerance_, 0.01, 0.49) * static_cast<double>(image_width));
-    for (const auto& marker : corners) {
-      if (marker.empty()) continue;
-      float cx = 0.0f;
-      for (const auto& pt : marker) {
-        cx += pt.x;
-      }
-      cx /= static_cast<float>(marker.size());
-      if (std::fabs(cx - half) <= tol) {
-        return true;
-      }
-    }
-    return false;
+    return std::find(ids.begin(), ids.end(), marker_forward_id_) != ids.end();
   }
 
-  bool markerDistanceValid(const rclcpp::Time& now) const
-  {
-    if (!marker_distance_valid_) return false;
-    const double age_ms = (now - last_marker_distance_time_).seconds() * 1000.0;
-    return age_ms >= 0.0 && age_ms < static_cast<double>(marker_hold_ms_);
-  }
+  // bool markerDistanceValid(const rclcpp::Time& now) const
+  // {
+  //   if (!marker_distance_valid_) return false;
+  //   const double age_ms = (now - last_marker_distance_time_).seconds() * 1000.0;
+  //   return age_ms >= 0.0 && age_ms < static_cast<double>(marker_hold_ms_);
+  // }
 
   bool markerLostNow(const rclcpp::Time& now) const
   {
@@ -702,97 +684,18 @@ private:
     return age_ms >= 0.0 && age_ms < static_cast<double>(marker_lost_hold_ms_);
   }
 
-  void updateMarkerDistance(const std::vector<std::vector<cv::Point2f>>& corners,
-                            const rclcpp::Time& now,
-                            const cv::Size& rgb_size)
-  {
-    if (last_depth_.empty()) {
-      if (marker_debug_) {
-        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000, "Marker distance skipped: no depth frame yet");
-      }
-      return;
-    }
-    if (last_depth_.rows <= 0 || last_depth_.cols <= 0) return;
-    if (last_depth_.rows != rgb_size.height || last_depth_.cols != rgb_size.width) {
-      if (marker_debug_) {
-        RCLCPP_WARN_THROTTLE(
-          this->get_logger(), *this->get_clock(), 2000,
-          "Marker distance skipped: RGB/Depth size mismatch rgb=%dx%d depth=%dx%d",
-          rgb_size.width, rgb_size.height, last_depth_.cols, last_depth_.rows);
-      }
-      return;
-    }
-
-    const double depth_age_ms = (now - last_depth_time_).seconds() * 1000.0;
-    if (depth_age_ms < 0.0 || depth_age_ms > static_cast<double>(marker_depth_max_age_ms_)) {
-      if (marker_debug_) {
-        RCLCPP_WARN_THROTTLE(
-          this->get_logger(), *this->get_clock(), 2000,
-          "Marker distance skipped: stale depth (age=%.1f ms > %d ms)",
-          depth_age_ms, marker_depth_max_age_ms_);
-      }
-      return;
-    }
-
-    const float min_d = static_cast<float>(min_depth_);
-    const float max_d = static_cast<float>(max_depth_);
-    const int radius = std::max(1, marker_window_radius_);
-
-    float best = std::numeric_limits<float>::infinity();
-    int count = 0;
-
-    for (const auto& marker : corners) {
-      if (marker.empty()) continue;
-      float cx = 0.0f;
-      float cy = 0.0f;
-      for (const auto& pt : marker) {
-        cx += pt.x;
-        cy += pt.y;
-      }
-      cx /= static_cast<float>(marker.size());
-      cy /= static_cast<float>(marker.size());
-
-      const int x0 = std::clamp(static_cast<int>(std::round(cx)) - radius, 0, last_depth_.cols - 1);
-      const int x1 = std::clamp(static_cast<int>(std::round(cx)) + radius, 0, last_depth_.cols - 1);
-      const int y0 = std::clamp(static_cast<int>(std::round(cy)) - radius, 0, last_depth_.rows - 1);
-      const int y1 = std::clamp(static_cast<int>(std::round(cy)) + radius, 0, last_depth_.rows - 1);
-
-      for (int y = y0; y <= y1; ++y) {
-        const float* drow = last_depth_.ptr<float>(y);
-        for (int x = x0; x <= x1; ++x) {
-          const float d = drow[x];
-          if (std::isfinite(d) && d > min_d && d < max_d) {
-            best = std::min(best, d);
-            count++;
-          }
-        }
-      }
-    }
-
-    if (count >= marker_distance_min_count_ && std::isfinite(best)) {
-      last_marker_distance_ = best;
-      last_marker_distance_time_ = now;
-      marker_distance_valid_ = true;
-      if (marker_debug_) {
-        RCLCPP_INFO_THROTTLE(
-          this->get_logger(), *this->get_clock(), 1000,
-          "Marker distance updated: %.3f m (%d samples)",
-          last_marker_distance_, count);
-      }
-    } else if (marker_debug_) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 2000,
-        "Marker distance invalid: only %d valid samples (min=%d), best=%f",
-        count, marker_distance_min_count_, best);
-    }
-  }
+  // void updateMarkerDistance(const std::vector<std::vector<cv::Point2f>>& corners,
+  //                           const rclcpp::Time& now,
+  //                           const cv::Size& rgb_size)
+  // {
+  // }
 
 private:
   // ROS
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr zones_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr marker_seen_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr marker_lost_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr marker_distance_pub_;
+  // rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr marker_distance_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr marker_front_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
@@ -848,7 +751,7 @@ private:
   int marker_hold_ms_{500};
   int marker_lost_hold_ms_{600};
   int marker_front_hold_ms_{600};
-  double marker_front_center_tolerance_{0.25};
+  int marker_forward_id_{0};
   int marker_distance_min_count_{6};
   int marker_depth_max_age_ms_{200};
   bool marker_seen_{false};

@@ -727,6 +727,16 @@ class RobotSupervisor(Node):
             self._publish_forward_override()
             return
 
+        # Sensor-level hard override: if ArUco is detected, force forward motion.
+        if self.marker_seen:
+            self._cancel_all_motion()
+            self._marker_debug_log(
+                "marker_seen_forward_override",
+                "marker_seen override -> EV_move_forward",
+            )
+            self._publish_forward_override()
+            return
+
         # Sensor-level hard override: if marker is centered in front, force forward.
         if self.marker_front_override_enabled and self.marker_front:
             self._cancel_all_motion()
