@@ -97,6 +97,9 @@ class RobotSupervisor(Node):
 
         # Marker logic
         self.marker_stop_distance = float(self.declare_parameter("marker_stop_distance", 0.5).value)
+        self.marker_front_block_bypass_distance = float(
+            self.declare_parameter("marker_front_block_bypass_distance", 0.8).value
+        )
         self.marker_lost_timeout = float(self.declare_parameter("marker_lost_timeout", 0.8).value)
         self.marker_debug = bool(self.declare_parameter("marker_debug", True).value)
         self.marker_debug_throttle_s = float(self.declare_parameter("marker_debug_throttle_s", 1.0).value)
@@ -672,6 +675,11 @@ class RobotSupervisor(Node):
         # Mission-level guardrail: if find_marker YAML is missing/fallback, still prioritize approach.
         if self.current_mission == "find_marker" and self.marker_override_enabled:
             front_blocked = "CORNER" in self.obstacle_zones
+            marker_distance_valid = math.isfinite(self.marker_distance)
+            can_bypass_front_block = (
+                marker_distance_valid
+                and self.marker_distance <= self.marker_front_block_bypass_distance
+            )
             if self.marker_close_check(None):
                 self._marker_debug_log(
                     "marker_override",
@@ -679,17 +687,23 @@ class RobotSupervisor(Node):
                 )
                 self.publish_twist_for_event("EV_stop")
                 return
-            if self.marker_seen and not front_blocked:
+            if self.marker_seen and (not front_blocked or can_bypass_front_block):
                 self._marker_debug_log(
                     "marker_override",
-                    f"find_marker override -> EV_move_to_marker (marker_seen=true, front_blocked={front_blocked}, zones={self.obstacle_zones})",
+                    "find_marker override -> EV_move_to_marker "
+                    f"(marker_seen=true, front_blocked={front_blocked}, "
+                    f"can_bypass_front_block={can_bypass_front_block}, "
+                    f"distance={self.marker_distance:.3f}m, zones={self.obstacle_zones})",
                 )
                 self.publish_twist_for_event("EV_move_to_marker")
                 return
             if self.marker_seen and front_blocked:
                 self._marker_debug_log(
                     "marker_override",
-                    f"find_marker override skipped for safety: front blocked (zones={self.obstacle_zones})",
+                    "find_marker override skipped for safety: front blocked "
+                    f"(distance={self.marker_distance:.3f}m, "
+                    f"bypass_threshold={self.marker_front_block_bypass_distance:.3f}m, "
+                    f"zones={self.obstacle_zones})",
                 )
 
         # Otherwise: pick next event from SCT
@@ -711,7 +725,13 @@ class RobotSupervisor(Node):
             self.current_mission == "find_marker"
             and self.marker_override_enabled
             and self.marker_seen
-            and ("CORNER" not in self.obstacle_zones)
+            and (
+                ("CORNER" not in self.obstacle_zones)
+                or (
+                    math.isfinite(self.marker_distance)
+                    and self.marker_distance <= self.marker_front_block_bypass_distance
+                )
+            )
             and (ev_name != "EV_move_to_marker")
             and (ev_name != "EV_stop")
             and (not self.marker_close_check(None))
