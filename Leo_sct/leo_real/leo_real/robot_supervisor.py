@@ -671,6 +671,7 @@ class RobotSupervisor(Node):
 
         # Mission-level guardrail: if find_marker YAML is missing/fallback, still prioritize approach.
         if self.current_mission == "find_marker" and self.marker_override_enabled:
+            front_blocked = "CORNER" in self.obstacle_zones
             if self.marker_close_check(None):
                 self._marker_debug_log(
                     "marker_override",
@@ -678,13 +679,18 @@ class RobotSupervisor(Node):
                 )
                 self.publish_twist_for_event("EV_stop")
                 return
-            if self.marker_seen:
+            if self.marker_seen and not front_blocked:
                 self._marker_debug_log(
                     "marker_override",
-                    f"find_marker override -> EV_move_to_marker (marker_seen=true, zones={self.obstacle_zones})",
+                    f"find_marker override -> EV_move_to_marker (marker_seen=true, front_blocked={front_blocked}, zones={self.obstacle_zones})",
                 )
                 self.publish_twist_for_event("EV_move_to_marker")
                 return
+            if self.marker_seen and front_blocked:
+                self._marker_debug_log(
+                    "marker_override",
+                    f"find_marker override skipped for safety: front blocked (zones={self.obstacle_zones})",
+                )
 
         # Otherwise: pick next event from SCT
         self.active_event = None
@@ -705,6 +711,7 @@ class RobotSupervisor(Node):
             self.current_mission == "find_marker"
             and self.marker_override_enabled
             and self.marker_seen
+            and ("CORNER" not in self.obstacle_zones)
             and (ev_name != "EV_move_to_marker")
             and (ev_name != "EV_stop")
             and (not self.marker_close_check(None))
