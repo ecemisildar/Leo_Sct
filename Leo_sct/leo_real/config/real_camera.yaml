@@ -36,6 +36,7 @@ image_processor:
     marker_debug: true
     marker_label: marker
     aruco_dictionary_id: 0  # DICT_6X6_250
+    aruco_fallback_dicts: [0]
     aruco_corner_refine: true
     aruco_try_inverted: true
     aruco_window_radius: 2
@@ -51,6 +52,6 @@ image_processor:
     marker_ratio: 1.6
     marker_pixel_ratio: 0.002
     marker_stride: 2
-    marker_hold_ms: 2000
+    marker_hold_ms: 3000
     marker_distance_min_count: 6
-    marker_depth_max_age_ms: 200
+    marker_depth_max_age_ms: 350

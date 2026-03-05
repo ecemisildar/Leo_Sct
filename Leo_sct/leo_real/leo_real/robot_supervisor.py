@@ -98,7 +98,7 @@ class RobotSupervisor(Node):
         # Marker logic
         self.marker_stop_distance = float(self.declare_parameter("marker_stop_distance", 0.5).value)
         self.marker_front_block_bypass_distance = float(
-            self.declare_parameter("marker_front_block_bypass_distance", 0.8).value
+            self.declare_parameter("marker_front_block_bypass_distance", 1.0).value
         )
         self.marker_lost_timeout = float(self.declare_parameter("marker_lost_timeout", 0.8).value)
         self.marker_debug = bool(self.declare_parameter("marker_debug", True).value)
