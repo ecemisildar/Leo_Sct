@@ -3,6 +3,7 @@
 // Lightweight depth-only obstacle zone detector (Ignition/Gazebo Sim) for multi-robot runs.
 // Publishes std_msgs/String on "detected_zones" with exactly one of:
 //   "LEFT", "RIGHT", "CORNER", "CLEAR", "marker"
+// Publishes std_msgs/Bool on "marker_front" when ArUco is detected in front-center view.
 //
 // Improvements vs naive mean/min:
 // - Depth-only subscription (no RGB sync)
@@ -46,6 +47,7 @@ public:
     marker_seen_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_seen", 10);
     marker_lost_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_lost", 10);
     marker_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("marker_distance", 10);
+    marker_front_pub_ = this->create_publisher<std_msgs::msg::Bool>("marker_front", 10);
 
     // --- Parameters (safe conservative defaults for real robots) ---
     enter_thresh_     = this->declare_parameter<double>("enter_thresh", 0.80);  // start avoiding earlier
@@ -127,6 +129,8 @@ public:
     marker_lost_hold_ms_ = this->declare_parameter<int>("marker_lost_hold_ms", 600);
     marker_distance_min_count_ = this->declare_parameter<int>("marker_distance_min_count", 6);
     marker_depth_max_age_ms_ = this->declare_parameter<int>("marker_depth_max_age_ms", 200);
+    marker_front_hold_ms_ = this->declare_parameter<int>("marker_front_hold_ms", 600);
+    marker_front_center_tolerance_ = this->declare_parameter<double>("marker_front_center_tolerance", 0.25);
 
     aruco_dict_ = cv::aruco::getPredefinedDictionary(aruco_dictionary_id_);
     aruco_params_ = cv::aruco::DetectorParameters::create();
@@ -156,6 +160,7 @@ public:
     last_marker_enabled_ = false;
     last_marker_time_ = now;
     last_marker_lost_time_ = now;
+    last_marker_front_time_ = now;
     last_depth_time_ = now;
     last_marker_distance_time_ = now;
     // Stability: require N consecutive safe frames before exiting avoid mode
@@ -278,19 +283,23 @@ private:
     }
     // marker_distance_pub_->publish(marker_distance_msg);
     if (marker_enabled_) {
+      std_msgs::msg::Bool marker_front_msg;
+      marker_front_msg.data = markerFrontNow(now);
       marker_seen_pub_->publish(marker_seen_msg);
       marker_lost_pub_->publish(marker_lost_msg);
       marker_distance_pub_->publish(marker_distance_msg);
+      marker_front_pub_->publish(marker_front_msg);
       if (marker_debug_) {
         const bool has_valid_distance = marker_seen_msg.data && markerDistanceValid(now);
         const std::string distance_str =
           has_valid_distance ? std::to_string(marker_distance_msg.data) : "NaN";
         RCLCPP_INFO_THROTTLE(
           this->get_logger(), *this->get_clock(), 1000,
-          "Marker pubs: seen=%s lost=%s distance=%s",
+          "Marker pubs: seen=%s lost=%s distance=%s front=%s",
           marker_seen_msg.data ? "true" : "false",
           marker_lost_msg.data ? "true" : "false",
-          distance_str.c_str());
+          distance_str.c_str(),
+          marker_front_msg.data ? "true" : "false");
       }
     }
 
@@ -571,11 +580,17 @@ private:
       const auto now = this->now();
       last_marker_time_ = now;
       marker_seen_ = true;
+      const bool front_now = markerInFront(corners, bgr.cols);
+      if (front_now) {
+        marker_front_seen_ = true;
+        last_marker_front_time_ = now;
+      }
       if (marker_debug_) {
         RCLCPP_INFO_THROTTLE(
           this->get_logger(), *this->get_clock(), 1000,
-          "ArUco detected: count=%zu dict=%d inverted=%s",
-          ids.size(), dict_report, last_detected_inverted_ ? "true" : "false");
+          "ArUco detected: count=%zu dict=%d inverted=%s front=%s",
+          ids.size(), dict_report, last_detected_inverted_ ? "true" : "false",
+          front_now ? "true" : "false");
       }
       if (!ids.empty()) {
         std::ostringstream id_stream;
@@ -644,6 +659,33 @@ private:
     if (!marker_enabled_ || !marker_seen_) return false;
     const double age_ms = (now - last_marker_time_).seconds() * 1000.0;
     return age_ms >= 0.0 && age_ms < static_cast<double>(marker_hold_ms_);
+  }
+
+  bool markerFrontNow(const rclcpp::Time& now) const
+  {
+    if (!marker_enabled_ || !marker_front_seen_) return false;
+    const double age_ms = (now - last_marker_front_time_).seconds() * 1000.0;
+    return age_ms >= 0.0 && age_ms < static_cast<double>(marker_front_hold_ms_);
+  }
+
+  bool markerInFront(const std::vector<std::vector<cv::Point2f>>& corners, int image_width) const
+  {
+    if (corners.empty() || image_width <= 0) return false;
+    const float half = static_cast<float>(image_width) * 0.5f;
+    const float tol = static_cast<float>(
+      std::clamp(marker_front_center_tolerance_, 0.01, 0.49) * static_cast<double>(image_width));
+    for (const auto& marker : corners) {
+      if (marker.empty()) continue;
+      float cx = 0.0f;
+      for (const auto& pt : marker) {
+        cx += pt.x;
+      }
+      cx /= static_cast<float>(marker.size());
+      if (std::fabs(cx - half) <= tol) {
+        return true;
+      }
+    }
+    return false;
   }
 
   bool markerDistanceValid(const rclcpp::Time& now) const
@@ -751,6 +793,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr marker_seen_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr marker_lost_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr marker_distance_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr marker_front_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
   rclcpp::Clock::SharedPtr clock_;
@@ -804,12 +847,16 @@ private:
   double aruco_polygonal_accuracy_{0.05};
   int marker_hold_ms_{500};
   int marker_lost_hold_ms_{600};
+  int marker_front_hold_ms_{600};
+  double marker_front_center_tolerance_{0.25};
   int marker_distance_min_count_{6};
   int marker_depth_max_age_ms_{200};
   bool marker_seen_{false};
+  bool marker_front_seen_{false};
   bool last_marker_enabled_{false};
   rclcpp::Time last_marker_time_;
   rclcpp::Time last_marker_lost_time_;
+  rclcpp::Time last_marker_front_time_;
   cv::Ptr<cv::aruco::Dictionary> aruco_dict_;
   cv::Ptr<cv::aruco::DetectorParameters> aruco_params_;
   mutable int last_detected_dict_id_{-1};

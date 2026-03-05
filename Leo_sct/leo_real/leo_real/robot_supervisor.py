@@ -105,6 +105,9 @@ class RobotSupervisor(Node):
         self.marker_debug_throttle_s = float(self.declare_parameter("marker_debug_throttle_s", 1.0).value)
         self._marker_debug_last: Dict[str, float] = {}
         self.marker_override_enabled = bool(self.declare_parameter("marker_override_enabled", True).value)
+        self.marker_front_override_enabled = bool(
+            self.declare_parameter("marker_front_override_enabled", True).value
+        )
 
         # Throttle zone updates to match supervisor cadence
         self.zone_update_min_dt = self.supervisor_period
@@ -116,6 +119,12 @@ class RobotSupervisor(Node):
 
         self.enabled = bool(self.declare_parameter("enabled", False).value)
         self.static_mode = bool(self.declare_parameter("static", False).value)
+        self.override_mode = str(self.declare_parameter("override_mode", "auto").value).strip().lower()
+        if self.override_mode not in {"auto", "stop", "forward"}:
+            self.get_logger().warn(
+                f"Invalid override_mode='{self.override_mode}', falling back to 'auto'."
+            )
+            self.override_mode = "auto"
 
         # -------------------------------
         # Load SCT YAML
@@ -133,6 +142,7 @@ class RobotSupervisor(Node):
         self.last_zone_update = 0.0
 
         self.marker_seen = False
+        self.marker_front = False
         self.marker_distance = float("inf")
         self.last_marker_distance_time = 0.0
         self.last_marker_lost_time = 0.0
@@ -163,6 +173,7 @@ class RobotSupervisor(Node):
 
         self.sub_zone = self.create_subscription(String, "detected_zones", self.zone_callback, 10)
         self.sub_marker_seen = self.create_subscription(Bool, "marker_seen", self.marker_seen_callback, 10)
+        self.sub_marker_front = self.create_subscription(Bool, "marker_front", self.marker_front_callback, 10)
         self.sub_marker_lost = self.create_subscription(Bool, "marker_lost", self.marker_lost_callback, 10)
         self.sub_marker_dist = self.create_subscription(Float32, "marker_distance", self.marker_distance_callback, 10)
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
@@ -182,6 +193,16 @@ class RobotSupervisor(Node):
             SetBool,
             "enable_supervisor_find_marker",
             self.handle_enable_supervisor_find_marker,
+        )
+        self.override_stop_service = self.create_service(
+            SetBool,
+            "override_stop",
+            self.handle_override_stop,
+        )
+        self.override_forward_service = self.create_service(
+            SetBool,
+            "override_forward",
+            self.handle_override_forward,
         )
 
         # -------------------------------
@@ -336,6 +357,11 @@ class RobotSupervisor(Node):
             self.last_marker_lost_time = 0.0
         self._marker_debug_log("marker_seen_cb", f"marker_seen topic -> {seen}")
 
+    def marker_front_callback(self, msg: Bool):
+        front = bool(msg.data)
+        self.marker_front = front
+        self._marker_debug_log("marker_front_cb", f"marker_front topic -> {front}")
+
     def marker_lost_callback(self, msg: Bool):
         if bool(msg.data):
             self.last_marker_lost_time = time.time()
@@ -481,6 +507,38 @@ class RobotSupervisor(Node):
             response.message = "Supervisor disabled."
         return response
 
+    def _set_override_mode(self, mode: str):
+        mode = str(mode).strip().lower()
+        if mode not in {"auto", "stop", "forward"}:
+            mode = "auto"
+        if mode != self.override_mode:
+            self.override_mode = mode
+            self._cancel_all_motion()
+            self.stop_sent = False
+            self.get_logger().info(f"Override mode set to '{self.override_mode}'")
+
+    def handle_override_stop(self, request, response):
+        if bool(request.data):
+            self._set_override_mode("stop")
+            response.message = "Override enabled: stop."
+        else:
+            if self.override_mode == "stop":
+                self._set_override_mode("auto")
+            response.message = "Stop override disabled."
+        response.success = True
+        return response
+
+    def handle_override_forward(self, request, response):
+        if bool(request.data):
+            self._set_override_mode("forward")
+            response.message = "Override enabled: forward."
+        else:
+            if self.override_mode == "forward":
+                self._set_override_mode("auto")
+            response.message = "Forward override disabled."
+        response.success = True
+        return response
+
     def _namespace_index(self) -> int:
         if self.ns.startswith("robot_"):
             try:
@@ -494,6 +552,20 @@ class RobotSupervisor(Node):
     # -------------------------------
     def _publish_stop(self):
         self.active_twist = Twist()
+        self._publish_cmd(self.active_twist)
+
+    def _publish_forward_override(self):
+        spec = self.action_table.get("EV_move_forward")
+        twist = Twist()
+        if spec is not None:
+            twist.linear.x = float(spec.linear_x)
+            twist.angular.z = float(spec.angular_z)
+        else:
+            twist.linear.x = 0.2
+            twist.angular.z = 0.0
+        self.active_event = "EV_move_forward"
+        self.active_twist = twist
+        self.motion_until = 0.0
         self._publish_cmd(self.active_twist)
 
     def _cancel_all_motion(self):
@@ -644,6 +716,26 @@ class RobotSupervisor(Node):
 
         self.stop_sent = False
         now = time.time()
+
+        # Manual override states supersede SCT choices.
+        if self.override_mode == "stop":
+            self._cancel_all_motion()
+            self._publish_stop()
+            return
+        if self.override_mode == "forward":
+            self._cancel_all_motion()
+            self._publish_forward_override()
+            return
+
+        # Sensor-level hard override: if marker is centered in front, force forward.
+        if self.marker_front_override_enabled and self.marker_front:
+            self._cancel_all_motion()
+            self._marker_debug_log(
+                "marker_front_override",
+                "marker_front override -> EV_move_forward",
+            )
+            self._publish_forward_override()
+            return
 
         # If we’re in the middle of a true full_rotate, keep executing until complete.
         if self.full_rotate_active:
