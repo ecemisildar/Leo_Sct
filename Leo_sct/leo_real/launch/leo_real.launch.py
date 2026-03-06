@@ -76,14 +76,12 @@ def generate_launch_description():
     )
 
     # --- Image processor (reads depth) ---
-    # NOTE: rgb_topic and remappings are relative; if namespaced, they become /<ns>/camera/...
     image_proc_node = Node(
         package="leo_image",
         executable="image_processor",
         name="image_processor",
         parameters=[
             camera_params_file,
-            {"rgb_topic": "camera/camera/color/image_raw"},
         ],
         remappings=[
             ("depth_camera/depth_image", "camera/camera/aligned_depth_to_color/image_raw"),

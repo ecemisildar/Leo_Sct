@@ -10,7 +10,7 @@ import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import Twist
-from std_msgs.msg import String, Bool, Float32
+from std_msgs.msg import String, Bool
 from std_srvs.srv import SetBool
 from nav_msgs.msg import Odometry
 
@@ -95,20 +95,6 @@ class RobotSupervisor(Node):
 
 
 
-        # Marker logic
-        self.marker_stop_distance = float(self.declare_parameter("marker_stop_distance", 0.5).value)
-        self.marker_front_block_bypass_distance = float(
-            self.declare_parameter("marker_front_block_bypass_distance", 1.0).value
-        )
-        self.marker_lost_timeout = float(self.declare_parameter("marker_lost_timeout", 0.8).value)
-        self.marker_debug = bool(self.declare_parameter("marker_debug", True).value)
-        self.marker_debug_throttle_s = float(self.declare_parameter("marker_debug_throttle_s", 1.0).value)
-        self._marker_debug_last: Dict[str, float] = {}
-        self.marker_override_enabled = bool(self.declare_parameter("marker_override_enabled", True).value)
-        self.marker_front_override_enabled = bool(
-            self.declare_parameter("marker_front_override_enabled", True).value
-        )
-
         # Throttle zone updates to match supervisor cadence
         self.zone_update_min_dt = self.supervisor_period
 
@@ -119,6 +105,9 @@ class RobotSupervisor(Node):
 
         self.enabled = bool(self.declare_parameter("enabled", False).value)
         self.static_mode = bool(self.declare_parameter("static", False).value)
+        self.aruco_follow_enabled = True
+        self.aruco_follow_linear_x = 0.15
+        self.aruco_follow_angular_z = 0.6
         self.override_mode = str(self.declare_parameter("override_mode", "auto").value).strip().lower()
         if self.override_mode not in {"auto", "stop", "forward"}:
             self.get_logger().warn(
@@ -140,12 +129,8 @@ class RobotSupervisor(Node):
         # -------------------------------
         self.obstacle_zones = ["CLEAR"]
         self.last_zone_update = 0.0
-
-        self.marker_seen = False
-        self.marker_front = False
-        self.marker_distance = float("inf")
-        self.last_marker_distance_time = 0.0
-        self.last_marker_lost_time = 0.0
+        self.aruco_detected = False
+        self.aruco_direction = "NONE"
 
         # Odom / yaw tracking for full-rotate
         self.have_odom = False
@@ -172,10 +157,8 @@ class RobotSupervisor(Node):
         self.cmd_pub = self.create_publisher(Twist, "cmd_vel", 10)
 
         self.sub_zone = self.create_subscription(String, "detected_zones", self.zone_callback, 10)
-        self.sub_marker_seen = self.create_subscription(Bool, "marker_seen", self.marker_seen_callback, 10)
-        self.sub_marker_front = self.create_subscription(Bool, "marker_front", self.marker_front_callback, 10)
-        self.sub_marker_lost = self.create_subscription(Bool, "marker_lost", self.marker_lost_callback, 10)
-        self.sub_marker_dist = self.create_subscription(Float32, "marker_distance", self.marker_distance_callback, 10)
+        self.sub_aruco_detected = self.create_subscription(Bool, "aruco_id1_detected", self.aruco_detected_callback, 10)
+        self.sub_aruco_direction = self.create_subscription(String, "aruco_id1_direction", self.aruco_direction_callback, 10)
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
 
         # -------------------------------
@@ -188,11 +171,6 @@ class RobotSupervisor(Node):
             SetBool,
             "enable_supervisor_explore",
             self.handle_enable_supervisor_explore,
-        )
-        self.enable_service_find_marker = self.create_service(
-            SetBool,
-            "enable_supervisor_find_marker",
-            self.handle_enable_supervisor_find_marker,
         )
         self.override_stop_service = self.create_service(
             SetBool,
@@ -223,7 +201,6 @@ class RobotSupervisor(Node):
                 angular_z=self.rotate_90_omega,
                 is_full_rotate=False
             ),
-            "EV_move_to_marker": ActionSpec(linear_x=0.2, angular_z=0.0),
             "EV_stop": ActionSpec(linear_x=0.0, angular_z=0.0),
             # full_rotate is executed as an atomic rotation using odom; target is full_rotate_target_rad (≤ π here).
             "EV_full_rotate": ActionSpec(linear_x=0.0, angular_z=self.full_rotate_omega, is_full_rotate=True),
@@ -231,9 +208,7 @@ class RobotSupervisor(Node):
 
     def _canonical_mission_name(self, mission: str) -> str:
         key = str(mission or "").strip().lower().replace("-", "_").replace(" ", "_")
-        if key in {"find", "findmarker"}:
-            key = "find_marker"
-        if key not in {"explore", "find_marker"}:
+        if key != "explore":
             key = "explore"
         return key
 
@@ -268,7 +243,7 @@ class RobotSupervisor(Node):
             if ev_id not in self.sct.callback:
                 self.sct.callback[ev_id] = {
                     "callback": None,
-                    "check_input": None,
+                    "check_input": (lambda _sup_data: False),
                     "sup_data": None,
                 }
         self._install_uncontrollable_callbacks()
@@ -350,45 +325,17 @@ class RobotSupervisor(Node):
         else:
             self.obstacle_zones = ["CLEAR"]
 
-    def marker_seen_callback(self, msg: Bool):
-        seen = bool(msg.data)
-        self.marker_seen = seen
-        if seen:
-            self.last_marker_lost_time = 0.0
-        self._marker_debug_log("marker_seen_cb", f"marker_seen topic -> {seen}")
+    def aruco_detected_callback(self, msg: Bool):
+        self.aruco_detected = bool(msg.data)
+        if not self.aruco_detected:
+            self.aruco_direction = "NONE"
 
-    def marker_front_callback(self, msg: Bool):
-        front = bool(msg.data)
-        self.marker_front = front
-        self._marker_debug_log("marker_front_cb", f"marker_front topic -> {front}")
-
-    def marker_lost_callback(self, msg: Bool):
-        if bool(msg.data):
-            self.last_marker_lost_time = time.time()
-            self.marker_seen = False
-            self._marker_debug_log("marker_lost_cb", "marker_lost topic -> true")
-
-    def marker_distance_callback(self, msg: Float32):
-        if math.isfinite(msg.data):
-            self.marker_distance = float(msg.data)
-            self.last_marker_distance_time = time.time()
-            self._marker_debug_log(
-                "marker_dist_cb",
-                f"marker_distance topic -> {self.marker_distance:.3f} m",
-            )
+    def aruco_direction_callback(self, msg: String):
+        direction = msg.data.strip().upper()
+        if direction in {"LEFT", "CENTER", "RIGHT", "NONE"}:
+            self.aruco_direction = direction
         else:
-            self.marker_distance = float("inf")
-            self._marker_debug_log("marker_dist_cb", "marker_distance topic -> NaN/inf")
-
-    def _marker_debug_log(self, key: str, message: str):
-        if not self.marker_debug:
-            return
-        now = time.time()
-        last = self._marker_debug_last.get(key, 0.0)
-        if now - last < self.marker_debug_throttle_s:
-            return
-        self._marker_debug_last[key] = now
-        self.get_logger().info(f"[marker-debug] {message}")
+            self.aruco_direction = "NONE"
 
     # -------------------------------
     # SCT input check functions (uncontrollables)
@@ -414,39 +361,6 @@ class RobotSupervisor(Node):
     def right_check(self, sup_data):
         return "RIGHT" in self.obstacle_zones
 
-    def marker_check(self, sup_data):
-        self._marker_debug_log("marker_seen_check", f"UCE marker_seen -> {self.marker_seen}")
-        return self.marker_seen
-
-    def marker_close_check(self, sup_data):
-        if not self.marker_seen:
-            self._marker_debug_log("marker_close_check", "UCE marker_close -> false (marker_seen=false)")
-            return False
-        if not math.isfinite(self.marker_distance):
-            self._marker_debug_log("marker_close_check", "UCE marker_close -> false (distance invalid)")
-            return False
-        close = self.marker_distance <= self.marker_stop_distance
-        self._marker_debug_log(
-            "marker_close_check",
-            f"UCE marker_close -> {close} (distance={self.marker_distance:.3f}m, threshold={self.marker_stop_distance:.3f}m)",
-        )
-        return close
-
-    def marker_lost_check(self, sup_data):
-        if self.marker_seen:
-            self._marker_debug_log("marker_lost_check", "UCE marker_lost -> false (marker_seen=true)")
-            return False
-        if self.last_marker_lost_time <= 0.0:
-            self._marker_debug_log("marker_lost_check", "UCE marker_lost -> false (never received marker_lost)")
-            return False
-        age = time.time() - self.last_marker_lost_time
-        lost = age <= self.marker_lost_timeout
-        self._marker_debug_log(
-            "marker_lost_check",
-            f"UCE marker_lost -> {lost} (age={age:.2f}s, timeout={self.marker_lost_timeout:.2f}s)",
-        )
-        return lost
-
     def _install_uncontrollable_callbacks(self):
         # Attach callbacks only for events that exist in current supervisor YAML.
         def add(ev: str, fn):
@@ -458,9 +372,6 @@ class RobotSupervisor(Node):
         add("path_clear", self.clear_path_check)
         add("obstacle_left", self.left_check)
         add("obstacle_right", self.right_check)
-        add("marker_seen", self.marker_check)
-        add("marker_lost", self.marker_lost_check)
-        add("marker_close", self.marker_close_check)
 
     # -------------------------------
     # Enable service
@@ -488,21 +399,6 @@ class RobotSupervisor(Node):
         response.success = True
         if self.enabled:
             response.message = f"Supervisor enabled for explore ({detail})."
-        else:
-            response.message = "Supervisor disabled."
-        return response
-
-    def handle_enable_supervisor_find_marker(self, request, response):
-        if bool(request.data):
-            ok, detail = self._switch_mission("find_marker")
-            if not ok:
-                response.success = False
-                response.message = detail
-                return response
-        self._set_enabled(request.data)
-        response.success = True
-        if self.enabled:
-            response.message = f"Supervisor enabled for find_marker ({detail})."
         else:
             response.message = "Supervisor disabled."
         return response
@@ -564,6 +460,22 @@ class RobotSupervisor(Node):
             twist.linear.x = 0.2
             twist.angular.z = 0.0
         self.active_event = "EV_move_forward"
+        self.active_twist = twist
+        self.motion_until = 0.0
+        self._publish_cmd(self.active_twist)
+
+    def _publish_aruco_follow_cmd(self):
+        twist = Twist()
+        if self.aruco_direction == "LEFT":
+            twist.angular.z = abs(self.aruco_follow_angular_z)
+        elif self.aruco_direction == "RIGHT":
+            twist.angular.z = -abs(self.aruco_follow_angular_z)
+        elif self.aruco_direction == "CENTER":
+            twist.linear.x = max(0.0, self.aruco_follow_linear_x)
+        else:
+            # Detection true but direction unknown -> stop for safety.
+            twist = Twist()
+        self.active_event = None
         self.active_twist = twist
         self.motion_until = 0.0
         self._publish_cmd(self.active_twist)
@@ -727,24 +639,9 @@ class RobotSupervisor(Node):
             self._publish_forward_override()
             return
 
-        # Sensor-level hard override: if ArUco is detected, force forward motion.
-        if self.marker_seen:
+        if self.aruco_follow_enabled and self.aruco_detected:
             self._cancel_all_motion()
-            self._marker_debug_log(
-                "marker_seen_forward_override",
-                "marker_seen override -> EV_move_forward",
-            )
-            self._publish_forward_override()
-            return
-
-        # Sensor-level hard override: if marker is centered in front, force forward.
-        if self.marker_front_override_enabled and self.marker_front:
-            self._cancel_all_motion()
-            self._marker_debug_log(
-                "marker_front_override",
-                "marker_front override -> EV_move_forward",
-            )
-            self._publish_forward_override()
+            self._publish_aruco_follow_cmd()
             return
 
         # If we’re in the middle of a true full_rotate, keep executing until complete.
@@ -774,40 +671,6 @@ class RobotSupervisor(Node):
             self._publish_cmd(self.active_twist)
             return
 
-        # Mission-level guardrail: if find_marker YAML is missing/fallback, still prioritize approach.
-        if self.current_mission == "find_marker" and self.marker_override_enabled:
-            front_blocked = "CORNER" in self.obstacle_zones
-            marker_distance_valid = math.isfinite(self.marker_distance)
-            can_bypass_front_block = (
-                marker_distance_valid
-                and self.marker_distance <= self.marker_front_block_bypass_distance
-            )
-            if self.marker_close_check(None):
-                self._marker_debug_log(
-                    "marker_override",
-                    "find_marker override -> EV_stop (marker_close=true)",
-                )
-                self.publish_twist_for_event("EV_stop")
-                return
-            if self.marker_seen and (not front_blocked or can_bypass_front_block):
-                self._marker_debug_log(
-                    "marker_override",
-                    "find_marker override -> EV_move_to_marker "
-                    f"(marker_seen=true, front_blocked={front_blocked}, "
-                    f"can_bypass_front_block={can_bypass_front_block}, "
-                    f"distance={self.marker_distance:.3f}m, zones={self.obstacle_zones})",
-                )
-                self.publish_twist_for_event("EV_move_to_marker")
-                return
-            if self.marker_seen and front_blocked:
-                self._marker_debug_log(
-                    "marker_override",
-                    "find_marker override skipped for safety: front blocked "
-                    f"(distance={self.marker_distance:.3f}m, "
-                    f"bypass_threshold={self.marker_front_block_bypass_distance:.3f}m, "
-                    f"zones={self.obstacle_zones})",
-                )
-
         # Otherwise: pick next event from SCT
         self.active_event = None
         self.sct.input_buffer = []
@@ -822,27 +685,6 @@ class RobotSupervisor(Node):
         if ev_name is None:
             self._publish_stop()
             return
-
-        if (
-            self.current_mission == "find_marker"
-            and self.marker_override_enabled
-            and self.marker_seen
-            and (
-                ("CORNER" not in self.obstacle_zones)
-                or (
-                    math.isfinite(self.marker_distance)
-                    and self.marker_distance <= self.marker_front_block_bypass_distance
-                )
-            )
-            and (ev_name != "EV_move_to_marker")
-            and (ev_name != "EV_stop")
-            and (not self.marker_close_check(None))
-        ):
-            self._marker_debug_log(
-                "marker_sct_override",
-                f"SCT selected {ev_name}; overriding to EV_move_to_marker (zones={self.obstacle_zones})",
-            )
-            ev_name = "EV_move_to_marker"
 
         self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
