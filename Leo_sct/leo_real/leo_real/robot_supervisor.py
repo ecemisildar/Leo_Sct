@@ -133,6 +133,8 @@ class RobotSupervisor(Node):
         self.last_zone_update = 0.0
         self.aruco_detected = False
         self.aruco_direction = "NONE"
+        self.aruco_last_valid_direction = "NONE"
+        self.last_aruco_direction_time = 0.0
         self.aruco_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
 
@@ -341,15 +343,26 @@ class RobotSupervisor(Node):
         self.aruco_detected = bool(msg.data)
         if self.aruco_detected:
             self.last_aruco_seen_time = time.time()
-        else:
-            self.aruco_direction = "NONE"
 
     def aruco_direction_callback(self, msg: String):
+        now = time.time()
         direction = msg.data.strip().upper()
         if direction in {"LEFT", "CENTER", "RIGHT", "NONE"}:
             self.aruco_direction = direction
+            if direction in {"LEFT", "CENTER", "RIGHT"}:
+                self.aruco_last_valid_direction = direction
+                self.last_aruco_direction_time = now
         else:
             self.aruco_direction = "NONE"
+
+    def _effective_aruco_direction(self) -> str:
+        d = self.aruco_direction
+        if d in {"LEFT", "CENTER", "RIGHT"}:
+            return d
+        if self.last_aruco_direction_time > 0.0:
+            if (time.time() - self.last_aruco_direction_time) <= self.aruco_hold_timeout_s:
+                return self.aruco_last_valid_direction
+        return "NONE"
 
     def aruco_distance_callback(self, msg: Float32):
         d = float(msg.data)
@@ -488,6 +501,7 @@ class RobotSupervisor(Node):
     def _publish_aruco_safe_cmd(self):
         twist = Twist()
         zones = set(self.obstacle_zones)
+        direction = self._effective_aruco_direction()
 
         # Keep marker-follow takeover active at close range, but do not hand back to SCT.
         if self.aruco_distance_m <= self.aruco_stop_distance_m:
@@ -499,25 +513,25 @@ class RobotSupervisor(Node):
 
         # Front obstacle: never drive forward. Try to keep rotating to center marker.
         if "CORNER" in zones:
-            if self.aruco_direction == "LEFT":
+            if direction == "LEFT":
                 twist.angular.z = abs(self.aruco_follow_angular_z)
-            elif self.aruco_direction == "RIGHT":
+            elif direction == "RIGHT":
                 twist.angular.z = -abs(self.aruco_follow_angular_z)
             else:
                 twist = Twist()
-        elif self.aruco_direction == "LEFT":
+        elif direction == "LEFT":
             # If left side is blocked, do not rotate into obstacle.
             if "LEFT" in zones:
                 twist.angular.z = -abs(self.aruco_follow_angular_z)
             else:
                 twist.angular.z = abs(self.aruco_follow_angular_z)
-        elif self.aruco_direction == "RIGHT":
+        elif direction == "RIGHT":
             # If right side is blocked, do not rotate into obstacle.
             if "RIGHT" in zones:
                 twist.angular.z = abs(self.aruco_follow_angular_z)
             else:
                 twist.angular.z = -abs(self.aruco_follow_angular_z)
-        elif self.aruco_direction == "CENTER":
+        elif direction == "CENTER":
             # Move forward only when front is clear.
             twist.linear.x = max(0.0, self.aruco_follow_linear_x)
         else:
