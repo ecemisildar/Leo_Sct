@@ -10,7 +10,7 @@ import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import Twist
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Float32
 from std_srvs.srv import SetBool
 from nav_msgs.msg import Odometry
 
@@ -108,6 +108,8 @@ class RobotSupervisor(Node):
         self.aruco_follow_enabled = True
         self.aruco_follow_linear_x = 0.15
         self.aruco_follow_angular_z = 0.6
+        self.aruco_stop_distance_m = 0.3
+        self.aruco_hold_timeout_s = 1.0
         self.override_mode = str(self.declare_parameter("override_mode", "auto").value).strip().lower()
         if self.override_mode not in {"auto", "stop", "forward"}:
             self.get_logger().warn(
@@ -131,6 +133,8 @@ class RobotSupervisor(Node):
         self.last_zone_update = 0.0
         self.aruco_detected = False
         self.aruco_direction = "NONE"
+        self.aruco_distance_m = float("inf")
+        self.last_aruco_seen_time = 0.0
 
         # Odom / yaw tracking for full-rotate
         self.have_odom = False
@@ -159,6 +163,7 @@ class RobotSupervisor(Node):
         self.sub_zone = self.create_subscription(String, "detected_zones", self.zone_callback, 10)
         self.sub_aruco_detected = self.create_subscription(Bool, "aruco_id1_detected", self.aruco_detected_callback, 10)
         self.sub_aruco_direction = self.create_subscription(String, "aruco_id1_direction", self.aruco_direction_callback, 10)
+        self.sub_aruco_distance = self.create_subscription(Float32, "aruco_id1_distance", self.aruco_distance_callback, 10)
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
 
         # -------------------------------
@@ -327,7 +332,9 @@ class RobotSupervisor(Node):
 
     def aruco_detected_callback(self, msg: Bool):
         self.aruco_detected = bool(msg.data)
-        if not self.aruco_detected:
+        if self.aruco_detected:
+            self.last_aruco_seen_time = time.time()
+        else:
             self.aruco_direction = "NONE"
 
     def aruco_direction_callback(self, msg: String):
@@ -336,6 +343,13 @@ class RobotSupervisor(Node):
             self.aruco_direction = direction
         else:
             self.aruco_direction = "NONE"
+
+    def aruco_distance_callback(self, msg: Float32):
+        d = float(msg.data)
+        if math.isfinite(d):
+            self.aruco_distance_m = d
+        else:
+            self.aruco_distance_m = float("inf")
 
     # -------------------------------
     # SCT input check functions (uncontrollables)
@@ -479,6 +493,13 @@ class RobotSupervisor(Node):
         self.active_twist = twist
         self.motion_until = 0.0
         self._publish_cmd(self.active_twist)
+
+    def _aruco_control_active(self) -> bool:
+        if self.aruco_detected:
+            return True
+        if self.last_aruco_seen_time <= 0.0:
+            return False
+        return (time.time() - self.last_aruco_seen_time) <= self.aruco_hold_timeout_s
 
     def _cancel_all_motion(self):
         self.active_event = None
@@ -639,9 +660,16 @@ class RobotSupervisor(Node):
             self._publish_forward_override()
             return
 
-        if self.aruco_follow_enabled and self.aruco_detected:
+        if self.aruco_follow_enabled and self._aruco_control_active():
             self._cancel_all_motion()
-            self._publish_aruco_follow_cmd()
+            if self.aruco_distance_m <= self.aruco_stop_distance_m:
+                self._publish_stop()
+                return
+            if self.aruco_detected:
+                self._publish_aruco_follow_cmd()
+                return
+            # Hold control briefly when marker flickers to avoid SCT takeover oscillation.
+            self._publish_stop()
             return
 
         # If we’re in the middle of a true full_rotate, keep executing until complete.

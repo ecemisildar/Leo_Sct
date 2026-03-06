@@ -9,6 +9,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/string.hpp>
 
 #include <cv_bridge/cv_bridge.h>
@@ -19,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -33,6 +35,7 @@ public:
     zones_pub_ = this->create_publisher<std_msgs::msg::String>("detected_zones", 10);
     aruco_detected_pub_ = this->create_publisher<std_msgs::msg::Bool>("aruco_id1_detected", 10);
     aruco_direction_pub_ = this->create_publisher<std_msgs::msg::String>("aruco_id1_direction", 10);
+    aruco_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("aruco_id1_distance", 10);
 
     enter_thresh_ = this->declare_parameter<double>("enter_thresh", 0.80);
     exit_thresh_ = this->declare_parameter<double>("exit_thresh", 1.05);
@@ -145,6 +148,8 @@ private:
       RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000, "Empty/small depth image.");
       return;
     }
+    last_depth_ = depth.clone();
+    last_depth_time_ = now;
 
     ZoneStats zs = computeZoneStats(depth);
     std::string zone_now = determineZoneHysteresis(zs);
@@ -213,6 +218,9 @@ private:
 
     bool detected = false;
     std::string direction = "NONE";
+    float distance_m = std::numeric_limits<float>::quiet_NaN();
+    bool distance_valid = false;
+    cv::Point2f target_center(0.0f, 0.0f);
     for (size_t i = 0; i < ids.size(); ++i) {
       if (ids[i] != aruco_target_id_) {
         continue;
@@ -220,10 +228,14 @@ private:
       detected = true;
       if (i < corners.size() && !corners[i].empty()) {
         float cx = 0.0f;
+        float cy = 0.0f;
         for (const auto & p : corners[i]) {
           cx += p.x;
+          cy += p.y;
         }
         cx /= static_cast<float>(corners[i].size());
+        cy /= static_cast<float>(corners[i].size());
+        target_center = cv::Point2f(cx, cy);
         const float w = static_cast<float>(gray.cols);
         if (w > 1.0f) {
           const float norm = (cx / w) - 0.5f;
@@ -242,18 +254,53 @@ private:
       break;
     }
 
+    if (detected && !last_depth_.empty()) {
+      const auto now = this->get_clock()->now();
+      const double depth_age_ms = (now - last_depth_time_).seconds() * 1000.0;
+      if (depth_age_ms >= 0.0 && depth_age_ms <= 350.0) {
+        if (last_depth_.rows == gray.rows && last_depth_.cols == gray.cols) {
+          const int radius = 2;
+          const int cx = std::clamp(static_cast<int>(std::round(target_center.x)), 0, last_depth_.cols - 1);
+          const int cy = std::clamp(static_cast<int>(std::round(target_center.y)), 0, last_depth_.rows - 1);
+          const int x0 = std::max(0, cx - radius);
+          const int x1 = std::min(last_depth_.cols - 1, cx + radius);
+          const int y0 = std::max(0, cy - radius);
+          const int y1 = std::min(last_depth_.rows - 1, cy + radius);
+
+          float best = std::numeric_limits<float>::infinity();
+          for (int y = y0; y <= y1; ++y) {
+            const float * row = last_depth_.ptr<float>(y);
+            for (int x = x0; x <= x1; ++x) {
+              const float d = row[x];
+              if (std::isfinite(d) && d > static_cast<float>(min_depth_) && d < static_cast<float>(max_depth_)) {
+                best = std::min(best, d);
+              }
+            }
+          }
+          if (std::isfinite(best)) {
+            distance_m = best;
+            distance_valid = true;
+          }
+        }
+      }
+    }
+
     std_msgs::msg::Bool msg;
     msg.data = detected;
     aruco_detected_pub_->publish(msg);
     std_msgs::msg::String dir_msg;
     dir_msg.data = direction;
     aruco_direction_pub_->publish(dir_msg);
+    std_msgs::msg::Float32 dist_msg;
+    dist_msg.data = distance_valid ? distance_m : std::numeric_limits<float>::quiet_NaN();
+    aruco_distance_pub_->publish(dist_msg);
 
     RCLCPP_INFO_THROTTLE(
       this->get_logger(), *this->get_clock(), 500,
-      "Aruco detected=%s direction=%s",
+      "Aruco detected=%s direction=%s distance=%.3f",
       detected ? "true" : "false",
-      direction.c_str());
+      direction.c_str(),
+      distance_valid ? distance_m : -1.0f);
 
     if (aruco_debug_) {
       RCLCPP_INFO_THROTTLE(
@@ -459,6 +506,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr zones_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr aruco_detected_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr aruco_direction_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr aruco_distance_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
   rclcpp::Clock::SharedPtr clock_;
@@ -502,6 +550,8 @@ private:
   int aruco_dictionary_id_{cv::aruco::DICT_4X4_100};
   int aruco_target_id_{1};
   double aruco_center_tolerance_{0.15};
+  cv::Mat last_depth_;
+  rclcpp::Time last_depth_time_;
 
   std::string last_state_{"CLEAR"};
   std::string last_non_clear_zone_{"CORNER"};
