@@ -703,19 +703,25 @@ class RobotSupervisor(Node):
             return
 
         # Keep SCT obstacle-avoidance behavior active during ArUco tracking.
-        # Only suppress SCT's "random walk"/"move forward" when marker control is active.
+        # Bias toward marker-follow while preserving front-obstacle safety.
         if self.aruco_follow_enabled and self._aruco_control_active():
             if self.aruco_distance_m <= self.aruco_stop_distance_m:
                 ev_name = "EV_stop"
-            elif ev_name in {"EV_random_walk", "EV_move_forward"}:
-                if self.aruco_direction == "LEFT":
+            elif self.aruco_direction == "LEFT":
+                if ev_name in {"EV_random_walk", "EV_move_forward", "EV_full_rotate", "EV_stop"}:
                     ev_name = "EV_rotate_counterclockwise"
-                elif self.aruco_direction == "RIGHT":
+            elif self.aruco_direction == "RIGHT":
+                if ev_name in {"EV_random_walk", "EV_move_forward", "EV_full_rotate", "EV_stop"}:
                     ev_name = "EV_rotate_clockwise"
-                elif self.aruco_direction == "CENTER":
-                    ev_name = "EV_move_forward"
+            elif self.aruco_direction == "CENTER":
+                # Keep emergency obstacle behavior if front is blocked.
+                if "CORNER" in self.obstacle_zones:
+                    if ev_name in {"EV_random_walk", "EV_move_forward", "EV_full_rotate"}:
+                        ev_name = "EV_stop"
                 else:
-                    ev_name = "EV_stop"
+                    ev_name = "EV_move_forward"
+            elif ev_name in {"EV_random_walk", "EV_move_forward", "EV_full_rotate"}:
+                ev_name = "EV_stop"
 
         self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
