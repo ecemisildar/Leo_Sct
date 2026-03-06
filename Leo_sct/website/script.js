@@ -18,7 +18,6 @@ const TWIST_MSG_TYPE = "geometry_msgs/msg/Twist";
 const SET_BOOL_SRV_TYPE = "std_srvs/srv/SetBool";
 const MISSION_LABELS = {
   explore: "Explore",
-  find_marker: "Find Marker",
 };
 const ROBOT_COLOR_FALLBACKS = ["#7e57c2", "#2e7d32", "#c62828", "#1565c0"];
 const ROBOT_SQUARE_SYMBOLS = ["🟪", "🟩", "🟥", "🟦"];
@@ -454,9 +453,8 @@ function cmdVelTopic(robot) {
 }
 
 function missionServiceNames(missionPreset, enabled) {
-  if (missionPreset === "find_marker") return ["enable_supervisor_find_marker"];
   if (missionPreset === "explore") return ["enable_supervisor_explore"];
-  if (!enabled) return ["enable_supervisor_explore", "enable_supervisor_find_marker"];
+  if (!enabled) return ["enable_supervisor_explore"];
   return ["enable_supervisor_explore"];
 }
 

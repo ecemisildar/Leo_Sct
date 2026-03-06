@@ -108,7 +108,7 @@ class RobotSupervisor(Node):
         self.aruco_follow_enabled = True
         self.aruco_follow_linear_x = 0.3
         self.aruco_follow_angular_z = 0.6
-        self.aruco_stop_distance_m = 0.2
+        self.aruco_stop_distance_m = 0.5
         self.aruco_hold_timeout_s = 2.0
         self.override_mode = str(self.declare_parameter("override_mode", "auto").value).strip().lower()
         if self.override_mode not in {"auto", "stop", "forward"}:
