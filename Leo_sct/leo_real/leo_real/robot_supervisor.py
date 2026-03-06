@@ -478,13 +478,40 @@ class RobotSupervisor(Node):
         self.motion_until = 0.0
         self._publish_cmd(self.active_twist)
 
-    def _publish_aruco_follow_cmd(self):
+    def _publish_aruco_safe_cmd(self):
         twist = Twist()
-        if self.aruco_direction == "LEFT":
-            twist.angular.z = abs(self.aruco_follow_angular_z)
+        zones = set(self.obstacle_zones)
+
+        # Keep marker-follow takeover active at close range, but do not hand back to SCT.
+        if self.aruco_distance_m <= self.aruco_stop_distance_m:
+            self.active_event = None
+            self.active_twist = twist
+            self.motion_until = 0.0
+            self._publish_cmd(self.active_twist)
+            return
+
+        # Front obstacle: never drive forward. Try to keep rotating to center marker.
+        if "CORNER" in zones:
+            if self.aruco_direction == "LEFT":
+                twist.angular.z = abs(self.aruco_follow_angular_z)
+            elif self.aruco_direction == "RIGHT":
+                twist.angular.z = -abs(self.aruco_follow_angular_z)
+            else:
+                twist = Twist()
+        elif self.aruco_direction == "LEFT":
+            # If left side is blocked, do not rotate into obstacle.
+            if "LEFT" in zones:
+                twist.angular.z = -abs(self.aruco_follow_angular_z)
+            else:
+                twist.angular.z = abs(self.aruco_follow_angular_z)
         elif self.aruco_direction == "RIGHT":
-            twist.angular.z = -abs(self.aruco_follow_angular_z)
+            # If right side is blocked, do not rotate into obstacle.
+            if "RIGHT" in zones:
+                twist.angular.z = abs(self.aruco_follow_angular_z)
+            else:
+                twist.angular.z = -abs(self.aruco_follow_angular_z)
         elif self.aruco_direction == "CENTER":
+            # Move forward only when front is clear.
             twist.linear.x = max(0.0, self.aruco_follow_linear_x)
         else:
             # Detection true but direction unknown -> stop for safety.
@@ -660,6 +687,12 @@ class RobotSupervisor(Node):
             self._publish_forward_override()
             return
 
+        # Marker-follow takeover bypasses SCT event selection while active.
+        if self.aruco_follow_enabled and self._aruco_control_active():
+            self._cancel_all_motion()
+            self._publish_aruco_safe_cmd()
+            return
+
         # If we’re in the middle of a true full_rotate, keep executing until complete.
         if self.full_rotate_active:
             self._publish_cmd(self.active_twist)
@@ -701,27 +734,6 @@ class RobotSupervisor(Node):
         if ev_name is None:
             self._publish_stop()
             return
-
-        # Keep SCT obstacle-avoidance behavior active during ArUco tracking.
-        # Bias toward marker-follow while preserving front-obstacle safety.
-        if self.aruco_follow_enabled and self._aruco_control_active():
-            if self.aruco_distance_m <= self.aruco_stop_distance_m:
-                ev_name = "EV_stop"
-            elif self.aruco_direction == "LEFT":
-                if ev_name in {"EV_random_walk", "EV_move_forward", "EV_full_rotate", "EV_stop"}:
-                    ev_name = "EV_rotate_counterclockwise"
-            elif self.aruco_direction == "RIGHT":
-                if ev_name in {"EV_random_walk", "EV_move_forward", "EV_full_rotate", "EV_stop"}:
-                    ev_name = "EV_rotate_clockwise"
-            elif self.aruco_direction == "CENTER":
-                # Keep emergency obstacle behavior if front is blocked.
-                if "CORNER" in self.obstacle_zones:
-                    if ev_name in {"EV_random_walk", "EV_move_forward", "EV_full_rotate"}:
-                        ev_name = "EV_stop"
-                else:
-                    ev_name = "EV_move_forward"
-            elif ev_name in {"EV_random_walk", "EV_move_forward", "EV_full_rotate"}:
-                ev_name = "EV_stop"
 
         self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
