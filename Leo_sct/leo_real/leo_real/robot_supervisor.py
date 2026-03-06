@@ -660,18 +660,6 @@ class RobotSupervisor(Node):
             self._publish_forward_override()
             return
 
-        if self.aruco_follow_enabled and self._aruco_control_active():
-            self._cancel_all_motion()
-            if self.aruco_distance_m <= self.aruco_stop_distance_m:
-                self._publish_stop()
-                return
-            if self.aruco_detected:
-                self._publish_aruco_follow_cmd()
-                return
-            # Hold control briefly when marker flickers to avoid SCT takeover oscillation.
-            self._publish_stop()
-            return
-
         # If we’re in the middle of a true full_rotate, keep executing until complete.
         if self.full_rotate_active:
             self._publish_cmd(self.active_twist)
@@ -713,6 +701,21 @@ class RobotSupervisor(Node):
         if ev_name is None:
             self._publish_stop()
             return
+
+        # Keep SCT obstacle-avoidance behavior active during ArUco tracking.
+        # Only suppress SCT's "random walk"/"move forward" when marker control is active.
+        if self.aruco_follow_enabled and self._aruco_control_active():
+            if self.aruco_distance_m <= self.aruco_stop_distance_m:
+                ev_name = "EV_stop"
+            elif ev_name in {"EV_random_walk", "EV_move_forward"}:
+                if self.aruco_direction == "LEFT":
+                    ev_name = "EV_rotate_counterclockwise"
+                elif self.aruco_direction == "RIGHT":
+                    ev_name = "EV_rotate_clockwise"
+                elif self.aruco_direction == "CENTER":
+                    ev_name = "EV_move_forward"
+                else:
+                    ev_name = "EV_stop"
 
         self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
