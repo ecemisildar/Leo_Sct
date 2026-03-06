@@ -108,7 +108,7 @@ class RobotSupervisor(Node):
         self.aruco_follow_enabled = True
         self.aruco_follow_linear_x = 0.3
         self.aruco_follow_angular_z = 0.6
-        self.aruco_stop_distance_m = 0.5
+        self.aruco_stop_distance_m = 0.3
         self.aruco_hold_timeout_s = 2.0
         self.override_mode = str(self.declare_parameter("override_mode", "auto").value).strip().lower()
         if self.override_mode not in {"auto", "stop", "forward"}:
@@ -532,16 +532,16 @@ class RobotSupervisor(Node):
             else:
                 twist.angular.z = -abs(self.aruco_follow_angular_z)
         elif direction == "CENTER":
-            # Move forward only when all obstacle zones are clear.
-            # If a side is blocked, bias rotation away from that side.
+            # Keep forward tracking when marker is centered.
+            # Side obstacles only reduce speed; front obstacle (CORNER) is still
+            # handled above and blocks forward motion.
+            base = max(0.0, self.aruco_follow_linear_x)
             if "LEFT" in zones and "RIGHT" in zones:
-                twist = Twist()
-            elif "LEFT" in zones:
-                twist.angular.z = -abs(self.aruco_follow_angular_z)
-            elif "RIGHT" in zones:
-                twist.angular.z = abs(self.aruco_follow_angular_z)
+                twist.linear.x = min(base, 0.12)
+            elif "LEFT" in zones or "RIGHT" in zones:
+                twist.linear.x = min(base, 0.18)
             else:
-                twist.linear.x = max(0.0, self.aruco_follow_linear_x)
+                twist.linear.x = base
         else:
             # Detection true but direction unknown -> stop for safety.
             twist = Twist()
