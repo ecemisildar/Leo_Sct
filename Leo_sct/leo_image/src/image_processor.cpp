@@ -37,9 +37,9 @@ public:
     aruco_direction_pub_ = this->create_publisher<std_msgs::msg::String>("aruco_id1_direction", 10);
     aruco_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("aruco_id1_distance", 10);
 
-    enter_thresh_ = this->declare_parameter<double>("enter_thresh", 0.80);
-    exit_thresh_ = this->declare_parameter<double>("exit_thresh", 1.05);
-    emergency_thresh_ = this->declare_parameter<double>("emergency_thresh", 0.45);
+    enter_thresh_ = this->declare_parameter<double>("enter_thresh", 0.60);
+    exit_thresh_ = this->declare_parameter<double>("exit_thresh", 0.80);
+    emergency_thresh_ = this->declare_parameter<double>("emergency_thresh", 0.30);
     side_enter_thresh_ = this->declare_parameter<double>("side_enter_thresh", enter_thresh_);
     side_exit_thresh_ = this->declare_parameter<double>("side_exit_thresh", exit_thresh_);
     left_enter_thresh_ = this->declare_parameter<double>("left_enter_thresh", side_enter_thresh_);
@@ -514,15 +514,15 @@ private:
   cv::Ptr<cv::aruco::Dictionary> aruco_dict_;
   cv::Ptr<cv::aruco::DetectorParameters> aruco_params_;
 
-  double enter_thresh_{0.80};
-  double exit_thresh_{1.05};
-  double emergency_thresh_{0.45};
-  double side_enter_thresh_{0.80};
-  double side_exit_thresh_{1.05};
-  double left_enter_thresh_{0.80};
-  double right_enter_thresh_{0.80};
-  double left_exit_thresh_{1.05};
-  double right_exit_thresh_{1.05};
+  double enter_thresh_{0.60};
+  double exit_thresh_{0.80};
+  double emergency_thresh_{0.30};
+  double side_enter_thresh_{0.60};
+  double side_exit_thresh_{0.80};
+  double left_enter_thresh_{0.60};
+  double right_enter_thresh_{0.60};
+  double left_exit_thresh_{0.80};
+  double right_exit_thresh_{0.80};
 
   double min_depth_{0.08};
   double max_depth_{10.0};
