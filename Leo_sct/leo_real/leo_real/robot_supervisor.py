@@ -308,7 +308,14 @@ class RobotSupervisor(Node):
         if self.static_mode:
             self.cmd_pub.publish(Twist())
             return
-        self.cmd_pub.publish(twist)
+        safe_twist = Twist()
+        safe_twist.linear.x = max(0.0, float(twist.linear.x))
+        safe_twist.linear.y = float(twist.linear.y)
+        safe_twist.linear.z = float(twist.linear.z)
+        safe_twist.angular.x = float(twist.angular.x)
+        safe_twist.angular.y = float(twist.angular.y)
+        safe_twist.angular.z = float(twist.angular.z)
+        self.cmd_pub.publish(safe_twist)
 
     # -------------------------------
     # Subscriptions
