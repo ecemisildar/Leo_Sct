@@ -168,7 +168,7 @@ function parseSessionResponse(payload) {
   const leaseSeconds = Number(payload?.lease_timeout_seconds);
 
   state.session.localEmergency = Boolean(payload?.local_emergency);
-  state.session.expired = Boolean(payload?.expired);
+  state.session.expired = false;
   state.session.source = "server";
 
   state.control.leaseTimeoutMs = Number.isFinite(leaseSeconds) && leaseSeconds > 0
@@ -179,9 +179,7 @@ function parseSessionResponse(payload) {
     Array.isArray(payload?.owned_robot_ids) ? payload.owned_robot_ids.map((x) => String(x)) : []
   );
 
-  if (!state.session.localEmergency && state.control.emergencyActive) {
-    state.session.expired = true;
-  }
+  // Do not force UI/session lockout on refresh.
 }
 
 async function refreshSessionPolicy(renew = false) {
