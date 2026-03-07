@@ -30,3 +30,12 @@ image_processor:
     hold_ms: 250
     clear_skip: 1
     safe_frames_required: 5
+
+    # ArUco tracking tuning
+    aruco_enabled: true
+    aruco_debug: false
+    rgb_topic: "camera/camera/color/image_raw"
+    aruco_dictionary_id: 1  # DICT_4X4_100
+    aruco_target_id: 1
+    # Wider center band reduces LEFT/RIGHT flicker and makes shepherding easier.
+    aruco_center_tolerance: 0.22

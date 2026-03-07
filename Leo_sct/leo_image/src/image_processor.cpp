@@ -64,7 +64,14 @@ public:
     clear_skip_ = this->declare_parameter<int>("clear_skip", 3);
     safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 5);
 
-    // ArUco is hardcoded: DICT_4X4_100, target id=1, RGB topic camera/camera/color/image_raw.
+    aruco_enabled_ = this->declare_parameter<bool>("aruco_enabled", aruco_enabled_);
+    aruco_debug_ = this->declare_parameter<bool>("aruco_debug", aruco_debug_);
+    rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", rgb_topic_);
+    aruco_dictionary_id_ = this->declare_parameter<int>("aruco_dictionary_id", aruco_dictionary_id_);
+    aruco_target_id_ = this->declare_parameter<int>("aruco_target_id", aruco_target_id_);
+    aruco_center_tolerance_ = this->declare_parameter<double>("aruco_center_tolerance", aruco_center_tolerance_);
+
+    // ArUco defaults: DICT_4X4_100, target id=1, RGB topic camera/camera/color/image_raw.
     aruco_dict_ = cv::aruco::getPredefinedDictionary(aruco_dictionary_id_);
     aruco_params_ = cv::aruco::DetectorParameters::create();
 
