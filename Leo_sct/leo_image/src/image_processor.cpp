@@ -5,6 +5,7 @@
 // - std_msgs/String on "detected_zones" with one of: LEFT, RIGHT, CORNER, CLEAR
 // - std_msgs/Bool on "aruco_id1_detected" (true when target ArUco is detected)
 // - std_msgs/String on "aruco_id1_direction" with LEFT/CENTER/RIGHT/NONE
+// - std_msgs/Float32 on "aruco_id1_offset" with normalized center error in [-0.5, 0.5]
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -36,6 +37,7 @@ public:
     aruco_detected_pub_ = this->create_publisher<std_msgs::msg::Bool>("aruco_id1_detected", 10);
     aruco_direction_pub_ = this->create_publisher<std_msgs::msg::String>("aruco_id1_direction", 10);
     aruco_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("aruco_id1_distance", 10);
+    aruco_offset_pub_ = this->create_publisher<std_msgs::msg::Float32>("aruco_id1_offset", 10);
 
     enter_thresh_ = this->declare_parameter<double>("enter_thresh", 0.60);
     exit_thresh_ = this->declare_parameter<double>("exit_thresh", 0.80);
@@ -225,6 +227,7 @@ private:
 
     bool detected = false;
     std::string direction = "NONE";
+    float marker_offset = std::numeric_limits<float>::quiet_NaN();
     float distance_m = std::numeric_limits<float>::quiet_NaN();
     bool distance_valid = false;
     cv::Point2f target_center(0.0f, 0.0f);
@@ -246,6 +249,7 @@ private:
         const float w = static_cast<float>(gray.cols);
         if (w > 1.0f) {
           const float norm = (cx / w) - 0.5f;
+          marker_offset = norm;
           const float tol = static_cast<float>(std::clamp(aruco_center_tolerance_, 0.01, 0.45));
           if (norm < -tol) {
             direction = "LEFT";
@@ -301,12 +305,16 @@ private:
     std_msgs::msg::Float32 dist_msg;
     dist_msg.data = distance_valid ? distance_m : std::numeric_limits<float>::quiet_NaN();
     aruco_distance_pub_->publish(dist_msg);
+    std_msgs::msg::Float32 offset_msg;
+    offset_msg.data = marker_offset;
+    aruco_offset_pub_->publish(offset_msg);
 
     RCLCPP_INFO_THROTTLE(
       this->get_logger(), *this->get_clock(), 500,
-      "Aruco detected=%s direction=%s distance=%.3f",
+      "Aruco detected=%s direction=%s offset=%.3f distance=%.3f",
       detected ? "true" : "false",
       direction.c_str(),
+      std::isfinite(marker_offset) ? marker_offset : -9.0f,
       distance_valid ? distance_m : -1.0f);
 
     if (aruco_debug_) {
@@ -514,6 +522,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr aruco_detected_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr aruco_direction_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr aruco_distance_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr aruco_offset_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
   rclcpp::Clock::SharedPtr clock_;

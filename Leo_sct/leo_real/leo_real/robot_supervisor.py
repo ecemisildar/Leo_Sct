@@ -114,8 +114,14 @@ class RobotSupervisor(Node):
             self.declare_parameter("aruco_follow_turn_forward_x", 0.10).value
         )
         self.aruco_follow_angular_z = float(self.declare_parameter("aruco_follow_angular_z", 0.45).value)
+        self.aruco_steer_kp = float(self.declare_parameter("aruco_steer_kp", 2.2).value)
+        self.aruco_offset_deadband = float(self.declare_parameter("aruco_offset_deadband", 0.04).value)
+        self.aruco_offset_hold_s = float(self.declare_parameter("aruco_offset_hold_s", 0.45).value)
+        self.aruco_alignment_slowdown_abs_error = float(
+            self.declare_parameter("aruco_alignment_slowdown_abs_error", 0.30).value
+        )
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.32).value)
-        self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.33).value)
+        self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.2).value)
         self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
         self.aruco_block_forward_on_obstacle = bool(
             self.declare_parameter("aruco_block_forward_on_obstacle", True).value
@@ -150,6 +156,9 @@ class RobotSupervisor(Node):
         self.aruco_direction = "NONE"
         self.aruco_last_valid_direction = "NONE"
         self.last_aruco_direction_time = 0.0
+        self.aruco_offset = float("nan")
+        self.aruco_last_valid_offset = 0.0
+        self.last_aruco_offset_time = 0.0
         self.aruco_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
         self.aruco_takeover_until = 0.0
@@ -182,6 +191,7 @@ class RobotSupervisor(Node):
         self.sub_aruco_detected = self.create_subscription(Bool, "aruco_id1_detected", self.aruco_detected_callback, 10)
         self.sub_aruco_direction = self.create_subscription(String, "aruco_id1_direction", self.aruco_direction_callback, 10)
         self.sub_aruco_distance = self.create_subscription(Float32, "aruco_id1_distance", self.aruco_distance_callback, 10)
+        self.sub_aruco_offset = self.create_subscription(Float32, "aruco_id1_offset", self.aruco_offset_callback, 10)
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
 
         # -------------------------------
@@ -389,12 +399,34 @@ class RobotSupervisor(Node):
                 return self.aruco_last_valid_direction
         return "NONE"
 
+    def _effective_aruco_offset(self) -> float:
+        if math.isfinite(self.aruco_offset):
+            return self.aruco_offset
+        if self.last_aruco_offset_time > 0.0:
+            if (time.time() - self.last_aruco_offset_time) <= self.aruco_offset_hold_s:
+                return self.aruco_last_valid_offset
+        return float("nan")
+
     def aruco_distance_callback(self, msg: Float32):
         d = float(msg.data)
         if math.isfinite(d):
             self.aruco_distance_m = d
         else:
             self.aruco_distance_m = float("inf")
+
+    def aruco_offset_callback(self, msg: Float32):
+        now = time.time()
+        off = float(msg.data)
+        if math.isfinite(off):
+            self.aruco_offset = max(-0.5, min(0.5, off))
+            self.aruco_last_valid_offset = self.aruco_offset
+            self.last_aruco_offset_time = now
+            self.aruco_takeover_until = max(
+                self.aruco_takeover_until,
+                now + max(0.0, self.aruco_takeover_hold_s),
+            )
+        else:
+            self.aruco_offset = float("nan")
 
     # -------------------------------
     # SCT input check functions (uncontrollables)
@@ -555,12 +587,20 @@ class RobotSupervisor(Node):
         twist = Twist()
         zones = set(self.obstacle_zones)
         direction = self._effective_aruco_direction()
+        offset = self._effective_aruco_offset()
         turn = abs(self.aruco_follow_angular_z)
         search_turn = abs(self.aruco_search_angular_z)
         turn_fwd = max(0.0, self.aruco_follow_turn_forward_x)
         side_blocked = ("LEFT" in zones) or ("RIGHT" in zones)
         if self.aruco_block_forward_on_obstacle and side_blocked:
             turn_fwd = 0.0
+        deadband = max(0.0, self.aruco_offset_deadband)
+        align_err = max(0.05, self.aruco_alignment_slowdown_abs_error)
+
+        steer = 0.0
+        if math.isfinite(offset):
+            steer = max(-turn, min(turn, -self.aruco_steer_kp * offset))
+        has_center_error = math.isfinite(offset) and abs(offset) > deadband
 
         # Keep marker-follow takeover active at close range, but do not hand back to SCT.
         if self.aruco_distance_m <= self.aruco_stop_distance_m:
@@ -572,7 +612,9 @@ class RobotSupervisor(Node):
 
         # Front obstacle: never drive forward. Try to keep rotating to center marker.
         if "CORNER" in zones:
-            if direction == "LEFT":
+            if math.isfinite(offset):
+                twist.angular.z = steer
+            elif direction == "LEFT":
                 twist.angular.z = turn
             elif direction == "RIGHT":
                 twist.angular.z = -turn
@@ -583,6 +625,19 @@ class RobotSupervisor(Node):
             else:
                 spin_sign = 1.0 if self.aruco_last_valid_direction != "RIGHT" else -1.0
                 twist.angular.z = spin_sign * search_turn
+        elif math.isfinite(offset):
+            speed = self._aruco_forward_speed(zones)
+            align_scale = max(0.0, 1.0 - (abs(offset) / align_err))
+            speed *= align_scale
+            if has_center_error:
+                twist.angular.z = steer
+                twist.linear.x = min(turn_fwd, speed)
+            else:
+                twist.linear.x = speed
+            if "LEFT" in zones and "RIGHT" not in zones:
+                twist.angular.z = -0.5 * turn
+            elif "RIGHT" in zones and "LEFT" not in zones:
+                twist.angular.z = 0.5 * turn
         elif direction == "LEFT":
             # If left side is blocked, do not rotate into obstacle.
             if "LEFT" in zones:
