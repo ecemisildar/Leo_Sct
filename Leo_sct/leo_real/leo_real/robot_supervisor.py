@@ -95,8 +95,10 @@ class RobotSupervisor(Node):
 
 
 
-        # Throttle zone updates to match supervisor cadence
-        self.zone_update_min_dt = self.supervisor_period
+        # Zone update throttle. Keep low for fast reaction while marker following.
+        self.zone_update_min_dt = float(
+            self.declare_parameter("zone_update_min_dt", 0.1).value
+        )
 
         # Random seed (per-robot namespace)
         self.ns = self.get_namespace().strip("/") or "root"
@@ -115,7 +117,13 @@ class RobotSupervisor(Node):
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.32).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.33).value)
         self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
+        self.aruco_block_forward_on_obstacle = bool(
+            self.declare_parameter("aruco_block_forward_on_obstacle", True).value
+        )
         self.aruco_seen_timeout_s = float(self.declare_parameter("aruco_seen_timeout_s", 1.2).value)
+        self.aruco_takeover_hold_s = float(
+            self.declare_parameter("aruco_takeover_hold_s", 2.5).value
+        )
         self.aruco_direction_hold_s = float(self.declare_parameter("aruco_direction_hold_s", 0.6).value)
         self.override_mode = str(self.declare_parameter("override_mode", "auto").value).strip().lower()
         if self.override_mode not in {"auto", "stop", "forward"}:
@@ -144,6 +152,7 @@ class RobotSupervisor(Node):
         self.last_aruco_direction_time = 0.0
         self.aruco_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
+        self.aruco_takeover_until = 0.0
 
         # Odom / yaw tracking for full-rotate
         self.have_odom = False
@@ -349,7 +358,12 @@ class RobotSupervisor(Node):
     def aruco_detected_callback(self, msg: Bool):
         self.aruco_detected = bool(msg.data)
         if self.aruco_detected:
-            self.last_aruco_seen_time = time.time()
+            now = time.time()
+            self.last_aruco_seen_time = now
+            self.aruco_takeover_until = max(
+                self.aruco_takeover_until,
+                now + max(0.0, self.aruco_takeover_hold_s),
+            )
 
     def aruco_direction_callback(self, msg: String):
         now = time.time()
@@ -359,6 +373,10 @@ class RobotSupervisor(Node):
             if direction in {"LEFT", "CENTER", "RIGHT"}:
                 self.aruco_last_valid_direction = direction
                 self.last_aruco_direction_time = now
+                self.aruco_takeover_until = max(
+                    self.aruco_takeover_until,
+                    now + max(0.0, self.aruco_takeover_hold_s),
+                )
         else:
             self.aruco_direction = "NONE"
 
@@ -506,6 +524,11 @@ class RobotSupervisor(Node):
         self._publish_cmd(self.active_twist)
 
     def _aruco_forward_speed(self, zones: set) -> float:
+        if "CORNER" in zones:
+            return 0.0
+        if self.aruco_block_forward_on_obstacle and ("LEFT" in zones or "RIGHT" in zones):
+            return 0.0
+
         base = max(0.0, self.aruco_follow_linear_x)
         minimum = min(base, max(0.0, self.aruco_follow_linear_min_x))
         slowdown = max(self.aruco_stop_distance_m + 1e-3, self.aruco_slowdown_distance_m)
@@ -535,6 +558,9 @@ class RobotSupervisor(Node):
         turn = abs(self.aruco_follow_angular_z)
         search_turn = abs(self.aruco_search_angular_z)
         turn_fwd = max(0.0, self.aruco_follow_turn_forward_x)
+        side_blocked = ("LEFT" in zones) or ("RIGHT" in zones)
+        if self.aruco_block_forward_on_obstacle and side_blocked:
+            turn_fwd = 0.0
 
         # Keep marker-follow takeover active at close range, but do not hand back to SCT.
         if self.aruco_distance_m <= self.aruco_stop_distance_m:
@@ -591,11 +617,14 @@ class RobotSupervisor(Node):
         self._publish_cmd(self.active_twist)
 
     def _aruco_control_active(self) -> bool:
+        now = time.time()
         if self.aruco_detected:
+            return True
+        if now <= self.aruco_takeover_until:
             return True
         if self.last_aruco_seen_time <= 0.0:
             return False
-        return (time.time() - self.last_aruco_seen_time) <= self.aruco_seen_timeout_s
+        return (now - self.last_aruco_seen_time) <= self.aruco_seen_timeout_s
 
     def _cancel_all_motion(self):
         self.active_event = None
