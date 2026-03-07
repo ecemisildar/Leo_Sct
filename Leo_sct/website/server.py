@@ -22,7 +22,6 @@ except Exception:
     qrcode = None
 
 
-SESSION_TIMEOUT_SECONDS = 5 * 60
 SESSION_COOKIE = "leo_session"
 LEASE_TIMEOUT_SECONDS = 12
 WEB_ROOT = Path(__file__).resolve().parent
@@ -31,7 +30,6 @@ WEB_ROOT = Path(__file__).resolve().parent
 @dataclass
 class SessionInfo:
     created_at: float
-    expires_at: Optional[float]
     local_emergency: bool
 
 
@@ -153,23 +151,10 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
             "HttpOnly",
             "SameSite=Lax",
         ]
-        if session.expires_at is not None:
-            parts.append(f"Max-Age={SESSION_TIMEOUT_SECONDS}")
         self.send_header("Set-Cookie", "; ".join(parts))
-
-    def _is_session_expired(self, session: SessionInfo, now: float) -> bool:
-        return session.expires_at is not None and now >= session.expires_at
 
     def _prune_expired(self):
         now = time.time()
-        expired_sessions = [
-            sid
-            for sid, info in SESSIONS.items()
-            if info.expires_at is not None and now > (info.expires_at + 60.0)
-        ]
-        for sid in expired_sessions:
-            SESSIONS.pop(sid, None)
-
         expired_leases = [
             robot_id
             for robot_id, lease in ROBOT_LEASES.items()
@@ -189,11 +174,9 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
         session = SESSIONS.get(sid) if sid else None
 
         is_new = False
-        expired = session is not None and self._is_session_expired(session, now)
-        if force_new or session is None or session.local_emergency != local or expired:
+        if force_new or session is None or session.local_emergency != local:
             sid = secrets.token_urlsafe(18)
-            expires_at = None if local else now + SESSION_TIMEOUT_SECONDS
-            session = SessionInfo(created_at=now, expires_at=expires_at, local_emergency=local)
+            session = SessionInfo(created_at=now, local_emergency=local)
             SESSIONS[sid] = session
             is_new = True
 
@@ -204,9 +187,6 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
         with STATE_LOCK:
             sid, session, _ = self._get_or_create_session(force_new_requested=force_new)
             self._prune_expired()
-            expired = self._is_session_expired(session, time.time())
-            if expired:
-                return sid, session, True
             return sid, session, False
 
     def _active_latch_for_session(self, session: SessionInfo) -> bool:
@@ -214,7 +194,6 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
 
     def _session_payload(self, sid: str, session: SessionInfo) -> dict:
         now = time.time()
-        session_expired = self._is_session_expired(session, now)
         owned = sorted(
             robot_id
             for robot_id, lease in ROBOT_LEASES.items()
@@ -222,11 +201,9 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
         )
         return {
             "local_emergency": session.local_emergency,
-            "session_timeout_seconds": SESSION_TIMEOUT_SECONDS,
             "lease_timeout_seconds": LEASE_TIMEOUT_SECONDS,
-            "expires_at": iso_utc(session.expires_at),
             "created_at": iso_utc(session.created_at),
-            "expired": session_expired or self._active_latch_for_session(session),
+            "expired": self._active_latch_for_session(session),
             "emergency_active": bool(EMERGENCY_LATCH["active"]),
             "emergency_set_at": iso_utc(EMERGENCY_LATCH["set_at"]),
             "owned_robot_ids": owned,
@@ -296,9 +273,6 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
         with STATE_LOCK:
             sid, session, _ = self._get_or_create_session(False)
             self._prune_expired()
-            if self._is_session_expired(session, time.time()):
-                payload = self._session_payload(sid, session)
-                return sid, session, payload
             return sid, session, None
 
     def _handle_claim(self):
@@ -308,10 +282,7 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
             self._json_response(400, {"ok": False, "error": "missing_robot_id"})
             return
 
-        sid, session, expired_payload = self._require_active_session()
-        if expired_payload is not None:
-            self._json_response(403, {"ok": False, "error": "session_expired", "session": expired_payload}, sid=sid, session=session)
-            return
+        sid, session, _ = self._require_active_session()
 
         now = time.time()
         with STATE_LOCK:
@@ -352,10 +323,7 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
         if not isinstance(robot_ids, list):
             robot_ids = []
 
-        sid, session, expired_payload = self._require_active_session()
-        if expired_payload is not None:
-            self._json_response(403, {"ok": False, "error": "session_expired", "session": expired_payload}, sid=sid, session=session)
-            return
+        sid, session, _ = self._require_active_session()
 
         with STATE_LOCK:
             self._prune_expired()
@@ -378,10 +346,7 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
         if not isinstance(robot_ids, list):
             robot_ids = []
 
-        sid, session, expired_payload = self._require_active_session()
-        if expired_payload is not None:
-            self._json_response(403, {"ok": False, "error": "session_expired", "session": expired_payload}, sid=sid, session=session)
-            return
+        sid, session, _ = self._require_active_session()
 
         now = time.time()
         refreshed = []
@@ -402,10 +367,7 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
         self._json_response(200, {"ok": True, "refreshed": refreshed, "session": payload}, sid=sid, session=session)
 
     def _handle_emergency_activate(self):
-        sid, session, expired_payload = self._require_active_session()
-        if expired_payload is not None:
-            self._json_response(403, {"ok": False, "error": "session_expired", "session": expired_payload}, sid=sid, session=session)
-            return
+        sid, session, _ = self._require_active_session()
 
         if not session.local_emergency:
             self._json_response(403, {"ok": False, "error": "local_only"}, sid=sid, session=session)
@@ -420,10 +382,7 @@ class LeoControlHandler(SimpleHTTPRequestHandler):
         self._json_response(200, {"ok": True, "session": payload}, sid=sid, session=session)
 
     def _handle_emergency_clear(self):
-        sid, session, expired_payload = self._require_active_session()
-        if expired_payload is not None:
-            self._json_response(403, {"ok": False, "error": "session_expired", "session": expired_payload}, sid=sid, session=session)
-            return
+        sid, session, _ = self._require_active_session()
 
         if not session.local_emergency:
             self._json_response(403, {"ok": False, "error": "local_only"}, sid=sid, session=session)

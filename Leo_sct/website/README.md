@@ -27,8 +27,8 @@ http://localhost:8080
 
 Session behavior:
 
-- Phone/LAN clients get a 5-minute session and are locked out when it expires.
-- Local loopback (`localhost` / `127.0.0.1`) has no timeout and keeps `Emergency Stop All`.
+- Phone/LAN clients stay active without a session timeout.
+- Local loopback (`localhost` / `127.0.0.1`) keeps `Emergency Stop All`.
 - Only one web client can control each robot at a time (server-side lease lock).
 - Local `Emergency Stop All` activates a global emergency latch: remote clients are force-blocked.
 

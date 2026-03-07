@@ -9,7 +9,6 @@ const CONTROL_RELEASE_ENDPOINT = "/api/control/release";
 const CONTROL_HEARTBEAT_ENDPOINT = "/api/control/heartbeat";
 const EMERGENCY_ACTIVATE_ENDPOINT = "/api/emergency/activate";
 
-const DEFAULT_REMOTE_SESSION_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_LEASE_TIMEOUT_MS = 12 * 1000;
 const SESSION_POLL_MS = 2000;
 const LEASE_HEARTBEAT_MS = 4000;
@@ -33,8 +32,6 @@ const state = {
   autonomousMissionPreset: "explore",
   session: {
     localEmergency: false,
-    timeoutMs: DEFAULT_REMOTE_SESSION_TIMEOUT_MS,
-    expiresAtMs: null,
     expired: false,
     source: "unknown",
   },
@@ -65,8 +62,6 @@ const advertisedTopicsByRobot = new Map();
 const pendingServiceCalls = new Map();
 let activeManualCommand = null;
 let manualCommandTimer = null;
-let sessionTickerTimer = null;
-let sessionExpiryTimer = null;
 let sessionPollTimer = null;
 let leaseHeartbeatTimer = null;
 
@@ -77,28 +72,6 @@ function robotKey(robotId) {
 function isLoopbackHostname() {
   const host = window.location.hostname;
   return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
-}
-
-function formatCountdown(ms) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
-function isMobileViewport() {
-  return window.matchMedia("(max-width: 720px)").matches;
-}
-
-function clearSessionTimers() {
-  if (sessionTickerTimer) {
-    clearInterval(sessionTickerTimer);
-    sessionTickerTimer = null;
-  }
-  if (sessionExpiryTimer) {
-    clearTimeout(sessionExpiryTimer);
-    sessionExpiryTimer = null;
-  }
 }
 
 function clearControlTimers() {
@@ -118,15 +91,7 @@ function updateSessionStatus() {
     return;
   }
   if (state.session.expired) {
-    sessionStatus.textContent = "Session: expired";
-    return;
-  }
-  if (typeof state.session.expiresAtMs === "number") {
-    const remaining = state.session.expiresAtMs - Date.now();
-    const countdown = formatCountdown(remaining);
-    sessionStatus.textContent = isMobileViewport()
-      ? `Session ends in ${countdown}`
-      : `Session: ${countdown} left`;
+    sessionStatus.textContent = "Session: blocked";
     return;
   }
   sessionStatus.textContent = "Session: active";
@@ -161,7 +126,7 @@ function sessionAllowsControls() {
 
 function guardSession(actionLabel) {
   if (sessionAllowsControls()) return true;
-  appendConsoleLine(`[session] ${actionLabel} blocked: session expired.`);
+  appendConsoleLine(`[session] ${actionLabel} blocked: emergency stop active.`);
   return false;
 }
 
@@ -200,15 +165,9 @@ async function apiPost(url, body) {
 }
 
 function parseSessionResponse(payload) {
-  const timeoutSeconds = Number(payload?.session_timeout_seconds);
   const leaseSeconds = Number(payload?.lease_timeout_seconds);
-  const timeoutMs = Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
-    ? timeoutSeconds * 1000
-    : DEFAULT_REMOTE_SESSION_TIMEOUT_MS;
 
   state.session.localEmergency = Boolean(payload?.local_emergency);
-  state.session.timeoutMs = timeoutMs;
-  state.session.expiresAtMs = payload?.expires_at ? Date.parse(String(payload.expires_at)) : null;
   state.session.expired = Boolean(payload?.expired);
   state.session.source = "server";
 
@@ -219,18 +178,6 @@ function parseSessionResponse(payload) {
   state.control.leasedRobotIds = new Set(
     Array.isArray(payload?.owned_robot_ids) ? payload.owned_robot_ids.map((x) => String(x)) : []
   );
-
-  if (typeof state.session.expiresAtMs === "number" && Number.isNaN(state.session.expiresAtMs)) {
-    state.session.expiresAtMs = Date.now() + state.session.timeoutMs;
-  }
-
-  if (!state.session.localEmergency && !state.session.expiresAtMs && !state.session.expired) {
-    state.session.expiresAtMs = Date.now() + state.session.timeoutMs;
-  }
-
-  if (!state.session.localEmergency && typeof state.session.expiresAtMs === "number") {
-    state.session.expired = state.session.expired || Date.now() >= state.session.expiresAtMs;
-  }
 
   if (!state.session.localEmergency && state.control.emergencyActive) {
     state.session.expired = true;
@@ -246,7 +193,6 @@ async function refreshSessionPolicy(renew = false) {
   const payload = await response.json();
   parseSessionResponse(payload);
   applySessionPolicyUI();
-  scheduleSessionTimeout();
 }
 
 async function loadSessionPolicy() {
@@ -257,26 +203,21 @@ async function loadSessionPolicy() {
     appendConsoleLine(
       state.session.localEmergency
         ? "[session] Local operator session active."
-        : "[session] Remote session active (5-minute timeout)."
+        : "[session] Remote session active."
     );
   } catch (error) {
     const localEmergency = isLoopbackHostname();
     state.session.localEmergency = localEmergency;
-    state.session.timeoutMs = DEFAULT_REMOTE_SESSION_TIMEOUT_MS;
-    state.session.expiresAtMs = localEmergency ? null : Date.now() + state.session.timeoutMs;
     state.session.expired = false;
     state.session.source = "browser_fallback";
     appendConsoleLine(
       `[session] Fallback policy (${localEmergency ? "local" : "remote"}) due to session API error: ${error.message}`
     );
     applySessionPolicyUI();
-    scheduleSessionTimeout();
   }
 
   if (state.session.expired) {
-    expireSession(state.control.emergencyActive
-      ? "Emergency stop activated by local operator."
-      : "5-minute session window ended.");
+    expireSession("Emergency stop activated by local operator.");
   }
 }
 
@@ -287,9 +228,7 @@ function startSessionPolling() {
     try {
       await refreshSessionPolicy(false);
       if (state.session.expired) {
-        expireSession(state.control.emergencyActive
-          ? "Emergency stop activated by local operator."
-          : "5-minute session window ended.");
+        expireSession("Emergency stop activated by local operator.");
       }
     } catch (error) {
       appendConsoleLine(`[session] poll failed: ${error.message}`);
@@ -306,12 +245,10 @@ function startLeaseHeartbeat() {
     const result = await apiPost(CONTROL_HEARTBEAT_ENDPOINT, { robot_ids: robotIds });
     if (!result.ok) {
       const err = result.payload?.error ?? `HTTP ${result.status}`;
-      if (err === "session_expired" || err === "emergency_active") {
+      if (err === "emergency_active") {
         const sessionPayload = result.payload?.session;
         if (sessionPayload) parseSessionResponse(sessionPayload);
-        expireSession(err === "emergency_active"
-          ? "Emergency stop activated by local operator."
-          : "5-minute session window ended.");
+        expireSession("Emergency stop activated by local operator.");
       }
       return;
     }
@@ -338,8 +275,6 @@ async function claimRobotLease(robotId, contextLabel) {
       appendConsoleLine(`[lock] ${robot?.name ?? `Robot ${robotId}`} is controlled by another client.`);
     } else if (err === "emergency_active") {
       expireSession("Emergency stop activated by local operator.");
-    } else if (err === "session_expired") {
-      expireSession("5-minute session window ended.");
     } else {
       appendConsoleLine(`[lock] Could not claim robot ${robotId} for ${contextLabel}: ${err}`);
     }
@@ -394,7 +329,6 @@ async function activateEmergencyLatch() {
 
 function expireSession(reason) {
   if (state.session.expired) return;
-  clearSessionTimers();
   clearControlTimers();
   stopManualCommand();
   disconnectRosBridges();
@@ -404,27 +338,6 @@ function expireSession(reason) {
   state.control.leasedRobotIds.clear();
   applySessionPolicyUI();
   appendConsoleLine(`[session] ${reason}`);
-}
-
-function scheduleSessionTimeout() {
-  clearSessionTimers();
-
-  if (state.session.localEmergency || state.session.expired || typeof state.session.expiresAtMs !== "number") {
-    updateSessionStatus();
-    return;
-  }
-
-  const remainingMs = state.session.expiresAtMs - Date.now();
-  if (remainingMs <= 0) {
-    expireSession("5-minute session window ended.");
-    return;
-  }
-
-  sessionTickerTimer = setInterval(updateSessionStatus, 1000);
-  sessionExpiryTimer = setTimeout(() => {
-    expireSession("5-minute session window ended.");
-  }, remainingMs);
-  updateSessionStatus();
 }
 
 function buildFallbackRobots() {
@@ -568,7 +481,7 @@ function updateConnectionStatus() {
 
 function sendRosMessage(robotId, payload) {
   if (!sessionAllowsControls()) {
-    return { ok: false, reason: "session_expired" };
+    return { ok: false, reason: "controls_blocked" };
   }
   const socket = rosSockets.get(robotId);
   if (!socket) {
