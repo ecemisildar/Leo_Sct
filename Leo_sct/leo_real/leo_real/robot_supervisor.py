@@ -633,6 +633,8 @@ class RobotSupervisor(Node):
         self._publish_cmd(self.active_twist)
 
     def _aruco_control_active(self) -> bool:
+        if self.aruco_goal_reached:
+            return True
         if self.aruco_detected:
             return True
         if self.last_aruco_seen_time <= 0.0:
@@ -641,7 +643,6 @@ class RobotSupervisor(Node):
         if not recent:
             # Allow future detections to restart ArUco mode cleanly.
             self.aruco_mode_latched = False
-            self.aruco_goal_reached = False
         return recent
 
     def _cancel_all_motion(self):
