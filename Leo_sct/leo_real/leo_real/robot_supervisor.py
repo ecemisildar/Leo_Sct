@@ -117,7 +117,7 @@ class RobotSupervisor(Node):
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.40).value)
         self.aruco_direction_hold_s = float(self.declare_parameter("aruco_direction_hold_s", 0.8).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.2).value)
-        self.aruco_stop_guard_m = float(self.declare_parameter("aruco_stop_guard_m", 0.08).value)
+        self.aruco_stop_guard_m = float(self.declare_parameter("aruco_stop_guard_m", 0.03).value)
         # self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
         self.aruco_corner_forward_x = float(self.declare_parameter("aruco_corner_forward_x", 0.2).value)
         self.aruco_corner_marker_vs_obstacle_margin_m = float(
@@ -556,16 +556,6 @@ class RobotSupervisor(Node):
             return min(speed, 0.16)
         return speed
 
-    def _effective_close_distance(self) -> float:
-        vals = []
-        if math.isfinite(self.aruco_distance_m):
-            vals.append(self.aruco_distance_m)
-        if math.isfinite(self.front_obstacle_distance_m):
-            vals.append(self.front_obstacle_distance_m)
-        if not vals:
-            return float("inf")
-        return min(vals)
-
     def _publish_aruco_safe_cmd(self):
         twist = Twist()
         zones = set(self.obstacle_zones)
@@ -577,10 +567,13 @@ class RobotSupervisor(Node):
         if self.aruco_block_forward_on_obstacle and side_blocked:
             turn_fwd = 0.0
 
-        # Hard stop guard near target. Use both marker-distance and front depth
-        # to avoid rotate loops when one signal flickers.
-        close_d = self._effective_close_distance()
-        if self.aruco_detected and close_d <= (self.aruco_stop_distance_m + max(0.0, self.aruco_stop_guard_m)):
+        # Hard stop guard near target based on marker distance only.
+        stop_acquire_d = self.aruco_stop_distance_m + max(0.0, self.aruco_stop_guard_m)
+        if (
+            self.aruco_detected
+            and math.isfinite(self.aruco_distance_m)
+            and self.aruco_distance_m <= stop_acquire_d
+        ):
             self.aruco_stop_latched = True
 
         if self.aruco_stop_latched:
