@@ -117,6 +117,7 @@ class RobotSupervisor(Node):
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.40).value)
         self.aruco_direction_hold_s = float(self.declare_parameter("aruco_direction_hold_s", 0.8).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.3).value)
+        self.aruco_stop_guard_m = float(self.declare_parameter("aruco_stop_guard_m", 0.08).value)
         # self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
         self.aruco_corner_forward_x = float(self.declare_parameter("aruco_corner_forward_x", 0.2).value)
         self.aruco_corner_marker_vs_obstacle_margin_m = float(
@@ -540,26 +541,30 @@ class RobotSupervisor(Node):
             return 0.0
 
         base = max(0.0, self.aruco_follow_linear_x)
-        minimum = min(base, max(0.0, self.aruco_follow_linear_min_x))
-        # slowdown = max(self.aruco_stop_distance_m + 1e-3, self.aruco_slowdown_distance_m)
         d = self.aruco_distance_m
 
-        # if math.isfinite(d):
-        #     if d <= self.aruco_stop_distance_m:
-        #         speed = 0.0
-        #     elif d >= slowdown:
-        #         speed = base
-        #     else:
-        #         ratio = (d - self.aruco_stop_distance_m) / max(1e-3, slowdown - self.aruco_stop_distance_m)
-        #         speed = minimum + (base - minimum) * max(0.0, min(1.0, ratio))
-        # else:
-        #     speed = max(minimum, 0.6 * base)
+        if math.isfinite(d) and d <= self.aruco_stop_distance_m:
+            speed = 0.0
+        elif math.isfinite(d):
+            speed = base
+        else:
+            speed = max(0.0, 0.7 * base)
 
         if "LEFT" in zones and "RIGHT" in zones:
             return min(speed, 0.10)
         if "LEFT" in zones or "RIGHT" in zones:
             return min(speed, 0.16)
         return speed
+
+    def _effective_close_distance(self) -> float:
+        vals = []
+        if math.isfinite(self.aruco_distance_m):
+            vals.append(self.aruco_distance_m)
+        if math.isfinite(self.front_obstacle_distance_m):
+            vals.append(self.front_obstacle_distance_m)
+        if not vals:
+            return float("inf")
+        return min(vals)
 
     def _publish_aruco_safe_cmd(self):
         twist = Twist()
@@ -572,12 +577,13 @@ class RobotSupervisor(Node):
         if self.aruco_block_forward_on_obstacle and side_blocked:
             turn_fwd = 0.0
 
-        # Wait at goal distance while marker is still visible.
-        if (
-            self.aruco_detected
-            and math.isfinite(self.aruco_distance_m)
-            and self.aruco_distance_m <= self.aruco_stop_distance_m
-        ):
+        # Hard stop guard near target. Use both marker-distance and front depth
+        # to avoid rotate loops when one signal flickers.
+        close_d = self._effective_close_distance()
+        if self.aruco_detected and close_d <= (self.aruco_stop_distance_m + max(0.0, self.aruco_stop_guard_m)):
+            self.aruco_stop_latched = True
+
+        if self.aruco_stop_latched:
             self.active_event = None
             self.active_twist = twist
             self.motion_until = 0.0
