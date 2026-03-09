@@ -75,10 +75,12 @@ public:
     aruco_dictionary_id_ = this->declare_parameter<int>("aruco_dictionary_id", aruco_dictionary_id_);
     aruco_target_id_ = this->declare_parameter<int>("aruco_target_id", aruco_target_id_);
     aruco_center_tolerance_ = this->declare_parameter<double>("aruco_center_tolerance", aruco_center_tolerance_);
+    aruco_seen_hold_ms_ = this->declare_parameter<int>("aruco_seen_hold_ms", aruco_seen_hold_ms_);
 
     // ArUco defaults: DICT_4X4_100, target id=1, RGB topic camera/camera/color/image_raw.
     aruco_dict_ = cv::aruco::getPredefinedDictionary(aruco_dictionary_id_);
     aruco_params_ = cv::aruco::DetectorParameters::create();
+    aruco_params_->cornerRefinementMethod = cv::aruco::CORNER_REFINE_SUBPIX;
 
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
@@ -300,6 +302,30 @@ private:
             distance_m = best;
             distance_valid = true;
           }
+        }
+      }
+    }
+
+    const auto now = this->get_clock()->now();
+    if (detected) {
+      last_aruco_seen_time_ = now;
+      aruco_seen_once_ = true;
+      if (direction != "NONE") {
+        last_aruco_direction_ = direction;
+      }
+      if (distance_valid) {
+        last_aruco_distance_m_ = distance_m;
+      }
+    } else if (aruco_seen_once_) {
+      const double age_ms = (now - last_aruco_seen_time_).seconds() * 1000.0;
+      if (age_ms >= 0.0 && age_ms <= static_cast<double>(aruco_seen_hold_ms_)) {
+        detected = true;
+        if (direction == "NONE" && last_aruco_direction_ != "NONE") {
+          direction = last_aruco_direction_;
+        }
+        if (!distance_valid && std::isfinite(last_aruco_distance_m_)) {
+          distance_m = last_aruco_distance_m_;
+          distance_valid = true;
         }
       }
     }
@@ -575,8 +601,13 @@ private:
   int aruco_dictionary_id_{cv::aruco::DICT_4X4_100};
   int aruco_target_id_{1};
   double aruco_center_tolerance_{0.15};
+  int aruco_seen_hold_ms_{800};
   cv::Mat last_depth_;
   rclcpp::Time last_depth_time_;
+  rclcpp::Time last_aruco_seen_time_;
+  bool aruco_seen_once_{false};
+  std::string last_aruco_direction_{"NONE"};
+  float last_aruco_distance_m_{std::numeric_limits<float>::quiet_NaN()};
 
   std::string last_state_{"CLEAR"};
   std::string last_non_clear_zone_{"CORNER"};

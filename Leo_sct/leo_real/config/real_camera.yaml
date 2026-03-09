@@ -37,5 +37,7 @@ image_processor:
     rgb_topic: "camera/camera/color/image_raw"
     aruco_dictionary_id: 1  # DICT_4X4_100
     aruco_target_id: 1
+    # Keep detection "true" briefly through occasional missed frames.
+    aruco_seen_hold_ms: 800
     # Wider center band reduces LEFT/RIGHT flicker and makes shepherding easier.
     aruco_center_tolerance: 0.22
