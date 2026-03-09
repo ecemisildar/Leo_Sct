@@ -117,7 +117,6 @@ class RobotSupervisor(Node):
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.40).value)
         self.aruco_direction_hold_s = float(self.declare_parameter("aruco_direction_hold_s", 0.8).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.2).value)
-        self.aruco_stop_guard_m = float(self.declare_parameter("aruco_stop_guard_m", 0.03).value)
         # self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
         self.aruco_corner_forward_x = float(self.declare_parameter("aruco_corner_forward_x", 0.2).value)
         self.aruco_corner_marker_vs_obstacle_margin_m = float(
@@ -158,8 +157,6 @@ class RobotSupervisor(Node):
         self.aruco_distance_m = float("inf")
         self.front_obstacle_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
-        self.aruco_mode_latched = False
-        self.aruco_goal_reached = False
 
         # Odom / yaw tracking for full-rotate
         self.have_odom = False
@@ -329,8 +326,6 @@ class RobotSupervisor(Node):
         self.stop_sent = False
         self._cancel_all_motion()
         if not self.enabled:
-            self.aruco_mode_latched = False
-            self.aruco_goal_reached = False
             self._publish_stop()
 
     def _publish_cmd(self, twist: Twist):
@@ -371,8 +366,6 @@ class RobotSupervisor(Node):
         self.aruco_detected = bool(msg.data)
         if self.aruco_detected:
             self.last_aruco_seen_time = time.time()
-            if self.aruco_latch_mode_on_detection:
-                self.aruco_mode_latched = True
 
     def aruco_direction_callback(self, msg: String):
         now = time.time()
@@ -567,16 +560,12 @@ class RobotSupervisor(Node):
         if self.aruco_block_forward_on_obstacle and side_blocked:
             turn_fwd = 0.0
 
-        # Hard stop guard near target based on marker distance only.
-        stop_acquire_d = self.aruco_stop_distance_m + max(0.0, self.aruco_stop_guard_m)
+        # Simple close stop: hold still while marker is detected and close enough.
         if (
             self.aruco_detected
             and math.isfinite(self.aruco_distance_m)
-            and self.aruco_distance_m <= stop_acquire_d
+            and self.aruco_distance_m <= self.aruco_stop_distance_m
         ):
-            self.aruco_stop_latched = True
-
-        if self.aruco_stop_latched:
             self.active_event = None
             self.active_twist = twist
             self.motion_until = 0.0
@@ -640,9 +629,6 @@ class RobotSupervisor(Node):
         if self.last_aruco_seen_time <= 0.0:
             return False
         recent = (time.time() - self.last_aruco_seen_time) <= self.aruco_seen_timeout_s
-        if not recent:
-            # Allow future detections to restart ArUco mode cleanly.
-            self.aruco_mode_latched = False
         return recent
 
     def _cancel_all_motion(self):
