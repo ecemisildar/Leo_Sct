@@ -116,7 +116,7 @@ class RobotSupervisor(Node):
         self.aruco_follow_angular_z = float(self.declare_parameter("aruco_follow_angular_z", 0.45).value)
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.40).value)
         self.aruco_direction_hold_s = float(self.declare_parameter("aruco_direction_hold_s", 0.8).value)
-        self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.3).value)
+        self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.2).value)
         self.aruco_stop_guard_m = float(self.declare_parameter("aruco_stop_guard_m", 0.08).value)
         # self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
         self.aruco_corner_forward_x = float(self.declare_parameter("aruco_corner_forward_x", 0.2).value)
