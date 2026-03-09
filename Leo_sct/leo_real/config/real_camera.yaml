@@ -2,9 +2,9 @@ image_processor:
   ros__parameters:
     # Depth-based obstacle detection tuning for RealSense
     # Conservative real-world profile: detect earlier, clear later.
-    enter_thresh: 0.60
-    exit_thresh: 0.80
-    emergency_thresh: 0.50
+    enter_thresh: 0.70
+    exit_thresh: 0.90
+    emergency_thresh: 0.60
     # Side ROIs: increased to react earlier to walls/objects on left/right.
     side_enter_thresh: 0.70
     side_exit_thresh: 0.95
@@ -38,7 +38,10 @@ image_processor:
     aruco_dictionary_id: 1  # DICT_4X4_100
     aruco_target_id: 1
     # Keep detection "true" briefly through occasional missed frames.
-    aruco_seen_hold_ms: 800
+    aruco_seen_hold_ms: 1500
+    aruco_missed_frames_threshold: 6
+    aruco_min_marker_perimeter_px: 80.0
+    aruco_center_tolerance: 0.18
     # Side-sensitive steering: classify LEFT/RIGHT earlier.
     aruco_center_tolerance: 0.16
     # Improve side-angle/small marker detection robustness.
