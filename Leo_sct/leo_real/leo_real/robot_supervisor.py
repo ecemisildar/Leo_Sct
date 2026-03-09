@@ -111,19 +111,13 @@ class RobotSupervisor(Node):
         self.aruco_follow_linear_x = float(self.declare_parameter("aruco_follow_linear_x", 0.35).value)
         self.aruco_follow_linear_min_x = float(self.declare_parameter("aruco_follow_linear_min_x", 0.14).value)
         self.aruco_follow_turn_forward_x = float(
-            self.declare_parameter("aruco_follow_turn_forward_x", 0.20).value
+            self.declare_parameter("aruco_follow_turn_forward_x", 0.30).value
         )
         self.aruco_follow_angular_z = float(self.declare_parameter("aruco_follow_angular_z", 0.45).value)
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.40).value)
         self.aruco_direction_hold_s = float(self.declare_parameter("aruco_direction_hold_s", 0.8).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.3).value)
-        self.aruco_stop_acquire_margin_m = float(
-            self.declare_parameter("aruco_stop_acquire_margin_m", 0.08).value
-        )
-        self.aruco_stop_hysteresis_m = float(
-            self.declare_parameter("aruco_stop_hysteresis_m", 0.04).value
-        )
-        self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
+        # self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
         self.aruco_corner_forward_x = float(self.declare_parameter("aruco_corner_forward_x", 0.2).value)
         self.aruco_corner_marker_vs_obstacle_margin_m = float(
             self.declare_parameter("aruco_corner_marker_vs_obstacle_margin_m", 0.03).value
@@ -165,7 +159,6 @@ class RobotSupervisor(Node):
         self.last_aruco_seen_time = 0.0
         self.aruco_mode_latched = False
         self.aruco_goal_reached = False
-        self.aruco_stop_latched = False
 
         # Odom / yaw tracking for full-rotate
         self.have_odom = False
@@ -337,7 +330,6 @@ class RobotSupervisor(Node):
         if not self.enabled:
             self.aruco_mode_latched = False
             self.aruco_goal_reached = False
-            self.aruco_stop_latched = False
             self._publish_stop()
 
     def _publish_cmd(self, twist: Twist):
@@ -403,7 +395,7 @@ class RobotSupervisor(Node):
     def aruco_distance_callback(self, msg: Float32):
         d = float(msg.data)
         if math.isfinite(d):
-            self.aruco_distance_m <= d
+            self.aruco_distance_m = d
         else:
             self.aruco_distance_m = float("inf")
 
@@ -549,19 +541,19 @@ class RobotSupervisor(Node):
 
         base = max(0.0, self.aruco_follow_linear_x)
         minimum = min(base, max(0.0, self.aruco_follow_linear_min_x))
-        slowdown = max(self.aruco_stop_distance_m + 1e-3, self.aruco_slowdown_distance_m)
+        # slowdown = max(self.aruco_stop_distance_m + 1e-3, self.aruco_slowdown_distance_m)
         d = self.aruco_distance_m
 
-        if math.isfinite(d):
-            if d <= self.aruco_stop_distance_m:
-                speed = 0.0
-            elif d >= slowdown:
-                speed = base
-            else:
-                ratio = (d - self.aruco_stop_distance_m) / max(1e-3, slowdown - self.aruco_stop_distance_m)
-                speed = minimum + (base - minimum) * max(0.0, min(1.0, ratio))
-        else:
-            speed = max(minimum, 0.6 * base)
+        # if math.isfinite(d):
+        #     if d <= self.aruco_stop_distance_m:
+        #         speed = 0.0
+        #     elif d >= slowdown:
+        #         speed = base
+        #     else:
+        #         ratio = (d - self.aruco_stop_distance_m) / max(1e-3, slowdown - self.aruco_stop_distance_m)
+        #         speed = minimum + (base - minimum) * max(0.0, min(1.0, ratio))
+        # else:
+        #     speed = max(minimum, 0.6 * base)
 
         if "LEFT" in zones and "RIGHT" in zones:
             return min(speed, 0.10)
@@ -580,17 +572,12 @@ class RobotSupervisor(Node):
         if self.aruco_block_forward_on_obstacle and side_blocked:
             turn_fwd = 0.0
 
-        # Stop-latch near goal distance to prevent rotate jitter near threshold.
-        # Acquire with small margin because depth may fluctuate frame-to-frame.
-        stop_acquire_d = self.aruco_stop_distance_m + max(0.0, self.aruco_stop_acquire_margin_m)
-        if self.aruco_detected:
-            marker_close = math.isfinite(self.aruco_distance_m) and (self.aruco_distance_m <= stop_acquire_d)
-            # Fallback when marker-distance sampling is noisy at close range.
-            front_close = math.isfinite(self.front_obstacle_distance_m) and (self.front_obstacle_distance_m <= stop_acquire_d)
-            if marker_close or front_close:
-                self.aruco_stop_latched = True
-
-        if self.aruco_stop_latched:
+        # Wait at goal distance while marker is still visible.
+        if (
+            self.aruco_detected
+            and math.isfinite(self.aruco_distance_m)
+            and self.aruco_distance_m <= self.aruco_stop_distance_m
+        ):
             self.active_event = None
             self.active_twist = twist
             self.motion_until = 0.0
@@ -657,7 +644,6 @@ class RobotSupervisor(Node):
         if not recent:
             # Allow future detections to restart ArUco mode cleanly.
             self.aruco_mode_latched = False
-            self.aruco_stop_latched = False
         return recent
 
     def _cancel_all_motion(self):
