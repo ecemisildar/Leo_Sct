@@ -122,6 +122,9 @@ class RobotSupervisor(Node):
         )
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.32).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.2).value)
+        self.aruco_stop_hysteresis_m = float(
+            self.declare_parameter("aruco_stop_hysteresis_m", 0.04).value
+        )
         self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
         self.aruco_front_override_distance_m = float(
             self.declare_parameter("aruco_front_override_distance_m", 0.2).value
@@ -165,6 +168,7 @@ class RobotSupervisor(Node):
         self.aruco_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
         self.aruco_takeover_until = 0.0
+        self.aruco_stop_latched = False
 
         # Odom / yaw tracking for full-rotate
         self.have_odom = False
@@ -605,8 +609,16 @@ class RobotSupervisor(Node):
             steer = max(-turn, min(turn, -self.aruco_steer_kp * offset))
         has_center_error = math.isfinite(offset) and abs(offset) > deadband
 
-        # Keep marker-follow takeover active at close range, but do not hand back to SCT.
-        if self.aruco_distance_m <= self.aruco_stop_distance_m:
+        # Keep marker-follow takeover active at close range with hysteresis,
+        # avoiding jittery rotate/move when depth fluctuates near stop threshold.
+        stop_release_distance = self.aruco_stop_distance_m + max(0.0, self.aruco_stop_hysteresis_m)
+        if math.isfinite(self.aruco_distance_m):
+            if self.aruco_distance_m <= self.aruco_stop_distance_m:
+                self.aruco_stop_latched = True
+            elif self.aruco_stop_latched and self.aruco_distance_m >= stop_release_distance:
+                self.aruco_stop_latched = False
+
+        if self.aruco_stop_latched:
             self.active_event = None
             self.active_twist = twist
             self.motion_until = 0.0
