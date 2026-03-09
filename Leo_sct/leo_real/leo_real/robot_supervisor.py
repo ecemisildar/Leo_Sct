@@ -115,6 +115,7 @@ class RobotSupervisor(Node):
         )
         self.aruco_follow_angular_z = float(self.declare_parameter("aruco_follow_angular_z", 0.45).value)
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.40).value)
+        self.aruco_direction_hold_s = float(self.declare_parameter("aruco_direction_hold_s", 0.8).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.2).value)
         self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
         self.aruco_corner_forward_x = float(self.declare_parameter("aruco_corner_forward_x", 0.2).value)
@@ -151,6 +152,8 @@ class RobotSupervisor(Node):
         self.last_zone_update = 0.0
         self.aruco_detected = False
         self.aruco_direction = "NONE"
+        self.aruco_last_valid_direction = "NONE"
+        self.last_aruco_direction_time = 0.0
         self.aruco_distance_m = float("inf")
         self.front_obstacle_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
@@ -371,11 +374,23 @@ class RobotSupervisor(Node):
                 self.aruco_mode_latched = True
 
     def aruco_direction_callback(self, msg: String):
+        now = time.time()
         direction = msg.data.strip().upper()
         if direction in {"LEFT", "CENTER", "RIGHT", "NONE"}:
             self.aruco_direction = direction
+            if direction in {"LEFT", "CENTER", "RIGHT"}:
+                self.aruco_last_valid_direction = direction
+                self.last_aruco_direction_time = now
         else:
             self.aruco_direction = "NONE"
+
+    def _effective_aruco_direction(self) -> str:
+        if self.aruco_direction in {"LEFT", "CENTER", "RIGHT"}:
+            return self.aruco_direction
+        if self.last_aruco_direction_time > 0.0:
+            if (time.time() - self.last_aruco_direction_time) <= self.aruco_direction_hold_s:
+                return self.aruco_last_valid_direction
+        return "NONE"
 
     def aruco_distance_callback(self, msg: Float32):
         d = float(msg.data)
@@ -549,7 +564,7 @@ class RobotSupervisor(Node):
     def _publish_aruco_safe_cmd(self):
         twist = Twist()
         zones = set(self.obstacle_zones)
-        direction = self.aruco_direction
+        direction = self._effective_aruco_direction()
         turn = abs(self.aruco_follow_angular_z)
         search_turn = abs(self.aruco_search_angular_z)
         turn_fwd = max(0.0, self.aruco_follow_turn_forward_x)
