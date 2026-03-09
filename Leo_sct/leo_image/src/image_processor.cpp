@@ -6,6 +6,7 @@
 // - std_msgs/Bool on "aruco_id1_detected" (true when target ArUco is detected)
 // - std_msgs/String on "aruco_id1_direction" with LEFT/CENTER/RIGHT/NONE
 // - std_msgs/Float32 on "aruco_id1_offset" with normalized center error in [-0.5, 0.5]
+// - std_msgs/Float32 on "front_obstacle_distance" with front ROI near distance in meters
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -38,6 +39,8 @@ public:
     aruco_direction_pub_ = this->create_publisher<std_msgs::msg::String>("aruco_id1_direction", 10);
     aruco_distance_pub_ = this->create_publisher<std_msgs::msg::Float32>("aruco_id1_distance", 10);
     aruco_offset_pub_ = this->create_publisher<std_msgs::msg::Float32>("aruco_id1_offset", 10);
+    front_obstacle_distance_pub_ =
+      this->create_publisher<std_msgs::msg::Float32>("front_obstacle_distance", 10);
 
     enter_thresh_ = this->declare_parameter<double>("enter_thresh", 0.60);
     exit_thresh_ = this->declare_parameter<double>("exit_thresh", 0.80);
@@ -162,6 +165,11 @@ private:
 
     ZoneStats zs = computeZoneStats(depth);
     std::string zone_now = determineZoneHysteresis(zs);
+
+    std_msgs::msg::Float32 front_msg;
+    front_msg.data =
+      (zs.front.p > 0.0f) ? zs.front.p : std::numeric_limits<float>::quiet_NaN();
+    front_obstacle_distance_pub_->publish(front_msg);
 
     if (zone_now != "CLEAR") {
       last_non_clear_zone_ = zone_now;
@@ -523,6 +531,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr aruco_direction_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr aruco_distance_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr aruco_offset_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr front_obstacle_distance_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
   rclcpp::Clock::SharedPtr clock_;

@@ -117,6 +117,10 @@ class RobotSupervisor(Node):
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.32).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.2).value)
         self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
+        self.aruco_corner_forward_x = float(self.declare_parameter("aruco_corner_forward_x", 0.08).value)
+        self.aruco_corner_marker_vs_obstacle_margin_m = float(
+            self.declare_parameter("aruco_corner_marker_vs_obstacle_margin_m", 0.03).value
+        )
         self.aruco_seen_timeout_s = float(self.declare_parameter("aruco_seen_timeout_s", 2.0).value)
         self.aruco_block_forward_on_obstacle = bool(
             self.declare_parameter("aruco_block_forward_on_obstacle", True).value
@@ -145,6 +149,7 @@ class RobotSupervisor(Node):
         self.aruco_detected = False
         self.aruco_direction = "NONE"
         self.aruco_distance_m = float("inf")
+        self.front_obstacle_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
 
         # Odom / yaw tracking for full-rotate
@@ -175,6 +180,9 @@ class RobotSupervisor(Node):
         self.sub_aruco_detected = self.create_subscription(Bool, "aruco_id1_detected", self.aruco_detected_callback, 10)
         self.sub_aruco_direction = self.create_subscription(String, "aruco_id1_direction", self.aruco_direction_callback, 10)
         self.sub_aruco_distance = self.create_subscription(Float32, "aruco_id1_distance", self.aruco_distance_callback, 10)
+        self.sub_front_obstacle_distance = self.create_subscription(
+            Float32, "front_obstacle_distance", self.front_obstacle_distance_callback, 10
+        )
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
 
         # -------------------------------
@@ -367,6 +375,13 @@ class RobotSupervisor(Node):
         else:
             self.aruco_distance_m = float("inf")
 
+    def front_obstacle_distance_callback(self, msg: Float32):
+        d = float(msg.data)
+        if math.isfinite(d):
+            self.front_obstacle_distance_m = d
+        else:
+            self.front_obstacle_distance_m = float("inf")
+
     # -------------------------------
     # SCT input check functions (uncontrollables)
     # -------------------------------
@@ -542,7 +557,18 @@ class RobotSupervisor(Node):
 
         # Front obstacle: never drive forward. Rotate to re-acquire free space.
         if "CORNER" in zones:
-            if direction == "LEFT":
+            marker_is_closer_than_obstacle = (
+                math.isfinite(self.aruco_distance_m)
+                and math.isfinite(self.front_obstacle_distance_m)
+                and (self.aruco_distance_m > self.aruco_stop_distance_m)
+                and (
+                    self.aruco_distance_m
+                    <= (self.front_obstacle_distance_m + self.aruco_corner_marker_vs_obstacle_margin_m)
+                )
+            )
+            if marker_is_closer_than_obstacle and direction == "CENTER":
+                twist.linear.x = max(0.0, self.aruco_corner_forward_x)
+            elif direction == "LEFT":
                 twist.angular.z = turn
             elif direction == "RIGHT":
                 twist.angular.z = -turn
