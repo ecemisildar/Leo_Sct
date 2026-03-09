@@ -117,6 +117,9 @@ class RobotSupervisor(Node):
         self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.40).value)
         self.aruco_direction_hold_s = float(self.declare_parameter("aruco_direction_hold_s", 0.8).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.3).value)
+        self.aruco_stop_acquire_margin_m = float(
+            self.declare_parameter("aruco_stop_acquire_margin_m", 0.08).value
+        )
         self.aruco_stop_hysteresis_m = float(
             self.declare_parameter("aruco_stop_hysteresis_m", 0.04).value
         )
@@ -577,9 +580,14 @@ class RobotSupervisor(Node):
         if self.aruco_block_forward_on_obstacle and side_blocked:
             turn_fwd = 0.0
 
-        # Stop-latch at goal distance to prevent rotate jitter near threshold.
-        if math.isfinite(self.aruco_distance_m):
-            if self.aruco_distance_m <= self.aruco_stop_distance_m:
+        # Stop-latch near goal distance to prevent rotate jitter near threshold.
+        # Acquire with small margin because depth may fluctuate frame-to-frame.
+        stop_acquire_d = self.aruco_stop_distance_m + max(0.0, self.aruco_stop_acquire_margin_m)
+        if self.aruco_detected:
+            marker_close = math.isfinite(self.aruco_distance_m) and (self.aruco_distance_m <= stop_acquire_d)
+            # Fallback when marker-distance sampling is noisy at close range.
+            front_close = math.isfinite(self.front_obstacle_distance_m) and (self.front_obstacle_distance_m <= stop_acquire_d)
+            if marker_close or front_close:
                 self.aruco_stop_latched = True
 
         if self.aruco_stop_latched:
