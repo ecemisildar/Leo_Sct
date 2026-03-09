@@ -39,5 +39,11 @@ image_processor:
     aruco_target_id: 1
     # Keep detection "true" briefly through occasional missed frames.
     aruco_seen_hold_ms: 800
-    # Wider center band reduces LEFT/RIGHT flicker and makes shepherding easier.
-    aruco_center_tolerance: 0.22
+    # Side-sensitive steering: classify LEFT/RIGHT earlier.
+    aruco_center_tolerance: 0.16
+    # Improve side-angle/small marker detection robustness.
+    aruco_min_marker_perimeter_rate: 0.015
+    aruco_max_marker_perimeter_rate: 4.0
+    aruco_adaptive_thresh_win_min: 3
+    aruco_adaptive_thresh_win_max: 43
+    aruco_adaptive_thresh_win_step: 4

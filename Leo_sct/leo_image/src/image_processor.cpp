@@ -76,11 +76,29 @@ public:
     aruco_target_id_ = this->declare_parameter<int>("aruco_target_id", aruco_target_id_);
     aruco_center_tolerance_ = this->declare_parameter<double>("aruco_center_tolerance", aruco_center_tolerance_);
     aruco_seen_hold_ms_ = this->declare_parameter<int>("aruco_seen_hold_ms", aruco_seen_hold_ms_);
+    aruco_min_marker_perimeter_rate_ = this->declare_parameter<double>(
+      "aruco_min_marker_perimeter_rate", aruco_min_marker_perimeter_rate_);
+    aruco_max_marker_perimeter_rate_ = this->declare_parameter<double>(
+      "aruco_max_marker_perimeter_rate", aruco_max_marker_perimeter_rate_);
+    aruco_adaptive_thresh_win_min_ = this->declare_parameter<int>(
+      "aruco_adaptive_thresh_win_min", aruco_adaptive_thresh_win_min_);
+    aruco_adaptive_thresh_win_max_ = this->declare_parameter<int>(
+      "aruco_adaptive_thresh_win_max", aruco_adaptive_thresh_win_max_);
+    aruco_adaptive_thresh_win_step_ = this->declare_parameter<int>(
+      "aruco_adaptive_thresh_win_step", aruco_adaptive_thresh_win_step_);
 
     // ArUco defaults: DICT_4X4_100, target id=1, RGB topic camera/camera/color/image_raw.
     aruco_dict_ = cv::aruco::getPredefinedDictionary(aruco_dictionary_id_);
     aruco_params_ = cv::aruco::DetectorParameters::create();
     aruco_params_->cornerRefinementMethod = cv::aruco::CORNER_REFINE_SUBPIX;
+    aruco_params_->minMarkerPerimeterRate =
+      static_cast<float>(std::clamp(aruco_min_marker_perimeter_rate_, 0.001, 1.0));
+    aruco_params_->maxMarkerPerimeterRate =
+      static_cast<float>(std::clamp(aruco_max_marker_perimeter_rate_, 1.0, 20.0));
+    aruco_params_->adaptiveThreshWinSizeMin = std::max(3, aruco_adaptive_thresh_win_min_ | 1);
+    aruco_params_->adaptiveThreshWinSizeMax = std::max(
+      aruco_params_->adaptiveThreshWinSizeMin + 2, aruco_adaptive_thresh_win_max_ | 1);
+    aruco_params_->adaptiveThreshWinSizeStep = std::max(2, aruco_adaptive_thresh_win_step_);
 
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
@@ -602,6 +620,11 @@ private:
   int aruco_target_id_{1};
   double aruco_center_tolerance_{0.15};
   int aruco_seen_hold_ms_{800};
+  double aruco_min_marker_perimeter_rate_{0.015};
+  double aruco_max_marker_perimeter_rate_{4.0};
+  int aruco_adaptive_thresh_win_min_{3};
+  int aruco_adaptive_thresh_win_max_{43};
+  int aruco_adaptive_thresh_win_step_{4};
   cv::Mat last_depth_;
   rclcpp::Time last_depth_time_;
   rclcpp::Time last_aruco_seen_time_;

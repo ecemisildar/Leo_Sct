@@ -572,9 +572,12 @@ class RobotSupervisor(Node):
         if self.aruco_block_forward_on_obstacle and side_blocked:
             turn_fwd = 0.0
 
-        if math.isfinite(self.aruco_distance_m) and self.aruco_distance_m <= self.aruco_stop_distance_m:
-            self.aruco_goal_reached = True
-        if self.aruco_goal_reached:
+        # Wait at goal distance while marker is still visible.
+        if (
+            self.aruco_detected
+            and math.isfinite(self.aruco_distance_m)
+            and self.aruco_distance_m <= self.aruco_stop_distance_m
+        ):
             self.active_event = None
             self.active_twist = twist
             self.motion_until = 0.0
@@ -633,8 +636,6 @@ class RobotSupervisor(Node):
         self._publish_cmd(self.active_twist)
 
     def _aruco_control_active(self) -> bool:
-        if self.aruco_goal_reached:
-            return True
         if self.aruco_detected:
             return True
         if self.last_aruco_seen_time <= 0.0:
