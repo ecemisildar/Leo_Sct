@@ -21,10 +21,20 @@ setup(
             'models/aruco_marker_0/model.config',
             'models/aruco_marker_0/model.sdf',
         ]),
+        ('share/' + package_name + '/models/aruco_marker_moving', [
+            'models/aruco_marker_moving/model.config',
+            'models/aruco_marker_moving/model.sdf',
+        ]),
         ('share/' + package_name + '/models/aruco_marker_0/materials/scripts', [
             'models/aruco_marker_0/materials/scripts/aruco_marker.material',
         ]),
         ('share/' + package_name + '/models/aruco_marker_0/materials/textures', [
+            'models/aruco_marker_0/materials/textures/aruco_4x4_0.png',
+        ]),
+        ('share/' + package_name + '/models/aruco_marker_moving/materials/scripts', [
+            'models/aruco_marker_0/materials/scripts/aruco_marker.material',
+        ]),
+        ('share/' + package_name + '/models/aruco_marker_moving/materials/textures', [
             'models/aruco_marker_0/materials/textures/aruco_4x4_0.png',
         ]),
     ],
@@ -40,6 +50,7 @@ setup(
             'robot_supervisor = swarm_basics.robot_supervisor:main',
             'coverage_counter = swarm_basics.coverage_counter:main',
             'bump_counter = swarm_basics.bump_counter:main',
+            'aruco_mover = swarm_basics.aruco_mover:main',
         ],
     },
 )

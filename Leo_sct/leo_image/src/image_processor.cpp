@@ -71,6 +71,7 @@ public:
 
     aruco_enabled_ = this->declare_parameter<bool>("aruco_enabled", aruco_enabled_);
     aruco_debug_ = this->declare_parameter<bool>("aruco_debug", aruco_debug_);
+    depth_topic_ = this->declare_parameter<std::string>("depth_topic", depth_topic_);
     rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", rgb_topic_);
     aruco_dictionary_id_ = this->declare_parameter<int>("aruco_dictionary_id", aruco_dictionary_id_);
     aruco_target_id_ = this->declare_parameter<int>("aruco_target_id", aruco_target_id_);
@@ -102,7 +103,7 @@ public:
 
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-      "depth_camera/depth_image",
+      depth_topic_,
       qos,
       std::bind(&DepthZoneDetector::depthCallback, this, std::placeholders::_1));
 
@@ -112,6 +113,15 @@ public:
         qos,
         std::bind(&DepthZoneDetector::rgbCallback, this, std::placeholders::_1));
     }
+
+    RCLCPP_INFO(
+      this->get_logger(),
+      "image_processor topics: depth='%s' rgb='%s' aruco_enabled=%s target_id=%d dictionary=%d",
+      depth_topic_.c_str(),
+      rgb_topic_.c_str(),
+      aruco_enabled_ ? "true" : "false",
+      aruco_target_id_,
+      aruco_dictionary_id_);
 
     last_state_ = "CLEAR";
     last_non_clear_zone_ = "CORNER";
@@ -615,6 +625,7 @@ private:
 
   bool aruco_enabled_{true};
   bool aruco_debug_{true};
+  std::string depth_topic_{"depth_camera/depth_image"};
   std::string rgb_topic_{"camera/camera/color/image_raw"};
   int aruco_dictionary_id_{cv::aruco::DICT_4X4_100};
   int aruco_target_id_{1};

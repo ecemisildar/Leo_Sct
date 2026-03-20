@@ -83,6 +83,41 @@ def generate_launch_description():
         default_value="true",
         description="Enable robot_supervisor_3_movements on launch",
     )
+    spawn_moving_aruco = DeclareLaunchArgument(
+        "spawn_moving_aruco",
+        default_value="true",
+        description="Spawn a moving ArUco target box.",
+    )
+    moving_aruco_x = DeclareLaunchArgument(
+        "moving_aruco_x",
+        default_value="1.0",
+        description="Center X position for the moving ArUco target.",
+    )
+    moving_aruco_y = DeclareLaunchArgument(
+        "moving_aruco_y",
+        default_value="1.0",
+        description="Center Y position for the moving ArUco target.",
+    )
+    moving_aruco_z = DeclareLaunchArgument(
+        "moving_aruco_z",
+        default_value="0.25",
+        description="Z position for the moving ArUco target.",
+    )
+    moving_aruco_radius = DeclareLaunchArgument(
+        "moving_aruco_radius",
+        default_value="1.5",
+        description="Circular path radius for the moving ArUco target.",
+    )
+    moving_aruco_speed = DeclareLaunchArgument(
+        "moving_aruco_speed",
+        default_value="0.35",
+        description="Circular path angular speed for the moving ArUco target.",
+    )
+    moving_aruco_update_rate = DeclareLaunchArgument(
+        "moving_aruco_update_rate",
+        default_value="5.0",
+        description="Circular path update rate in Hz for the moving ArUco target.",
+    )
     results_dir = DeclareLaunchArgument(
         "results_dir",
         default_value=os.path.join(
@@ -124,6 +159,13 @@ def generate_launch_description():
             "total_robots": LaunchConfiguration("total_robots"),
             "results_dir": LaunchConfiguration("results_dir"),
             "auto_start_supervisor": LaunchConfiguration("auto_start_supervisor"),
+            "spawn_moving_aruco": LaunchConfiguration("spawn_moving_aruco"),
+            "moving_aruco_x": LaunchConfiguration("moving_aruco_x"),
+            "moving_aruco_y": LaunchConfiguration("moving_aruco_y"),
+            "moving_aruco_z": LaunchConfiguration("moving_aruco_z"),
+            "moving_aruco_radius": LaunchConfiguration("moving_aruco_radius"),
+            "moving_aruco_speed": LaunchConfiguration("moving_aruco_speed"),
+            "moving_aruco_update_rate": LaunchConfiguration("moving_aruco_update_rate"),
         }.items(),
     )
 
@@ -160,6 +202,13 @@ def generate_launch_description():
             run_duration,
             total_robots,
             auto_start_supervisor,
+            spawn_moving_aruco,
+            moving_aruco_x,
+            moving_aruco_y,
+            moving_aruco_z,
+            moving_aruco_radius,
+            moving_aruco_speed,
+            moving_aruco_update_rate,
             results_dir,
             gz_sim,
             spawn_robot,

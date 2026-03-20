@@ -16,13 +16,56 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
 
     leo_description = get_package_share_directory("leo_description")
+    swarm_basics_dir = get_package_share_directory("swarm_basics")
     run_id = time.strftime("run_%Y%m%d_%H%M%S")
 
     auto_start_supervisor = LaunchConfiguration("auto_start_supervisor")
+    spawn_moving_aruco = LaunchConfiguration("spawn_moving_aruco")
+    moving_aruco_x = LaunchConfiguration("moving_aruco_x")
+    moving_aruco_y = LaunchConfiguration("moving_aruco_y")
+    moving_aruco_z = LaunchConfiguration("moving_aruco_z")
+    moving_aruco_radius = LaunchConfiguration("moving_aruco_radius")
+    moving_aruco_speed = LaunchConfiguration("moving_aruco_speed")
+    moving_aruco_update_rate = LaunchConfiguration("moving_aruco_update_rate")
     auto_start_supervisor_arg = DeclareLaunchArgument(
         "auto_start_supervisor",
         default_value="true",
         description="Enable robot_supervisor_3_movements on launch",
+    )
+    spawn_moving_aruco_arg = DeclareLaunchArgument(
+        "spawn_moving_aruco",
+        default_value="true",
+        description="Spawn a moving ArUco target box in Gazebo.",
+    )
+    moving_aruco_x_arg = DeclareLaunchArgument(
+        "moving_aruco_x",
+        default_value="1.0",
+        description="Center X position for the moving ArUco target.",
+    )
+    moving_aruco_y_arg = DeclareLaunchArgument(
+        "moving_aruco_y",
+        default_value="1.0",
+        description="Center Y position for the moving ArUco target.",
+    )
+    moving_aruco_z_arg = DeclareLaunchArgument(
+        "moving_aruco_z",
+        default_value="0.25",
+        description="Z position for the moving ArUco target.",
+    )
+    moving_aruco_radius_arg = DeclareLaunchArgument(
+        "moving_aruco_radius",
+        default_value="1.5",
+        description="Radius of the circular ArUco motion.",
+    )
+    moving_aruco_speed_arg = DeclareLaunchArgument(
+        "moving_aruco_speed",
+        default_value="0.35",
+        description="Angular speed in rad/s for the moving ArUco target.",
+    )
+    moving_aruco_update_rate_arg = DeclareLaunchArgument(
+        "moving_aruco_update_rate",
+        default_value="5.0",
+        description="Pose update rate in Hz for the moving ArUco target.",
     )
 
     # total_robots_arg = LaunchConfiguration("total_robots")
@@ -59,6 +102,44 @@ def generate_launch_description():
             })
 
         nodes = []
+
+        if LaunchConfiguration("spawn_moving_aruco").perform(context).lower() == "true":
+            marker_model_path = os.path.join(
+                swarm_basics_dir,
+                "models",
+                "aruco_marker_0",
+                "model.sdf",
+            )
+            marker_spawn = Node(
+                package="ros_gz_sim",
+                executable="create",
+                name="moving_aruco_box_spawner",
+                arguments=[
+                    "-name", "moving_aruco_box",
+                    "-x", str(float(moving_aruco_x.perform(context)) + float(moving_aruco_radius.perform(context))),
+                    "-y", moving_aruco_y,
+                    "-z", moving_aruco_z,
+                    "-file", marker_model_path,
+                ],
+                output="screen",
+            )
+            marker_mover = Node(
+                package="swarm_basics",
+                executable="aruco_mover",
+                name="aruco_mover",
+                parameters=[
+                    {"world_name": "random_world"},
+                    {"entity_name": "moving_aruco_box"},
+                    {"center_x": moving_aruco_x},
+                    {"center_y": moving_aruco_y},
+                    {"z": moving_aruco_z},
+                    {"radius": moving_aruco_radius},
+                    {"angular_speed": moving_aruco_speed},
+                    {"update_rate_hz": moving_aruco_update_rate},
+                ],
+                output="screen",
+            )
+            nodes += [marker_spawn, marker_mover]
 
         # --- One bridge for all robots ---
         bridge_args = []
@@ -153,6 +234,8 @@ def generate_launch_description():
                     {"use_sim_time": True},
                     {"depth_topic": f"/{ns}/depth_camera/depth_image"},
                     {"rgb_topic": f"/{ns}/depth_camera/image"},
+                    {"aruco_dictionary_id": 1},
+                    {"aruco_target_id": 0},
                 ],
                 output="screen"
             )
@@ -163,6 +246,13 @@ def generate_launch_description():
 
     return LaunchDescription([
         auto_start_supervisor_arg,
+        spawn_moving_aruco_arg,
+        moving_aruco_x_arg,
+        moving_aruco_y_arg,
+        moving_aruco_z_arg,
+        moving_aruco_radius_arg,
+        moving_aruco_speed_arg,
+        moving_aruco_update_rate_arg,
         RegisterEventHandler(
             OnShutdown(
                 on_shutdown=[

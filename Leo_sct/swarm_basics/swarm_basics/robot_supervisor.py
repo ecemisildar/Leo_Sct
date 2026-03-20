@@ -93,8 +93,6 @@ class RobotSupervisor(Node):
         self.rotate_90_prev_yaw = 0.0
 
 
-
-
         # Zone update throttle. Keep low for fast reaction while marker following.
         self.zone_update_min_dt = float(
             self.declare_parameter("zone_update_min_dt", 0.1).value
