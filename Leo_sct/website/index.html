@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Leo Swarm Control</title>
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=29" />
   </head>
   <body>
     <div class="bg-glow"></div>
@@ -12,56 +12,51 @@
       <div class="brand">
         <div>
           <h1>Leo Swarm Control</h1>
-          <p>User interface for start/stop, autonomous runs, and manual driving.</p>
+          <p>User interface for autonomous runs and manual driving.</p>
         </div>
       </div>
-      <div class="status-pill" id="connectionStatus">ROS2: Disconnected</div>
+      <div class="button-row">
+        <div class="robot-status-list" id="connectionStatus">
+          <div class="robot-status-card">Loading robots...</div>
+        </div>
+        <div class="control-column">
+          <div class="status-pill" id="sessionStatus">Session: pending...</div>
+          <button class="ghost-btn emergency-btn" id="allStopBtn">Emergency Stop All</button>
+        </div>
+      </div>
     </header>
 
+    <section class="option-row" id="connectOptionRow">
+      <a class="option-link" href="./connect.html">Phone Connect</a>
+    </section>
+
     <section class="mode-switch" role="tablist" aria-label="Control modes">
-      <button class="mode-btn is-active" data-mode="startup" role="tab" aria-selected="true">
-        1. Start / Stop
-      </button>
-      <button class="mode-btn" data-mode="autonomous" role="tab" aria-selected="false">
-        2. Autonomous Drive
+      <button class="mode-btn is-active" data-mode="autonomous" role="tab" aria-selected="true">
+        Autonomous Drive
       </button>
       <button class="mode-btn" data-mode="manual" role="tab" aria-selected="false">
-        3. Manual Drive
+        Manual Drive
       </button>
     </section>
 
     <main>
-      <section class="mode-panel" id="mode-startup" data-mode-panel="startup">
+      <section class="mode-panel" id="mode-autonomous" data-mode-panel="autonomous">
         <div class="panel-header">
-          <h2>Robot Power &amp; Status</h2>
-          <button class="ghost-btn" id="allStopBtn">Emergency Stop All</button>
-        </div>
-        <div class="robot-grid" id="startupGrid"></div>
-      </section>
-
-      <section class="mode-panel is-hidden" id="mode-autonomous" data-mode-panel="autonomous">
-        <div class="panel-header">
-          <h2>Autonomous Run (LLM + SCT + ROS)</h2>
-          <div class="tag">Pipeline: LLM → SCT → ROS2</div>
+          <h2>Autonomous Run</h2>
+          <div class="tag pipeline-tag">Pipeline: LLM → SCT → ROS2</div>
         </div>
         <div class="autonomous-layout">
           <div class="card">
-            <h3>Select autonomous robots</h3>
-            <p class="muted">Choose which robots will run the autonomous pipeline.</p>
-            <div class="checkbox-grid" id="autonomousGrid"></div>
-          </div>
-          <div class="card">
-            <h3>Scenario Controls</h3>
+            <h3>Select robots</h3>
+            <p class="muted">Choose one or more robots for the autonomous pipeline.</p>
+            <div class="autonomous-button-grid" id="autonomousGrid"></div>
             <label class="field">
               <span>Mission preset</span>
               <select id="missionPreset">
-                <option value="explore">Explore (SCT)</option>
+                <option value="explore">Explore</option>
               </select>
             </label>
-            <div class="button-row">
-              <button class="primary-btn" id="startAutoBtn">Start Autonomous</button>
-              <button class="ghost-btn" id="stopAutoBtn">Stop Autonomous</button>
-            </div>
+            <button class="primary-btn" id="toggleAutoBtn">Start Autonomous</button>
           </div>
         </div>
       </section>
@@ -69,12 +64,12 @@
       <section class="mode-panel is-hidden" id="mode-manual" data-mode-panel="manual">
         <div class="panel-header">
           <h2>Manual Drive</h2>
-          <div class="tag">cmd_vel over ROS2</div>
+          <div class="tag">Velocity messages over ROS2</div>
         </div>
         <div class="manual-layout">
           <div class="card">
             <label class="field">
-              <span>Manual robot</span>
+              <span>Select Robot</span>
               <select id="manualRobotSelect"></select>
             </label>
             <div class="speed-row">
@@ -113,6 +108,6 @@
       <span id="activeSummary"></span>
     </footer>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=38"></script>
   </body>
 </html>

@@ -66,7 +66,7 @@ def generate_launch_description():
             ns = robot["ns"]
             bridge_args += [
                 f"/{ns}/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
-                # f"/{ns}/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
+                f"/{ns}/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
                 # f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
                 f"/{ns}/depth_camera/depth_image@sensor_msgs/msg/Image@ignition.msgs.Image",
                 # f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo",
@@ -149,7 +149,11 @@ def generate_launch_description():
                 executable="image_processor",
                 name="image_processor",
                 namespace=ns,
-                parameters=[{"use_sim_time": True}],
+                parameters=[
+                    {"use_sim_time": True},
+                    {"depth_topic": f"/{ns}/depth_camera/depth_image"},
+                    {"rgb_topic": f"/{ns}/depth_camera/image"},
+                ],
                 output="screen"
             )
 

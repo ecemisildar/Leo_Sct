@@ -129,6 +129,7 @@ class BumpCounter(Node):
         self.pub_obs = self.create_publisher(UInt32, "bump_count_obstacle", 10)
         self.pub_last = self.create_publisher(String, "last_bump_with", 10)
         self.pub_last_type = self.create_publisher(String, "last_bump_type", 10)
+        self.pub_last_robot = self.create_publisher(String, "last_bump_robot", 10)
 
         # ---- Subscriptions ----
         self._subs = {}
@@ -278,12 +279,13 @@ class BumpCounter(Node):
         return self.cooldown_default
     # --------------------------------------------------------
 
-    def _publish_counts(self, last_with: str, bump_type: str):
+    def _publish_counts(self, last_with: str, bump_type: str, last_robot: str):
         self.pub_total.publish(UInt32(data=int(self.bump_total)))
         self.pub_robot.publish(UInt32(data=int(self.bump_robot)))
         self.pub_obs.publish(UInt32(data=int(self.bump_obstacle)))
         self.pub_last.publish(String(data=last_with))
         self.pub_last_type.publish(String(data=bump_type))
+        self.pub_last_robot.publish(String(data=last_robot))
 
     def _on_contacts(self, msg: Contacts, source_topic: str = ""):
         now = self.get_clock().now()
@@ -303,6 +305,7 @@ class BumpCounter(Node):
                     key = tuple(sorted([r1, r2]))
                     entity_a, entity_b = key[0], key[1]
                     last_with = f"{entity_a}<->{entity_b}"
+                    last_robot = f"{entity_a},{entity_b}"
                 else:
                     # key is (robot, obstacle_entity) => counts ONCE per pair
                     robot = r1
@@ -310,6 +313,7 @@ class BumpCounter(Node):
                     key = (robot, other)
                     entity_a, entity_b = robot, other
                     last_with = other
+                    last_robot = robot
 
             else:
                 # Per-robot mode: only count contacts that involve this namespace.
@@ -329,6 +333,7 @@ class BumpCounter(Node):
                 key = other  # debounced per "other entity"
                 entity_a, entity_b = me, other
                 last_with = other
+                last_robot = r_me or ns
 
             # Debounce: new bump only if key not active
             if key not in self.active:
@@ -347,7 +352,7 @@ class BumpCounter(Node):
                 stamp = msg.header.stamp
                 self._append_csv(stamp, bump_type, key, entity_a, entity_b, avg_xyz, source_topic)
 
-                self._publish_counts(last_with=last_with, bump_type=bump_type)
+                self._publish_counts(last_with=last_with, bump_type=bump_type, last_robot=last_robot)
 
                 self.get_logger().info(
                     f"[{self.label}] bump #{self.bump_total} ({bump_type}) with: {last_with}"

@@ -24,13 +24,12 @@ class CoverageCounter(Node):
         super().__init__("coverage_counter")
 
         # fixed settings (no args)
-        package_root = Path.home() / "ros2_ws/src/Leo_sct/swarm_basics"
+        package_root = Path.home() / "ros2_ws/src/Leo_sct/src/swarm_basics"
 
         results_dir_default = package_root / "results"
         self.results_dir = Path(
             str(self.declare_parameter("results_dir", str(results_dir_default)).value)
         )
-        self.task_name = str(self.declare_parameter("task_name", "").value).strip()
         run_id_param = str(self.declare_parameter("run_id", "").value).strip()
         self.run_id = run_id_param or time.strftime("run_%Y%m%d_%H%M%S")
         self.run_duration = float(self.declare_parameter("run_duration", 500.0).value)
@@ -40,8 +39,6 @@ class CoverageCounter(Node):
         self.obstacle_occupancy_threshold = 0.4
         self.world_sdf = package_root / "worlds" / "random_world.sdf"
 
-        if self.task_name:
-            self.run_id = f"run_{self.task_name}_{time.strftime('%Y%m%d_%H%M%S')}"
         self.run_dir = self.results_dir / self.run_id
         self.run_dir.mkdir(parents=True, exist_ok=True)
 

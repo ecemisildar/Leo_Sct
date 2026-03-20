@@ -14,7 +14,11 @@ import xml.etree.ElementTree as ET
 # ----------------------------
 # CONFIG (no args)
 # ----------------------------
-PACKAGE_ROOT = Path.home() / "ros2_ws/src/Leo_sct/swarm_basics"
+_PACKAGE_ROOT_CANDIDATES = [
+    Path("/ros2_ws/src/Leo_sct/src/swarm_basics"),
+    Path.home() / "ros2_ws/src/Leo_sct/src/swarm_basics",
+]
+PACKAGE_ROOT = next((p for p in _PACKAGE_ROOT_CANDIDATES if p.exists()), _PACKAGE_ROOT_CANDIDATES[-1])
 RESULTS_DIR = PACKAGE_ROOT / "results"
 WORLD_SDF = PACKAGE_ROOT / "worlds" / "random_world.sdf"
 
