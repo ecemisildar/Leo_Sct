@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
 <sdf version="1.8">
-  <model name="aruco_marker_0">
+  <model name="moving_aruco_box">
     <static>false</static>
     <link name="link">
+      <pose>0 0 0.25 0 0 0</pose>
       <gravity>false</gravity>
       <kinematic>true</kinematic>
       <inertial>
@@ -18,13 +19,13 @@
       </inertial>
       <collision name="collision">
         <geometry>
-          <box><size>0.5 0.5 0.5</size></box>
+          <box><size>1.0 1.0 1.0</size></box>
         </geometry>
       </collision>
 
       <visual name="body">
         <geometry>
-          <box><size>0.5 0.5 0.5</size></box>
+          <box><size>1.0 1.0 1.0</size></box>
         </geometry>
         <material>
           <ambient>0.9 0.9 0.9 1</ambient>
@@ -33,11 +34,11 @@
       </visual>
 
       <visual name="marker_face_pos_x">
-        <pose>0.251 0 0 0 0 0</pose>
+        <pose>0.501 0 0 0 0 0</pose>
         <geometry>
           <plane>
             <normal>1 0 0</normal>
-            <size>0.45 0.45</size>
+            <size>0.90 0.90</size>
           </plane>
         </geometry>
         <cast_shadows>false</cast_shadows>
@@ -56,11 +57,11 @@
       </visual>
 
       <visual name="marker_face_neg_x">
-        <pose>-0.251 0 0 0 0 0</pose>
+        <pose>-0.501 0 0 0 0 0</pose>
         <geometry>
           <plane>
             <normal>-1 0 0</normal>
-            <size>0.45 0.45</size>
+            <size>0.90 0.90</size>
           </plane>
         </geometry>
         <cast_shadows>false</cast_shadows>
@@ -79,11 +80,11 @@
       </visual>
 
       <visual name="marker_face_pos_y">
-        <pose>0 0.251 0 0 0 0</pose>
+        <pose>0 0.501 0 0 0 0</pose>
         <geometry>
           <plane>
             <normal>0 1 0</normal>
-            <size>0.45 0.45</size>
+            <size>0.90 0.90</size>
           </plane>
         </geometry>
         <cast_shadows>false</cast_shadows>
@@ -102,11 +103,11 @@
       </visual>
 
       <visual name="marker_face_neg_y">
-        <pose>0 -0.251 0 0 0 0</pose>
+        <pose>0 -0.501 0 0 0 0</pose>
         <geometry>
           <plane>
             <normal>0 -1 0</normal>
-            <size>0.45 0.45</size>
+            <size>0.90 0.90</size>
           </plane>
         </geometry>
         <cast_shadows>false</cast_shadows>
@@ -125,11 +126,11 @@
       </visual>
 
       <visual name="marker_face_pos_z">
-        <pose>0 0 0.251 0 0 0</pose>
+        <pose>0 0 0.501 0 0 0</pose>
         <geometry>
           <plane>
             <normal>0 0 1</normal>
-            <size>0.45 0.45</size>
+            <size>0.90 0.90</size>
           </plane>
         </geometry>
         <cast_shadows>false</cast_shadows>
@@ -148,11 +149,11 @@
       </visual>
 
       <visual name="marker_face_neg_z">
-        <pose>0 0 -0.251 0 0 0</pose>
+        <pose>0 0 -0.501 0 0 0</pose>
         <geometry>
           <plane>
             <normal>0 0 -1</normal>
-            <size>0.45 0.45</size>
+            <size>0.90 0.90</size>
           </plane>
         </geometry>
         <cast_shadows>false</cast_shadows>

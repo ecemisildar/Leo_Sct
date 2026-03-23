@@ -5,7 +5,7 @@ import xacro
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.actions import ExecuteProcess, RegisterEventHandler
+from launch.actions import ExecuteProcess, RegisterEventHandler, TimerAction
 from launch.event_handlers import OnShutdown
 from launch.actions import OpaqueFunction, Shutdown, TimerAction
 from launch.substitutions import LaunchConfiguration
@@ -139,7 +139,13 @@ def generate_launch_description():
                 ],
                 output="screen",
             )
-            nodes += [marker_spawn, marker_mover]
+            nodes += [
+                marker_spawn,
+                TimerAction(
+                    period=2.0,
+                    actions=[marker_mover],
+                ),
+            ]
 
         # --- One bridge for all robots ---
         bridge_args = []

@@ -97,6 +97,9 @@ class RobotSupervisor(Node):
         self.zone_update_min_dt = float(
             self.declare_parameter("zone_update_min_dt", 0.1).value
         )
+        self.marker_log_period_s = float(
+            self.declare_parameter("marker_log_period_s", 1.0).value
+        )
 
         # Random seed (per-robot namespace)
         self.ns = self.get_namespace().strip("/") or "root"
@@ -155,6 +158,10 @@ class RobotSupervisor(Node):
         self.aruco_distance_m = float("inf")
         self.front_obstacle_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
+        self.last_marker_log_time = 0.0
+        self.last_marker_log_detected: Optional[bool] = None
+        self.last_marker_log_direction = "NONE"
+        self.last_marker_log_distance_m = float("inf")
 
         # Odom / yaw tracking for full-rotate
         self.have_odom = False
@@ -314,10 +321,10 @@ class RobotSupervisor(Node):
         if states == self._last_printed_sup_states:
             return
         self._last_printed_sup_states = states
-        print(
-            f"[robot_supervisor] mission={self.current_mission} current_state={states}",
-            flush=True,
-        )
+        # print(
+        #     f"[robot_supervisor] mission={self.current_mission} current_state={states}",
+        #     flush=True,
+        # )
 
     def _set_enabled(self, enable: bool):
         self.enabled = bool(enable)
@@ -364,6 +371,7 @@ class RobotSupervisor(Node):
         self.aruco_detected = bool(msg.data)
         if self.aruco_detected:
             self.last_aruco_seen_time = time.time()
+        self._log_marker_status(force=True)
 
     def aruco_direction_callback(self, msg: String):
         now = time.time()
@@ -375,6 +383,7 @@ class RobotSupervisor(Node):
                 self.last_aruco_direction_time = now
         else:
             self.aruco_direction = "NONE"
+        self._log_marker_status()
 
     def _effective_aruco_direction(self) -> str:
         if self.aruco_direction in {"LEFT", "CENTER", "RIGHT"}:
@@ -390,6 +399,7 @@ class RobotSupervisor(Node):
             self.aruco_distance_m = d
         else:
             self.aruco_distance_m = float("inf")
+        self._log_marker_status()
 
     def front_obstacle_distance_callback(self, msg: Float32):
         d = float(msg.data)
@@ -397,6 +407,24 @@ class RobotSupervisor(Node):
             self.front_obstacle_distance_m = d
         else:
             self.front_obstacle_distance_m = float("inf")
+
+    def _log_marker_status(self, force: bool = False):
+        now = time.time()
+        if not force and (now - self.last_marker_log_time) < self.marker_log_period_s:
+            return
+
+        direction = self._effective_aruco_direction()
+        distance_text = f"{self.aruco_distance_m:.3f} m" if math.isfinite(self.aruco_distance_m) else "nan"
+        age_s = (now - self.last_aruco_seen_time) if self.last_aruco_seen_time > 0.0 else float("inf")
+        age_text = f"{age_s:.2f} s" if math.isfinite(age_s) else "never"
+        self.get_logger().info(
+            f"Marker status: detected={str(self.aruco_detected).lower()} "
+            f"direction={direction} distance={distance_text} last_seen={age_text}"
+        )
+        self.last_marker_log_time = now
+        self.last_marker_log_detected = self.aruco_detected
+        self.last_marker_log_direction = direction
+        self.last_marker_log_distance_m = self.aruco_distance_m
 
     # -------------------------------
     # SCT input check functions (uncontrollables)
@@ -777,6 +805,7 @@ class RobotSupervisor(Node):
 
         self.stop_sent = False
         now = time.time()
+        self._log_marker_status()
 
         # Manual override states supersede SCT choices.
         if self.override_mode == "stop":
@@ -836,7 +865,7 @@ class RobotSupervisor(Node):
             self._publish_stop()
             return
 
-        self.get_logger().info(f"Selected controllable event: {ev_name}")
+        # self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
 
 
