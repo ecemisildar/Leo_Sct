@@ -15,7 +15,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 class CoverageCounter(Node):
     """
     - Tracks visited grid cells from Gazebo poses (TFMessage)
-    - Saves results to results/<run_id>/
+    - Saves results directly into results/
     - Logs paths + visited cells to CSV for offline analysis
     - Does not render or save plots (handled by offline scripts)
     """
@@ -39,14 +39,14 @@ class CoverageCounter(Node):
         self.obstacle_occupancy_threshold = 0.4
         self.world_sdf = package_root / "worlds" / "random_world.sdf"
 
-        self.run_dir = self.results_dir / self.run_id
-        self.run_dir.mkdir(parents=True, exist_ok=True)
+        self.results_dir.mkdir(parents=True, exist_ok=True)
 
-        self.coverage_csv_path = self.run_dir / "coverage_timeseries.csv"
-        self.paths_csv_path = self.run_dir / "coverage_paths.csv"
-        self.visited_cells_csv_path = self.run_dir / "coverage_visited_cells.csv"
-        self.status_path = self.run_dir / "SAVE_STATUS.txt"
-        self.error_path = self.run_dir / "SAVE_ERROR.txt"
+        prefix = f"{self.run_id}_" if self.run_id else ""
+        self.coverage_csv_path = self.results_dir / f"{prefix}coverage_timeseries.csv"
+        self.paths_csv_path = self.results_dir / f"{prefix}coverage_paths.csv"
+        self.visited_cells_csv_path = self.results_dir / f"{prefix}coverage_visited_cells.csv"
+        self.status_path = self.results_dir / f"{prefix}SAVE_STATUS.txt"
+        self.error_path = self.results_dir / f"{prefix}SAVE_ERROR.txt"
 
         self._saved_ok = False
         self._saving_now = False
@@ -94,7 +94,7 @@ class CoverageCounter(Node):
 
         self._write_status(
             "Node started\n"
-            f"run_dir: {self.run_dir}\n"
+            f"results_dir: {self.results_dir}\n"
         )
 
     def pose_callback(self, msg: TFMessage):

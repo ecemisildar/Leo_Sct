@@ -125,8 +125,6 @@ def generate_launch_description():
             "ros2_ws",
             "src",
             "Leo_sct",
-            "src",
-            "swarm_basics",
             "results",
         ),
         description="Directory to write run artifacts",

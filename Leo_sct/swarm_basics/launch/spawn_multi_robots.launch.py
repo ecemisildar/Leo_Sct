@@ -76,7 +76,6 @@ def generate_launch_description():
             name="coverage_counter",
             parameters=[
                 {"run_duration": LaunchConfiguration("run_duration")},
-                {"run_id": run_id},
                 {"results_dir": LaunchConfiguration("results_dir")},
             ],
             output="screen"
@@ -280,7 +279,6 @@ def generate_launch_description():
             name="bump_counter",
             parameters=[
                 {"global_mode": True},
-                {"run_id": run_id},
                 {"results_dir": LaunchConfiguration("results_dir")},
             ],
             output="screen",
