@@ -16,8 +16,8 @@ class ArucoMover(Node):
         self.center_x = float(self.declare_parameter("center_x", 1.0).value)
         self.center_y = float(self.declare_parameter("center_y", 1.0).value)
         self.z = float(self.declare_parameter("z", 0.25).value)
-        self.radius = float(self.declare_parameter("radius", 1.0).value)
-        self.angular_speed = float(self.declare_parameter("angular_speed", 0.35).value)
+        self.radius = float(self.declare_parameter("radius", 10.0).value)
+        self.angular_speed = float(self.declare_parameter("angular_speed", 0.15).value)
         self.update_rate_hz = float(self.declare_parameter("update_rate_hz", 5.0).value)
         self.face_motion = bool(self.declare_parameter("face_motion", True).value)
 
@@ -80,10 +80,14 @@ class ArucoMover(Node):
             return
 
         t = time.time() - self.started_at
-        theta = self.angular_speed * t
-        yaw = theta if self.face_motion else 0.0
-        x = self.center_x + self.radius * math.cos(theta)
-        y = self.center_y + self.radius * math.sin(theta)
+        phase = self.angular_speed * t
+        x = self.center_x 
+        y = self.center_y + self.radius * math.sin(phase)
+        dx_dt = self.radius * self.angular_speed * math.cos(phase)
+        if self.face_motion and abs(dx_dt) > 1e-6:
+            yaw = 0.0 if dx_dt >= 0.0 else math.pi
+        else:
+            yaw = 0.0
         req_text = self._build_pose_request(x, y, yaw)
 
         candidates = (

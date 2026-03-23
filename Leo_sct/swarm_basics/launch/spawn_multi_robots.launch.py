@@ -54,8 +54,8 @@ def generate_launch_description():
     )
     moving_aruco_radius_arg = DeclareLaunchArgument(
         "moving_aruco_radius",
-        default_value="1.5",
-        description="Radius of the circular ArUco motion.",
+        default_value="3.0",
+        description="Half-length of the straight ArUco path.",
     )
     moving_aruco_speed_arg = DeclareLaunchArgument(
         "moving_aruco_speed",
@@ -87,17 +87,17 @@ def generate_launch_description():
         total_robots_value = int(LaunchConfiguration("total_robots").perform(context))
         total_robots = max(1, total_robots_value)
 
-        center_x = 0.0
+        center_x = -2.0
         center_y = 0.0
-        formation_radius = 2.0
+        robot_spacing = 1.25
         robots = []
+        start_y = center_y - 0.5 * robot_spacing * (total_robots - 1)
         for i in range(total_robots):
-            yaw = (2 * math.pi / total_robots) * i
             robots.append({
                 "ns": f"robot_{i}",
-                "x": center_x + formation_radius * math.cos(yaw),
-                "y": center_y + formation_radius * math.sin(yaw),
-                "yaw": yaw
+                "x": center_x,
+                "y": start_y + i * robot_spacing,
+                "yaw": 0.0,
             })
 
         nodes = []
@@ -241,6 +241,7 @@ def generate_launch_description():
                     {"rgb_topic": f"/{ns}/depth_camera/image"},
                     {"aruco_dictionary_id": 1},
                     {"aruco_target_id": 0},
+                    {"aruco_seen_hold_ms": 150},
                 ],
                 output="screen"
             )

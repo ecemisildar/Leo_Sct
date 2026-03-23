@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -77,6 +78,8 @@ public:
     aruco_target_id_ = this->declare_parameter<int>("aruco_target_id", aruco_target_id_);
     aruco_center_tolerance_ = this->declare_parameter<double>("aruco_center_tolerance", aruco_center_tolerance_);
     aruco_seen_hold_ms_ = this->declare_parameter<int>("aruco_seen_hold_ms", aruco_seen_hold_ms_);
+    aruco_depth_mask_enabled_ = this->declare_parameter<bool>("aruco_depth_mask_enabled", aruco_depth_mask_enabled_);
+    aruco_depth_mask_margin_px_ = this->declare_parameter<int>("aruco_depth_mask_margin_px", aruco_depth_mask_margin_px_);
     aruco_min_marker_perimeter_rate_ = this->declare_parameter<double>(
       "aruco_min_marker_perimeter_rate", aruco_min_marker_perimeter_rate_);
     aruco_max_marker_perimeter_rate_ = this->declare_parameter<double>(
@@ -193,7 +196,10 @@ private:
     last_depth_ = depth.clone();
     last_depth_time_ = now;
 
-    ZoneStats zs = computeZoneStats(depth);
+    cv::Mat depth_for_zones = depth.clone();
+    applyArucoDepthMask(depth_for_zones, now);
+
+    ZoneStats zs = computeZoneStats(depth_for_zones);
     std::string zone_now = determineZoneHysteresis(zs);
 
     std_msgs::msg::Float32 front_msg;
@@ -301,6 +307,17 @@ private:
         }
       }
       break;
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(marker_mutex_);
+      if (detected && !corners.empty()) {
+        last_marker_corners_ = corners;
+        last_marker_ids_ = ids;
+      } else if (!detected) {
+        last_marker_corners_.clear();
+        last_marker_ids_.clear();
+      }
     }
 
     if (detected && !last_depth_.empty()) {
@@ -552,6 +569,59 @@ private:
     return "CLEAR";
   }
 
+  void applyArucoDepthMask(cv::Mat & depth, const rclcpp::Time & now)
+  {
+    if (!aruco_depth_mask_enabled_) {
+      return;
+    }
+
+    std::vector<std::vector<cv::Point2f>> marker_corners;
+    std::vector<int> marker_ids;
+    {
+      std::lock_guard<std::mutex> lock(marker_mutex_);
+      marker_corners = last_marker_corners_;
+      marker_ids = last_marker_ids_;
+    }
+
+    if (marker_corners.empty() || marker_ids.empty()) {
+      return;
+    }
+
+    const double age_ms = (now - last_aruco_seen_time_).seconds() * 1000.0;
+    if (age_ms < 0.0 || age_ms > static_cast<double>(aruco_seen_hold_ms_)) {
+      return;
+    }
+
+    const int margin = std::max(0, aruco_depth_mask_margin_px_);
+    for (size_t i = 0; i < marker_ids.size() && i < marker_corners.size(); ++i) {
+      if (marker_ids[i] != aruco_target_id_ || marker_corners[i].empty()) {
+        continue;
+      }
+
+      int min_x = depth.cols - 1;
+      int max_x = 0;
+      int min_y = depth.rows - 1;
+      int max_y = 0;
+      for (const auto & p : marker_corners[i]) {
+        min_x = std::min(min_x, static_cast<int>(std::floor(p.x)));
+        max_x = std::max(max_x, static_cast<int>(std::ceil(p.x)));
+        min_y = std::min(min_y, static_cast<int>(std::floor(p.y)));
+        max_y = std::max(max_y, static_cast<int>(std::ceil(p.y)));
+      }
+
+      min_x = std::clamp(min_x - margin, 0, depth.cols - 1);
+      max_x = std::clamp(max_x + margin, 0, depth.cols - 1);
+      min_y = std::clamp(min_y - margin, 0, depth.rows - 1);
+      max_y = std::clamp(max_y + margin, 0, depth.rows - 1);
+      if (min_x > max_x || min_y > max_y) {
+        continue;
+      }
+
+      const cv::Rect roi(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1);
+      depth(roi).setTo(std::numeric_limits<float>::quiet_NaN());
+    }
+  }
+
   void drawROIs(cv::Mat & vis)
   {
     const int w = vis.cols;
@@ -630,7 +700,9 @@ private:
   int aruco_dictionary_id_{cv::aruco::DICT_4X4_100};
   int aruco_target_id_{1};
   double aruco_center_tolerance_{0.15};
-  int aruco_seen_hold_ms_{800};
+  int aruco_seen_hold_ms_{150};
+  bool aruco_depth_mask_enabled_{true};
+  int aruco_depth_mask_margin_px_{12};
   double aruco_min_marker_perimeter_rate_{0.015};
   double aruco_max_marker_perimeter_rate_{4.0};
   int aruco_adaptive_thresh_win_min_{3};
@@ -642,6 +714,9 @@ private:
   bool aruco_seen_once_{false};
   std::string last_aruco_direction_{"NONE"};
   float last_aruco_distance_m_{std::numeric_limits<float>::quiet_NaN()};
+  std::mutex marker_mutex_;
+  std::vector<std::vector<cv::Point2f>> last_marker_corners_;
+  std::vector<int> last_marker_ids_;
 
   std::string last_state_{"CLEAR"};
   std::string last_non_clear_zone_{"CORNER"};

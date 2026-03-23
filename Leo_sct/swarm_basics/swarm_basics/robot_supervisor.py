@@ -60,7 +60,7 @@ class RobotSupervisor(Node):
         # Cap at 180 degrees max, even if overridden via parameters.
         self.full_rotate_target_rad = min(
             math.pi,
-            float(self.declare_parameter("full_rotate_target_rad", math.pi).value),
+            float(self.declare_parameter("full_rotate_target_rad", math.pi / 2.0).value),
         )
         self.full_rotate_omega = float(self.declare_parameter("full_rotate_omega", 2.0).value)  # rad/s
         self.full_rotate_timeout_s = float(self.declare_parameter("full_rotate_timeout_s", 6.0).value)
@@ -225,6 +225,7 @@ class RobotSupervisor(Node):
         self.action_table: Dict[str, ActionSpec] = {
             "EV_random_walk": ActionSpec(linear_x=0.0, angular_z=0.0, hold_s=None),  # special handled below
             "EV_move_forward": ActionSpec(linear_x=0.2, angular_z=0.0),
+            "EV_move_to_marker": ActionSpec(linear_x=0.0, angular_z=0.0),
             "EV_move_backward": ActionSpec(linear_x=-0.5, angular_z=0.0, hold_s=self.recovery_back_hold_s),
             "EV_rotate_clockwise": ActionSpec(
                 linear_x=0.0,
@@ -417,10 +418,10 @@ class RobotSupervisor(Node):
         distance_text = f"{self.aruco_distance_m:.3f} m" if math.isfinite(self.aruco_distance_m) else "nan"
         age_s = (now - self.last_aruco_seen_time) if self.last_aruco_seen_time > 0.0 else float("inf")
         age_text = f"{age_s:.2f} s" if math.isfinite(age_s) else "never"
-        self.get_logger().info(
-            f"Marker status: detected={str(self.aruco_detected).lower()} "
-            f"direction={direction} distance={distance_text} last_seen={age_text}"
-        )
+        # self.get_logger().info(
+        #     f"Marker status: detected={str(self.aruco_detected).lower()} "
+        #     f"direction={direction} distance={distance_text} last_seen={age_text}"
+        # )
         self.last_marker_log_time = now
         self.last_marker_log_detected = self.aruco_detected
         self.last_marker_log_direction = direction
@@ -450,6 +451,19 @@ class RobotSupervisor(Node):
     def right_check(self, sup_data):
         return "RIGHT" in self.obstacle_zones
 
+    def marker_seen_check(self, sup_data):
+        return self.aruco_detected
+
+    def marker_lost_check(self, sup_data):
+        return not self.aruco_detected
+
+    def marker_close_check(self, sup_data):
+        return (
+            self.aruco_detected
+            and math.isfinite(self.aruco_distance_m)
+            and self.aruco_distance_m <= self.aruco_stop_distance_m
+        )
+
     def _install_uncontrollable_callbacks(self):
         # Attach callbacks only for events that exist in current supervisor YAML.
         def add(ev: str, fn):
@@ -461,6 +475,9 @@ class RobotSupervisor(Node):
         add("path_clear", self.clear_path_check)
         add("obstacle_left", self.left_check)
         add("obstacle_right", self.right_check)
+        add("marker_seen", self.marker_seen_check)
+        add("marker_lost", self.marker_lost_check)
+        add("marker_close", self.marker_close_check)
 
     # -------------------------------
     # Enable service
@@ -753,6 +770,11 @@ class RobotSupervisor(Node):
             self._publish_stop()
             return
 
+        if ev_name == "EV_move_to_marker":
+            self.active_event = ev_name
+            self._publish_aruco_safe_cmd()
+            return
+
         # random walk is special (stochastic each time it fires)
         if ev_name == "EV_random_walk":
             twist = Twist()
@@ -817,12 +839,6 @@ class RobotSupervisor(Node):
             self._publish_forward_override()
             return
 
-        # Marker-follow takeover bypasses SCT event selection while active.
-        if self.aruco_follow_enabled and self._aruco_control_active():
-            self._cancel_all_motion()
-            self._publish_aruco_safe_cmd()
-            return
-
         # If we’re in the middle of a true full_rotate, keep executing until complete.
         if self.full_rotate_active:
             self._publish_cmd(self.active_twist)
@@ -865,7 +881,7 @@ class RobotSupervisor(Node):
             self._publish_stop()
             return
 
-        # self.get_logger().info(f"Selected controllable event: {ev_name}")
+        self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
 
 
