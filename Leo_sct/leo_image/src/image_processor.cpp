@@ -388,13 +388,13 @@ private:
     offset_msg.data = marker_offset;
     aruco_offset_pub_->publish(offset_msg);
 
-    RCLCPP_INFO_THROTTLE(
-      this->get_logger(), *this->get_clock(), 500,
-      "Aruco detected=%s direction=%s offset=%.3f distance=%.3f",
-      detected ? "true" : "false",
-      direction.c_str(),
-      std::isfinite(marker_offset) ? marker_offset : -9.0f,
-      distance_valid ? distance_m : -1.0f);
+    // RCLCPP_INFO_THROTTLE(
+    //   this->get_logger(), *this->get_clock(), 500,
+    //   "Aruco detected=%s direction=%s offset=%.3f distance=%.3f",
+    //   detected ? "true" : "false",
+    //   direction.c_str(),
+    //   std::isfinite(marker_offset) ? marker_offset : -9.0f,
+    //   distance_valid ? distance_m : -1.0f);
 
     if (aruco_debug_) {
       RCLCPP_INFO_THROTTLE(

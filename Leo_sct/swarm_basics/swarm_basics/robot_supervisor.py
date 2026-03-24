@@ -108,28 +108,10 @@ class RobotSupervisor(Node):
 
         self.enabled = bool(self.declare_parameter("enabled", False).value)
         self.static_mode = bool(self.declare_parameter("static", False).value)
-        self.aruco_follow_enabled = bool(self.declare_parameter("aruco_follow_enabled", True).value)
         self.aruco_follower_cmd_timeout_s = float(
             self.declare_parameter("aruco_follower_cmd_timeout_s", 0.5).value
         )
-        self.aruco_follow_linear_x = float(self.declare_parameter("aruco_follow_linear_x", 0.35).value)
-        self.aruco_follow_linear_min_x = float(self.declare_parameter("aruco_follow_linear_min_x", 0.14).value)
-        self.aruco_follow_turn_forward_x = float(
-            self.declare_parameter("aruco_follow_turn_forward_x", 0.30).value
-        )
-        self.aruco_follow_angular_z = float(self.declare_parameter("aruco_follow_angular_z", 0.45).value)
-        self.aruco_search_angular_z = float(self.declare_parameter("aruco_search_angular_z", 0.40).value)
-        self.aruco_direction_hold_s = float(self.declare_parameter("aruco_direction_hold_s", 0.8).value)
         self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.2).value)
-        # self.aruco_slowdown_distance_m = float(self.declare_parameter("aruco_slowdown_distance_m", 1.00).value)
-        self.aruco_corner_forward_x = float(self.declare_parameter("aruco_corner_forward_x", 0.2).value)
-        self.aruco_corner_marker_vs_obstacle_margin_m = float(
-            self.declare_parameter("aruco_corner_marker_vs_obstacle_margin_m", 0.03).value
-        )
-        self.aruco_seen_timeout_s = float(self.declare_parameter("aruco_seen_timeout_s", 2.0).value)
-        self.aruco_latch_mode_on_detection = bool(
-            self.declare_parameter("aruco_latch_mode_on_detection", True).value
-        )
         self.aruco_block_forward_on_obstacle = bool(
             self.declare_parameter("aruco_block_forward_on_obstacle", True).value
         )
@@ -155,14 +137,9 @@ class RobotSupervisor(Node):
         self.obstacle_zones = ["CLEAR"]
         self.last_zone_update = 0.0
         self.aruco_detected = False
-        self.aruco_direction = "NONE"
-        self.aruco_last_valid_direction = "NONE"
-        self.last_aruco_direction_time = 0.0
         self.aruco_distance_m = float("inf")
-        self.front_obstacle_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
         self.tick_aruco_detected = False
-        self.tick_aruco_direction = "NONE"
         self.tick_aruco_distance_m = float("inf")
         self.last_marker_log_time = 0.0
         self.last_marker_log_detected: Optional[bool] = None
@@ -197,11 +174,7 @@ class RobotSupervisor(Node):
 
         self.sub_zone = self.create_subscription(String, "detected_zones", self.zone_callback, 10)
         self.sub_aruco_detected = self.create_subscription(Bool, "aruco_id1_detected", self.aruco_detected_callback, 10)
-        self.sub_aruco_direction = self.create_subscription(String, "aruco_id1_direction", self.aruco_direction_callback, 10)
         self.sub_aruco_distance = self.create_subscription(Float32, "aruco_id1_distance", self.aruco_distance_callback, 10)
-        self.sub_front_obstacle_distance = self.create_subscription(
-            Float32, "front_obstacle_distance", self.front_obstacle_distance_callback, 10
-        )
         self.sub_aruco_follower_cmd = self.create_subscription(
             Twist, "aruco_follower/cmd_vel", self.aruco_follower_cmd_callback, 10
         )
@@ -385,26 +358,6 @@ class RobotSupervisor(Node):
             self.last_aruco_seen_time = time.time()
         self._log_marker_status(force=True)
 
-    def aruco_direction_callback(self, msg: String):
-        now = time.time()
-        direction = msg.data.strip().upper()
-        if direction in {"LEFT", "CENTER", "RIGHT", "NONE"}:
-            self.aruco_direction = direction
-            if direction in {"LEFT", "CENTER", "RIGHT"}:
-                self.aruco_last_valid_direction = direction
-                self.last_aruco_direction_time = now
-        else:
-            self.aruco_direction = "NONE"
-        self._log_marker_status()
-
-    def _effective_aruco_direction(self) -> str:
-        if self.aruco_direction in {"LEFT", "CENTER", "RIGHT"}:
-            return self.aruco_direction
-        if self.last_aruco_direction_time > 0.0:
-            if (time.time() - self.last_aruco_direction_time) <= self.aruco_direction_hold_s:
-                return self.aruco_last_valid_direction
-        return "NONE"
-
     def aruco_distance_callback(self, msg: Float32):
         d = float(msg.data)
         if math.isfinite(d):
@@ -412,13 +365,6 @@ class RobotSupervisor(Node):
         else:
             self.aruco_distance_m = float("inf")
         self._log_marker_status()
-
-    def front_obstacle_distance_callback(self, msg: Float32):
-        d = float(msg.data)
-        if math.isfinite(d):
-            self.front_obstacle_distance_m = d
-        else:
-            self.front_obstacle_distance_m = float("inf")
 
     def aruco_follower_cmd_callback(self, msg: Twist):
         self.aruco_follower_twist = msg
@@ -429,7 +375,6 @@ class RobotSupervisor(Node):
         if not force and (now - self.last_marker_log_time) < self.marker_log_period_s:
             return
 
-        direction = self._effective_aruco_direction()
         distance_text = f"{self.aruco_distance_m:.3f} m" if math.isfinite(self.aruco_distance_m) else "nan"
         age_s = (now - self.last_aruco_seen_time) if self.last_aruco_seen_time > 0.0 else float("inf")
         age_text = f"{age_s:.2f} s" if math.isfinite(age_s) else "never"
@@ -439,7 +384,7 @@ class RobotSupervisor(Node):
         # )
         self.last_marker_log_time = now
         self.last_marker_log_detected = self.aruco_detected
-        self.last_marker_log_direction = direction
+        self.last_marker_log_direction = "NONE"
         self.last_marker_log_distance_m = self.aruco_distance_m
 
     # -------------------------------
@@ -585,87 +530,10 @@ class RobotSupervisor(Node):
         self.motion_until = 0.0
         self._publish_cmd(self.active_twist)
 
-    def _aruco_forward_speed(self, zones: set) -> float:
-        if "CORNER" in zones:
-            return 0.0
-        if self.aruco_block_forward_on_obstacle and ("LEFT" in zones or "RIGHT" in zones):
-            return 0.0
-
-        base = max(0.0, self.aruco_follow_linear_x)
-        d = self.aruco_distance_m
-
-        if math.isfinite(d) and d <= self.aruco_stop_distance_m:
-            speed = 0.0
-        elif math.isfinite(d):
-            speed = base
-        else:
-            speed = max(0.0, 0.7 * base)
-
-        if "LEFT" in zones and "RIGHT" in zones:
-            return min(speed, 0.10)
-        if "LEFT" in zones or "RIGHT" in zones:
-            return min(speed, 0.16)
-        return speed
-
     def _aruco_follower_cmd_is_fresh(self) -> bool:
         if self.last_aruco_follower_cmd_time <= 0.0:
             return False
         return (time.time() - self.last_aruco_follower_cmd_time) <= self.aruco_follower_cmd_timeout_s
-
-    def _build_aruco_fallback_cmd(self) -> Twist:
-        twist = Twist()
-        zones = set(self.obstacle_zones)
-        direction = self._effective_aruco_direction()
-        turn = abs(self.aruco_follow_angular_z)
-        search_turn = abs(self.aruco_search_angular_z)
-        turn_fwd = max(0.0, self.aruco_follow_turn_forward_x)
-        side_blocked = ("LEFT" in zones) or ("RIGHT" in zones)
-        if self.aruco_block_forward_on_obstacle and side_blocked:
-            turn_fwd = 0.0
-
-        if "CORNER" in zones:
-            marker_is_closer_than_obstacle = (
-                math.isfinite(self.aruco_distance_m)
-                and math.isfinite(self.front_obstacle_distance_m)
-                and (self.aruco_distance_m > self.aruco_stop_distance_m)
-                and (
-                    self.aruco_distance_m
-                    <= (self.front_obstacle_distance_m + self.aruco_corner_marker_vs_obstacle_margin_m)
-                )
-            )
-            if marker_is_closer_than_obstacle and direction == "CENTER":
-                twist.linear.x = max(0.0, self.aruco_corner_forward_x)
-            elif direction == "LEFT":
-                twist.angular.z = turn
-            elif direction == "RIGHT":
-                twist.angular.z = -turn
-            elif "LEFT" in zones and "RIGHT" not in zones:
-                twist.angular.z = -search_turn
-            elif "RIGHT" in zones and "LEFT" not in zones:
-                twist.angular.z = search_turn
-            else:
-                twist.angular.z = search_turn
-        elif direction == "LEFT":
-            if "LEFT" in zones:
-                twist.angular.z = -turn
-            else:
-                twist.angular.z = turn
-                twist.linear.x = turn_fwd
-        elif direction == "RIGHT":
-            if "RIGHT" in zones:
-                twist.angular.z = turn
-            else:
-                twist.angular.z = -turn
-                twist.linear.x = turn_fwd
-        elif direction == "CENTER":
-            twist.linear.x = self._aruco_forward_speed(zones)
-            if "LEFT" in zones and "RIGHT" not in zones:
-                twist.angular.z = -0.5 * turn
-            elif "RIGHT" in zones and "LEFT" not in zones:
-                twist.angular.z = 0.5 * turn
-        else:
-            twist.angular.z = search_turn
-        return twist
 
     def _filter_aruco_follower_cmd(self, base_twist: Twist) -> Twist:
         twist = Twist()
@@ -682,15 +550,6 @@ class RobotSupervisor(Node):
 
         if "CORNER" in zones:
             twist.linear.x = 0.0
-            if abs(twist.angular.z) < 1e-3:
-                direction = self._effective_aruco_direction()
-                search_turn = abs(self.aruco_search_angular_z)
-                if direction == "LEFT":
-                    twist.angular.z = search_turn
-                elif direction == "RIGHT":
-                    twist.angular.z = -search_turn
-                else:
-                    twist.angular.z = search_turn
             return twist
 
         if self.aruco_block_forward_on_obstacle and ("LEFT" in zones or "RIGHT" in zones):
@@ -703,10 +562,9 @@ class RobotSupervisor(Node):
         return twist
 
     def _publish_aruco_safe_cmd(self):
+        twist = Twist()
         if self._aruco_follower_cmd_is_fresh():
             twist = self._filter_aruco_follower_cmd(self.aruco_follower_twist)
-        else:
-            twist = self._build_aruco_fallback_cmd()
         self.active_event = None
         self.active_twist = twist
         self.motion_until = 0.0
@@ -866,7 +724,6 @@ class RobotSupervisor(Node):
         self.stop_sent = False
         now = time.time()
         self.tick_aruco_detected = self.aruco_detected
-        self.tick_aruco_direction = self._effective_aruco_direction()
         self.tick_aruco_distance_m = self.aruco_distance_m
         self._log_marker_status()
 
