@@ -13,12 +13,12 @@ class ArucoMover(Node):
 
         self.world_name = str(self.declare_parameter("world_name", "random_world").value)
         self.entity_name = str(self.declare_parameter("entity_name", "moving_aruco_box").value)
-        self.center_x = float(self.declare_parameter("center_x", 1.0).value)
-        self.center_y = float(self.declare_parameter("center_y", 1.0).value)
-        self.z = float(self.declare_parameter("z", 0.25).value)
-        self.radius = float(self.declare_parameter("radius", 10.0).value)
-        self.angular_speed = float(self.declare_parameter("angular_speed", 0.15).value)
-        self.update_rate_hz = float(self.declare_parameter("update_rate_hz", 5.0).value)
+        self.center_x = float(self.declare_parameter("center_x", 2.0).value)
+        self.center_y = float(self.declare_parameter("center_y", 0.0).value)
+        self.z = float(self.declare_parameter("z", 0.375).value)
+        self.radius = float(self.declare_parameter("radius", 4.0).value)
+        self.angular_speed = float(self.declare_parameter("angular_speed", 0.35).value)
+        self.update_rate_hz = float(self.declare_parameter("update_rate_hz", 2.0).value)
         self.face_motion = bool(self.declare_parameter("face_motion", True).value)
 
         self.service_name = f"/world/{self.world_name}/set_pose"
@@ -69,25 +69,40 @@ class ArucoMover(Node):
             "--reptype",
             rep_type,
             "--timeout",
-            "200",
+            "1000",
             "--req",
             req_text,
         ]
         return subprocess.run(cmd, capture_output=True, text=True)
+
+    def _square_pose(self, t: float):
+        side_length = max(0.1, self.radius)
+        half_side = 0.5 * side_length
+        perimeter = 4.0 * side_length
+        distance = (self.angular_speed * t) % perimeter
+
+        if distance < side_length:
+            x = self.center_x - half_side + distance
+            y = self.center_y - half_side
+        elif distance < 2.0 * side_length:
+            x = self.center_x + half_side
+            y = self.center_y - half_side + (distance - side_length)
+        elif distance < 3.0 * side_length:
+            x = self.center_x + half_side - (distance - 2.0 * side_length)
+            y = self.center_y + half_side
+        else:
+            x = self.center_x - half_side
+            y = self.center_y + half_side - (distance - 3.0 * side_length)
+
+        return x, y
 
     def _on_timer(self):
         if not self.backends:
             return
 
         t = time.time() - self.started_at
-        phase = self.angular_speed * t
-        x = self.center_x 
-        y = self.center_y + self.radius * math.sin(phase)
-        dx_dt = self.radius * self.angular_speed * math.cos(phase)
-        if self.face_motion and abs(dx_dt) > 1e-6:
-            yaw = 0.0 if dx_dt >= 0.0 else math.pi
-        else:
-            yaw = 0.0
+        x, y = self._square_pose(t)
+        yaw = 0.0
         req_text = self._build_pose_request(x, y, yaw)
 
         candidates = (

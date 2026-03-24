@@ -16,6 +16,7 @@ Quick run:
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import re
@@ -35,7 +36,7 @@ import yaml
 
 THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(THIS_DIR))
-DEFAULT_NADZORU_ROOT = Path.home() / "Nadzoru2"
+DEFAULT_NADZORU_ROOT = Path.home() / "Documents/Nadzoru2"
 DEFAULT_SOURCE_AUTOMATA_DIR = THIS_DIR / "hardcoded_find_obj"
 DEFAULT_SOURCE_AUTOMATA_DIR_EXPLORE = THIS_DIR / "hardcoded_coverage"
 DEFAULT_SOURCE_AUTOMATA_DIR_WALL_FOLLOW = THIS_DIR / "hardcoded_wall_follow"
@@ -51,7 +52,7 @@ TASK_AUTOMATA_DIRS = {
 
 DEFAULT_REAL_YAML_OUT_DIR = (
     Path.home()
-    / "ros2_ws/src/Leo_sct/swar_basics/config"
+    / "ros2_ws/src/Leo_sct/swarm_basics/config"
 )
 
 DEFAULT_PROFILE_PATH = THIS_DIR / "task_profiles.json"
@@ -66,7 +67,7 @@ RUN_LLM = True
 
 # LLM defaults (shared with the LLM-only flow).
 DEFAULT_KEY_FILE = THIS_DIR.parent / "api_key.txt"
-DEFAULT_MODEL = "gpt-4.1"
+DEFAULT_MODEL = "gpt-5.4-nano"
 DEFAULT_GOAL = "Find the marker object and get close to it and stop while staying safe"
 DEFAULT_TIMEOUT_S = 120.0
 DEFAULT_RETRIES = 2
@@ -351,25 +352,60 @@ def parse_json_response(content: str) -> Dict[str, str]:
             i += 1
         return "".join(out)
 
-    try:
-        return json.loads(content)
-    except json.JSONDecodeError:
-        pass
+    def normalize_payload(data: object) -> Dict[str, str]:
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected a JSON object, got {type(data).__name__}.")
+        transitions = data.get("transitions")
+        if isinstance(transitions, list):
+            normalized = []
+            for item in transitions:
+                if isinstance(item, str):
+                    normalized.append(item)
+                elif isinstance(item, (tuple, list)) and len(item) == 3 and all(isinstance(x, str) for x in item):
+                    s, ev, t = item
+                    normalized.append(f'(\"{s}\", \"{ev}\", \"{t}\")')
+                else:
+                    raise ValueError(f"Unsupported transition entry: {item!r}")
+            data = dict(data)
+            data["transitions"] = normalized
+        return data
+
+    def try_json(text: str):
+        try:
+            return normalize_payload(json.loads(text))
+        except json.JSONDecodeError:
+            return None
+
+    def try_python_literal(text: str):
+        try:
+            return normalize_payload(ast.literal_eval(text))
+        except (ValueError, SyntaxError):
+            return None
+
+    stripped = strip_line_comments(content)
+    parsed = try_json(stripped)
+    if parsed is not None:
+        return parsed
+
     fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, re.DOTALL)
     if fence_match:
-        snippet = fence_match.group(1)
-        try:
-            return json.loads(strip_line_comments(snippet))
-        except json.JSONDecodeError:
-            pass
+        snippet = strip_line_comments(fence_match.group(1))
+        parsed = try_json(snippet) or try_python_literal(snippet)
+        if parsed is not None:
+            return parsed
+
     start = content.find("{")
     end = content.rfind("}")
     if start != -1 and end != -1 and end > start:
-        snippet = content[start : end + 1]
-        try:
-            return json.loads(strip_line_comments(snippet))
-        except json.JSONDecodeError:
-            pass
+        snippet = strip_line_comments(content[start : end + 1])
+        parsed = try_json(snippet) or try_python_literal(snippet)
+        if parsed is not None:
+            return parsed
+
+    parsed = try_python_literal(stripped)
+    if parsed is not None:
+        return parsed
+
     raise ValueError("Unable to parse JSON response from API:\n" + content)
 
 

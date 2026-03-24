@@ -109,6 +109,9 @@ class RobotSupervisor(Node):
         self.enabled = bool(self.declare_parameter("enabled", False).value)
         self.static_mode = bool(self.declare_parameter("static", False).value)
         self.aruco_follow_enabled = bool(self.declare_parameter("aruco_follow_enabled", True).value)
+        self.aruco_follower_cmd_timeout_s = float(
+            self.declare_parameter("aruco_follower_cmd_timeout_s", 0.5).value
+        )
         self.aruco_follow_linear_x = float(self.declare_parameter("aruco_follow_linear_x", 0.35).value)
         self.aruco_follow_linear_min_x = float(self.declare_parameter("aruco_follow_linear_min_x", 0.14).value)
         self.aruco_follow_turn_forward_x = float(
@@ -158,10 +161,15 @@ class RobotSupervisor(Node):
         self.aruco_distance_m = float("inf")
         self.front_obstacle_distance_m = float("inf")
         self.last_aruco_seen_time = 0.0
+        self.tick_aruco_detected = False
+        self.tick_aruco_direction = "NONE"
+        self.tick_aruco_distance_m = float("inf")
         self.last_marker_log_time = 0.0
         self.last_marker_log_detected: Optional[bool] = None
         self.last_marker_log_direction = "NONE"
         self.last_marker_log_distance_m = float("inf")
+        self.aruco_follower_twist = Twist()
+        self.last_aruco_follower_cmd_time = 0.0
 
         # Odom / yaw tracking for full-rotate
         self.have_odom = False
@@ -193,6 +201,9 @@ class RobotSupervisor(Node):
         self.sub_aruco_distance = self.create_subscription(Float32, "aruco_id1_distance", self.aruco_distance_callback, 10)
         self.sub_front_obstacle_distance = self.create_subscription(
             Float32, "front_obstacle_distance", self.front_obstacle_distance_callback, 10
+        )
+        self.sub_aruco_follower_cmd = self.create_subscription(
+            Twist, "aruco_follower/cmd_vel", self.aruco_follower_cmd_callback, 10
         )
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
 
@@ -409,6 +420,10 @@ class RobotSupervisor(Node):
         else:
             self.front_obstacle_distance_m = float("inf")
 
+    def aruco_follower_cmd_callback(self, msg: Twist):
+        self.aruco_follower_twist = msg
+        self.last_aruco_follower_cmd_time = time.time()
+
     def _log_marker_status(self, force: bool = False):
         now = time.time()
         if not force and (now - self.last_marker_log_time) < self.marker_log_period_s:
@@ -452,16 +467,16 @@ class RobotSupervisor(Node):
         return "RIGHT" in self.obstacle_zones
 
     def marker_seen_check(self, sup_data):
-        return self.aruco_detected
+        return self.tick_aruco_detected
 
     def marker_lost_check(self, sup_data):
-        return not self.aruco_detected
+        return not self.tick_aruco_detected
 
     def marker_close_check(self, sup_data):
         return (
-            self.aruco_detected
-            and math.isfinite(self.aruco_distance_m)
-            and self.aruco_distance_m <= self.aruco_stop_distance_m
+            self.tick_aruco_detected
+            and math.isfinite(self.tick_aruco_distance_m)
+            and self.tick_aruco_distance_m <= self.aruco_stop_distance_m
         )
 
     def _install_uncontrollable_callbacks(self):
@@ -592,7 +607,12 @@ class RobotSupervisor(Node):
             return min(speed, 0.16)
         return speed
 
-    def _publish_aruco_safe_cmd(self):
+    def _aruco_follower_cmd_is_fresh(self) -> bool:
+        if self.last_aruco_follower_cmd_time <= 0.0:
+            return False
+        return (time.time() - self.last_aruco_follower_cmd_time) <= self.aruco_follower_cmd_timeout_s
+
+    def _build_aruco_fallback_cmd(self) -> Twist:
         twist = Twist()
         zones = set(self.obstacle_zones)
         direction = self._effective_aruco_direction()
@@ -603,19 +623,6 @@ class RobotSupervisor(Node):
         if self.aruco_block_forward_on_obstacle and side_blocked:
             turn_fwd = 0.0
 
-        # Simple close stop: hold still while marker is detected and close enough.
-        if (
-            self.aruco_detected
-            and math.isfinite(self.aruco_distance_m)
-            and self.aruco_distance_m <= self.aruco_stop_distance_m
-        ):
-            self.active_event = None
-            self.active_twist = twist
-            self.motion_until = 0.0
-            self._publish_cmd(self.active_twist)
-            return
-
-        # Front obstacle: never drive forward. Rotate to re-acquire free space.
         if "CORNER" in zones:
             marker_is_closer_than_obstacle = (
                 math.isfinite(self.aruco_distance_m)
@@ -639,14 +646,12 @@ class RobotSupervisor(Node):
             else:
                 twist.angular.z = search_turn
         elif direction == "LEFT":
-            # If left side is blocked, do not rotate into obstacle.
             if "LEFT" in zones:
                 twist.angular.z = -turn
             else:
                 twist.angular.z = turn
                 twist.linear.x = turn_fwd
         elif direction == "RIGHT":
-            # If right side is blocked, do not rotate into obstacle.
             if "RIGHT" in zones:
                 twist.angular.z = turn
             else:
@@ -659,20 +664,53 @@ class RobotSupervisor(Node):
             elif "RIGHT" in zones and "LEFT" not in zones:
                 twist.angular.z = 0.5 * turn
         else:
-            # Marker temporarily not visible in the hold window: keep scanning.
             twist.angular.z = search_turn
+        return twist
+
+    def _filter_aruco_follower_cmd(self, base_twist: Twist) -> Twist:
+        twist = Twist()
+        twist.linear.x = max(0.0, float(base_twist.linear.x))
+        twist.angular.z = float(base_twist.angular.z)
+        zones = set(self.obstacle_zones)
+
+        if (
+            self.aruco_detected
+            and math.isfinite(self.aruco_distance_m)
+            and self.aruco_distance_m <= self.aruco_stop_distance_m
+        ):
+            return Twist()
+
+        if "CORNER" in zones:
+            twist.linear.x = 0.0
+            if abs(twist.angular.z) < 1e-3:
+                direction = self._effective_aruco_direction()
+                search_turn = abs(self.aruco_search_angular_z)
+                if direction == "LEFT":
+                    twist.angular.z = search_turn
+                elif direction == "RIGHT":
+                    twist.angular.z = -search_turn
+                else:
+                    twist.angular.z = search_turn
+            return twist
+
+        if self.aruco_block_forward_on_obstacle and ("LEFT" in zones or "RIGHT" in zones):
+            twist.linear.x = 0.0
+
+        if "LEFT" in zones and twist.angular.z > 0.0:
+            twist.angular.z = 0.0
+        if "RIGHT" in zones and twist.angular.z < 0.0:
+            twist.angular.z = 0.0
+        return twist
+
+    def _publish_aruco_safe_cmd(self):
+        if self._aruco_follower_cmd_is_fresh():
+            twist = self._filter_aruco_follower_cmd(self.aruco_follower_twist)
+        else:
+            twist = self._build_aruco_fallback_cmd()
         self.active_event = None
         self.active_twist = twist
         self.motion_until = 0.0
         self._publish_cmd(self.active_twist)
-
-    def _aruco_control_active(self) -> bool:
-        if self.aruco_detected:
-            return True
-        if self.last_aruco_seen_time <= 0.0:
-            return False
-        recent = (time.time() - self.last_aruco_seen_time) <= self.aruco_seen_timeout_s
-        return recent
 
     def _cancel_all_motion(self):
         self.active_event = None
@@ -827,6 +865,9 @@ class RobotSupervisor(Node):
 
         self.stop_sent = False
         now = time.time()
+        self.tick_aruco_detected = self.aruco_detected
+        self.tick_aruco_direction = self._effective_aruco_direction()
+        self.tick_aruco_distance_m = self.aruco_distance_m
         self._log_marker_status()
 
         # Manual override states supersede SCT choices.
@@ -881,7 +922,7 @@ class RobotSupervisor(Node):
             self._publish_stop()
             return
 
-        self.get_logger().info(f"Selected controllable event: {ev_name}")
+        # self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
 
 
