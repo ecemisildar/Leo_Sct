@@ -11,6 +11,7 @@ from launch.actions import OpaqueFunction, Shutdown, TimerAction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
+from swarm_basics.launch_defaults import MOVING_ARUCO_DEFAULTS
 
 
 def generate_launch_description():
@@ -35,37 +36,37 @@ def generate_launch_description():
     )
     spawn_moving_aruco_arg = DeclareLaunchArgument(
         "spawn_moving_aruco",
-        default_value="true",
+        default_value=MOVING_ARUCO_DEFAULTS["spawn_moving_aruco"],
         description="Spawn a moving ArUco target box in Gazebo.",
     )
     moving_aruco_x_arg = DeclareLaunchArgument(
         "moving_aruco_x",
-        default_value="2.0",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_x"],
         description="Center X position for the moving ArUco target square path.",
     )
     moving_aruco_y_arg = DeclareLaunchArgument(
         "moving_aruco_y",
-        default_value="0.0",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_y"],
         description="Center Y position for the moving ArUco target square path.",
     )
     moving_aruco_z_arg = DeclareLaunchArgument(
         "moving_aruco_z",
-        default_value="0.375",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_z"],
         description="Z position for the moving ArUco target.",
     )
     moving_aruco_radius_arg = DeclareLaunchArgument(
         "moving_aruco_radius",
-        default_value="4.0",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_radius"],
         description="Side length of the square ArUco path.",
     )
     moving_aruco_speed_arg = DeclareLaunchArgument(
         "moving_aruco_speed",
-        default_value="0.35",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_speed"],
         description="Linear speed in m/s along the square ArUco path.",
     )
     moving_aruco_update_rate_arg = DeclareLaunchArgument(
         "moving_aruco_update_rate",
-        default_value="5.0",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_update_rate"],
         description="Pose update rate in Hz for the moving ArUco target.",
     )
 

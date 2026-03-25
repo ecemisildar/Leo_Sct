@@ -22,6 +22,7 @@
 import os
 
 from ament_index_python.packages import get_package_share_directory
+from swarm_basics.launch_defaults import MOVING_ARUCO_DEFAULTS
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, Shutdown, TimerAction, SetEnvironmentVariable
@@ -85,37 +86,37 @@ def generate_launch_description():
     )
     spawn_moving_aruco = DeclareLaunchArgument(
         "spawn_moving_aruco",
-        default_value="true",
+        default_value=MOVING_ARUCO_DEFAULTS["spawn_moving_aruco"],
         description="Spawn a moving ArUco target box.",
     )
     moving_aruco_x = DeclareLaunchArgument(
         "moving_aruco_x",
-        default_value="1.0",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_x"],
         description="Center X position for the moving ArUco target.",
     )
     moving_aruco_y = DeclareLaunchArgument(
         "moving_aruco_y",
-        default_value="1.0",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_y"],
         description="Center Y position for the moving ArUco target.",
     )
     moving_aruco_z = DeclareLaunchArgument(
         "moving_aruco_z",
-        default_value="0.25",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_z"],
         description="Z position for the moving ArUco target.",
     )
     moving_aruco_radius = DeclareLaunchArgument(
         "moving_aruco_radius",
-        default_value="1.5",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_radius"],
         description="Circular path radius for the moving ArUco target.",
     )
     moving_aruco_speed = DeclareLaunchArgument(
         "moving_aruco_speed",
-        default_value="0.35",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_speed"],
         description="Circular path angular speed for the moving ArUco target.",
     )
     moving_aruco_update_rate = DeclareLaunchArgument(
         "moving_aruco_update_rate",
-        default_value="5.0",
+        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_update_rate"],
         description="Circular path update rate in Hz for the moving ArUco target.",
     )
     results_dir = DeclareLaunchArgument(
