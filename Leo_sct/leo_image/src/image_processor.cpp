@@ -275,6 +275,7 @@ private:
     float distance_m = std::numeric_limits<float>::quiet_NaN();
     bool distance_valid = false;
     cv::Point2f target_center(0.0f, 0.0f);
+    cv::Rect target_bbox;
     for (size_t i = 0; i < ids.size(); ++i) {
       if (ids[i] != aruco_target_id_) {
         continue;
@@ -290,6 +291,21 @@ private:
         cx /= static_cast<float>(corners[i].size());
         cy /= static_cast<float>(corners[i].size());
         target_center = cv::Point2f(cx, cy);
+        int min_x = gray.cols - 1;
+        int max_x = 0;
+        int min_y = gray.rows - 1;
+        int max_y = 0;
+        for (const auto & p : corners[i]) {
+          min_x = std::min(min_x, static_cast<int>(std::floor(p.x)));
+          max_x = std::max(max_x, static_cast<int>(std::ceil(p.x)));
+          min_y = std::min(min_y, static_cast<int>(std::floor(p.y)));
+          max_y = std::max(max_y, static_cast<int>(std::ceil(p.y)));
+        }
+        min_x = std::clamp(min_x - 4, 0, gray.cols - 1);
+        max_x = std::clamp(max_x + 4, 0, gray.cols - 1);
+        min_y = std::clamp(min_y - 4, 0, gray.rows - 1);
+        max_y = std::clamp(max_y + 4, 0, gray.rows - 1);
+        target_bbox = cv::Rect(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1);
         const float w = static_cast<float>(gray.cols);
         if (w > 1.0f) {
           const float norm = (cx / w) - 0.5f;
@@ -325,27 +341,50 @@ private:
       const double depth_age_ms = (now - last_depth_time_).seconds() * 1000.0;
       if (depth_age_ms >= 0.0 && depth_age_ms <= 350.0) {
         if (last_depth_.rows == gray.rows && last_depth_.cols == gray.cols) {
-          const int radius = 2;
-          const int cx = std::clamp(static_cast<int>(std::round(target_center.x)), 0, last_depth_.cols - 1);
-          const int cy = std::clamp(static_cast<int>(std::round(target_center.y)), 0, last_depth_.rows - 1);
-          const int x0 = std::max(0, cx - radius);
-          const int x1 = std::min(last_depth_.cols - 1, cx + radius);
-          const int y0 = std::max(0, cy - radius);
-          const int y1 = std::min(last_depth_.rows - 1, cy + radius);
-
-          float best = std::numeric_limits<float>::infinity();
-          for (int y = y0; y <= y1; ++y) {
-            const float * row = last_depth_.ptr<float>(y);
-            for (int x = x0; x <= x1; ++x) {
-              const float d = row[x];
-              if (std::isfinite(d) && d > static_cast<float>(min_depth_) && d < static_cast<float>(max_depth_)) {
-                best = std::min(best, d);
+          std::vector<float> depth_vals;
+          if (target_bbox.area() > 0) {
+            depth_vals.reserve(static_cast<size_t>(target_bbox.area()));
+            for (int y = target_bbox.y; y < target_bbox.y + target_bbox.height; ++y) {
+              const float * row = last_depth_.ptr<float>(y);
+              for (int x = target_bbox.x; x < target_bbox.x + target_bbox.width; ++x) {
+                const float d = row[x];
+                if (std::isfinite(d) && d > static_cast<float>(min_depth_) && d < static_cast<float>(max_depth_)) {
+                  depth_vals.push_back(d);
+                }
               }
             }
           }
-          if (std::isfinite(best)) {
-            distance_m = best;
+
+          if (!depth_vals.empty()) {
+            const size_t k = std::min(
+              depth_vals.size() - 1,
+              static_cast<size_t>(std::floor(0.20 * static_cast<double>(depth_vals.size() - 1))));
+            std::nth_element(depth_vals.begin(), depth_vals.begin() + k, depth_vals.end());
+            distance_m = depth_vals[k];
             distance_valid = true;
+          } else {
+            const int radius = 2;
+            const int cx = std::clamp(static_cast<int>(std::round(target_center.x)), 0, last_depth_.cols - 1);
+            const int cy = std::clamp(static_cast<int>(std::round(target_center.y)), 0, last_depth_.rows - 1);
+            const int x0 = std::max(0, cx - radius);
+            const int x1 = std::min(last_depth_.cols - 1, cx + radius);
+            const int y0 = std::max(0, cy - radius);
+            const int y1 = std::min(last_depth_.rows - 1, cy + radius);
+
+            float best = std::numeric_limits<float>::infinity();
+            for (int y = y0; y <= y1; ++y) {
+              const float * row = last_depth_.ptr<float>(y);
+              for (int x = x0; x <= x1; ++x) {
+                const float d = row[x];
+                if (std::isfinite(d) && d > static_cast<float>(min_depth_) && d < static_cast<float>(max_depth_)) {
+                  best = std::min(best, d);
+                }
+              }
+            }
+            if (std::isfinite(best)) {
+              distance_m = best;
+              distance_valid = true;
+            }
           }
         }
       }
@@ -396,14 +435,14 @@ private:
     //   std::isfinite(marker_offset) ? marker_offset : -9.0f,
     //   distance_valid ? distance_m : -1.0f);
 
-    if (aruco_debug_) {
-      RCLCPP_INFO_THROTTLE(
-        this->get_logger(), *this->get_clock(), 1000,
-        "Aruco dictionary=%d target_id=%d total_detected=%zu",
-        aruco_dictionary_id_,
-        aruco_target_id_,
-        ids.size());
-    }
+    // if (aruco_debug_) {
+    //   RCLCPP_INFO_THROTTLE(
+    //     this->get_logger(), *this->get_clock(), 1000,
+    //     "Aruco dictionary=%d target_id=%d total_detected=%zu",
+    //     aruco_dictionary_id_,
+    //     aruco_target_id_,
+    //     ids.size());
+    // }
   }
 
   ZoneStats computeZoneStats(const cv::Mat & depth)

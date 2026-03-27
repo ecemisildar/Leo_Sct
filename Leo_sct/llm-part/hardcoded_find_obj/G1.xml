@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<model version="0.0" type="FSA" id="Untitled">
+<!-- <model version="0.0" type="FSA" id="Untitled">
 <data>
 	<state id="0" name="1" initial ="True" marked="True" x="258" y="273" />
 	<event id="0" name="marker_seen" controllable="False" observable="True"/>
@@ -17,4 +17,175 @@
 	<transition source="0" target="0" event="5"/>
 	<transition source="0" target="0" event="6"/>
 </data>
-</model>
+</model> -->
+
+<model version="0.0" type="FSA" id="Untitled">
+<data>
+	<states>
+    <state id="0" name="idle"        initial="True" marked="True" x="200" y="300"/>
+    <state id="1" name="moving_fwd"  initial="False" marked="True" x="400" y="150"/>
+    <state id="2" name="moving_bwd"  initial="False" marked="True" x="400" y="450"/>
+    <state id="3" name="rotating"    initial="False" marked="True" x="600" y="300"/>
+    <state id="4" name="tracking"    initial="False" marked="True" x="700" y="150"/>
+    <state id="5" name="scanning"    initial="False" marked="True" x="700" y="450"/>
+    <state id="6" name="stopped"     initial="False" marked="True" x="450" y="300"/>
+  </states>
+  <events>
+    <!-- controllable -->
+    <event id="0"  name="move_forward"           controllable="True"  observable="True"/>
+    <event id="2"  name="rotate_clockwise"        controllable="True"  observable="True"/>
+    <event id="3"  name="rotate_counterclockwise" controllable="True"  observable="True"/>
+    <event id="4"  name="move_to_marker"          controllable="True"  observable="True"/>
+    <event id="5"  name="random_walk"             controllable="True"  observable="True"/>
+    <event id="6"  name="full_rotate"             controllable="True"  observable="True"/>
+    <event id="7"  name="stop"                    controllable="True"  observable="True"/>
+    <!-- uncontrollable -->
+    <event id="8"  name="path_clear"              controllable="False" observable="True"/>
+    <event id="9"  name="obstacle_front"          controllable="False" observable="True"/>
+    <event id="10" name="obstacle_left"           controllable="False" observable="True"/>
+    <event id="11" name="obstacle_right"          controllable="False" observable="True"/>
+    <event id="12" name="marker_seen"             controllable="False" observable="True"/>
+    <event id="13" name="marker_lost"             controllable="False" observable="True"/>
+    <event id="14" name="marker_close"            controllable="False" observable="True"/>
+  </events>
+  <transitions>
+    <!-- ============================================================
+         CONTROLLABLE TRANSITIONS
+         All controllable events are enabled from every state.
+         The supervisor will restrict where needed.
+         ============================================================ -->
+
+    <!-- move_forward -> moving_fwd (from all states) -->
+    <transition source="0" target="1" event="0"/>
+    <transition source="1" target="1" event="0"/>
+    <transition source="2" target="1" event="0"/>
+    <transition source="3" target="1" event="0"/>
+    <transition source="4" target="1" event="0"/>
+    <transition source="5" target="1" event="0"/>
+    <transition source="6" target="1" event="0"/>
+
+    <!-- random_walk -> moving_fwd (from all states) -->
+    <transition source="0" target="1" event="5"/>
+    <transition source="1" target="1" event="5"/>
+    <transition source="2" target="1" event="5"/>
+    <transition source="3" target="1" event="5"/>
+    <transition source="4" target="1" event="5"/>
+    <transition source="5" target="1" event="5"/>
+    <transition source="6" target="1" event="5"/>
+
+    <!-- rotate_clockwise -> rotating (from all states) -->
+    <transition source="0" target="3" event="2"/>
+    <transition source="1" target="3" event="2"/>
+    <transition source="2" target="3" event="2"/>
+    <transition source="3" target="3" event="2"/>
+    <transition source="4" target="3" event="2"/>
+    <transition source="5" target="3" event="2"/>
+    <transition source="6" target="3" event="2"/>
+
+    <!-- rotate_counterclockwise -> rotating (from all states) -->
+    <transition source="0" target="3" event="3"/>
+    <transition source="1" target="3" event="3"/>
+    <transition source="2" target="3" event="3"/>
+    <transition source="3" target="3" event="3"/>
+    <transition source="4" target="3" event="3"/>
+    <transition source="5" target="3" event="3"/>
+    <transition source="6" target="3" event="3"/>
+
+    <!-- move_to_marker -> tracking (from all states) -->
+    <transition source="0" target="4" event="4"/>
+    <transition source="1" target="4" event="4"/>
+    <transition source="2" target="4" event="4"/>
+    <transition source="3" target="4" event="4"/>
+    <transition source="4" target="4" event="4"/>
+    <transition source="5" target="4" event="4"/>
+    <transition source="6" target="4" event="4"/>
+
+    <!-- full_rotate -> scanning (from all states) -->
+    <transition source="0" target="5" event="6"/>
+    <transition source="1" target="5" event="6"/>
+    <transition source="2" target="5" event="6"/>
+    <transition source="3" target="5" event="6"/>
+    <transition source="4" target="5" event="6"/>
+    <transition source="5" target="5" event="6"/>
+    <transition source="6" target="5" event="6"/>
+
+    <!-- stop -> stopped (from all states) -->
+    <transition source="0" target="6" event="7"/>
+    <transition source="1" target="6" event="7"/>
+    <transition source="2" target="6" event="7"/>
+    <transition source="3" target="6" event="7"/>
+    <transition source="4" target="6" event="7"/>
+    <transition source="5" target="6" event="7"/>
+    <transition source="6" target="6" event="7"/>
+
+    <!-- ============================================================
+         UNCONTROLLABLE TRANSITIONS
+         All sensor events self-loop on every state.
+         G1 does not care about sensor readings.
+         ============================================================ -->
+
+    <!-- path_clear self-loops -->
+    <transition source="0" target="0" event="8"/>
+    <transition source="1" target="1" event="8"/>
+    <transition source="2" target="2" event="8"/>
+    <transition source="3" target="3" event="8"/>
+    <transition source="4" target="4" event="8"/>
+    <transition source="5" target="5" event="8"/>
+    <transition source="6" target="6" event="8"/>
+
+    <!-- obstacle_front self-loops -->
+    <transition source="0" target="0" event="9"/>
+    <transition source="1" target="1" event="9"/>
+    <transition source="2" target="2" event="9"/>
+    <transition source="3" target="3" event="9"/>
+    <transition source="4" target="4" event="9"/>
+    <transition source="5" target="5" event="9"/>
+    <transition source="6" target="6" event="9"/>
+
+    <!-- obstacle_left self-loops -->
+    <transition source="0" target="0" event="10"/>
+    <transition source="1" target="1" event="10"/>
+    <transition source="2" target="2" event="10"/>
+    <transition source="3" target="3" event="10"/>
+    <transition source="4" target="4" event="10"/>
+    <transition source="5" target="5" event="10"/>
+    <transition source="6" target="6" event="10"/>
+
+    <!-- obstacle_right self-loops -->
+    <transition source="0" target="0" event="11"/>
+    <transition source="1" target="1" event="11"/>
+    <transition source="2" target="2" event="11"/>
+    <transition source="3" target="3" event="11"/>
+    <transition source="4" target="4" event="11"/>
+    <transition source="5" target="5" event="11"/>
+    <transition source="6" target="6" event="11"/>
+
+    <!-- marker_seen self-loops -->
+    <transition source="0" target="0" event="12"/>
+    <transition source="1" target="1" event="12"/>
+    <transition source="2" target="2" event="12"/>
+    <transition source="3" target="3" event="12"/>
+    <transition source="4" target="4" event="12"/>
+    <transition source="5" target="5" event="12"/>
+    <transition source="6" target="6" event="12"/>
+
+    <!-- marker_lost self-loops -->
+    <transition source="0" target="0" event="13"/>
+    <transition source="1" target="1" event="13"/>
+    <transition source="2" target="2" event="13"/>
+    <transition source="3" target="3" event="13"/>
+    <transition source="4" target="4" event="13"/>
+    <transition source="5" target="5" event="13"/>
+    <transition source="6" target="6" event="13"/>
+
+    <!-- marker_close self-loops -->
+    <transition source="0" target="0" event="14"/>
+    <transition source="1" target="1" event="14"/>
+    <transition source="2" target="2" event="14"/>
+    <transition source="3" target="3" event="14"/>
+    <transition source="4" target="4" event="14"/>
+    <transition source="5" target="5" event="14"/>
+    <transition source="6" target="6" event="14"/>
+  </transitions>
+</data>
+</model> 

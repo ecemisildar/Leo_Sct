@@ -67,7 +67,7 @@ RUN_LLM = True
 
 # LLM defaults (shared with the LLM-only flow).
 DEFAULT_KEY_FILE = THIS_DIR.parent / "api_key.txt"
-DEFAULT_MODEL = "gpt-5.4-nano"
+DEFAULT_MODEL = "gpt-4.1"
 DEFAULT_GOAL = "Find the marker object and get close to it and stop while staying safe"
 DEFAULT_TIMEOUT_S = 120.0
 DEFAULT_RETRIES = 2
@@ -128,8 +128,6 @@ EVENT_SEMANTICS = {
     "obstacle_front": "front sensor region is blocked.",
     "obstacle_left": "left sensor region is blocked.",
     "obstacle_right": "right sensor region is blocked.",
-    "rotate_clockwise": "robot rotates clockwise.",
-    "rotate_counterclockwise": "robot rotates counterclockwise.",
     "marker_seen": "marker currently detected in camera.",
     "marker_lost": "marker currently not detected in camera.",
     "marker_close": "marker distance < threshold (goal condition).",
@@ -217,6 +215,32 @@ def _validate_llm_json(
                     f"Controllable self-loop in action-like state '{s}' on '{ev}'. "
                     f"This tends to cause repeated motion pulses and collisions."
                 )
+
+    # 6) marker_close safety invariant:
+    # marker_close must always lead to a terminal state where stop is the ONLY controllable
+    if "marker_close" in uncontrollable:
+        for (s, ev), tgt_set in nexts.items():
+            if ev != "marker_close":
+                continue
+            tgt = next(iter(tgt_set))
+            tgt_ctrls = [e for e in controllable if (tgt, e) in nexts]
+            if tgt_ctrls != ["stop"]:
+                raise ValueError(
+                    f"Safety violation: marker_close from '{s}' leads to '{tgt}', "
+                    f"which has controllables {tgt_ctrls} — must be exactly ['stop']. "
+                    f"The robot must stop when the marker is reached."
+                )
+            # Also check the terminal state doesn't transition away on uncontrollables
+            # (other than self-loops) — prevents escaping the goal state
+            for uc in uncontrollable:
+                if (tgt, uc) in nexts:
+                    uc_tgt = next(iter(nexts[(tgt, uc)]))
+                    if uc_tgt != tgt:
+                        raise ValueError(
+                            f"Safety violation: terminal goal state '{tgt}' transitions "
+                            f"away on uncontrollable '{uc}' to '{uc_tgt}'. "
+                            f"Goal state must self-loop on all uncontrollables."
+                        )            
 
 
 def _ensure_nadzoru_imports(nadzoru_root: Path) -> None:
@@ -618,6 +642,37 @@ def _run_nadzoru_script(
         generated.append(output_path)
     return generated
 
+def _check_sloc_valid(sloc_path: Path, sloc_name: str) -> None:
+    from machine.automaton import Automaton
+
+    a = Automaton()
+    a.load(str(sloc_path))
+
+    states = list(a.states)
+    if len(states) == 0:
+        raise SystemExit(
+            f"SupC produced an empty supervisor '{sloc_name}' — "
+            f"the specification is likely not controllable w.r.t. the plant. "
+            f"Check {sloc_path} and review the LLM-generated transitions."
+        )
+
+    if a.initial_state is None:
+        raise SystemExit(
+            f"Supervisor '{sloc_name}' has no initial state — "
+            f"it cannot be executed. Check {sloc_path}."
+        )
+
+    # Check for blocking: every state should have at least one outgoing transition
+    blocking_states = [
+        s.name for s in states
+        if len(list(s.out_transitions)) == 0 and s != a.initial_state
+    ]
+    if blocking_states:
+        raise SystemExit(
+            f"Supervisor '{sloc_name}' has blocking (dead-end) states with no "
+            f"outgoing transitions: {blocking_states}. The robot may get permanently stuck."
+        )
+
 
 def _build_sct_yaml(automatons: Sequence["Automaton"]) -> Dict[str, object]:
     if not automatons:
@@ -871,6 +926,7 @@ def main() -> int:
             f"Inputs: E={paths['e_xml']} G1={paths['g1']} G2={paths['g2']} "
             f"Script={paths['script']}"
         )
+    _check_sloc_valid(paths["sloc_xml"], paths["sloc_name"])    
 
     from machine.automaton import Automaton
 
