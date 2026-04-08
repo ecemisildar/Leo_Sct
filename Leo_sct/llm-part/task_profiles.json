@@ -17,7 +17,12 @@
     "constraints": [
       "Focus on systematic exploration; avoid long dwell times in one spot.",
       "Do not collide with obstacles and robots.",
-      "Prefer forward movement unless obstacle cues demand recovery."
+      "Prefer forward movement unless obstacle cues demand recovery.",
+      "Every non-terminal explore state must enable exactly one controllable action.",
+      "States reached by obstacle_front must enable exactly one deterministic recovery controllable: full_rotate, rotate_clockwise, or rotate_counterclockwise.",
+      "States reached by obstacle_left must enable exactly one controllable and it must be rotate_clockwise.",
+      "States reached by obstacle_right must enable exactly one controllable and it must be rotate_counterclockwise.",
+      "No state reached by any obstacle event may enable move_forward or random_walk."
     ],
     "include_default_constraints": true
   },

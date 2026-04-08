@@ -1,0 +1,368 @@
+It involves two types of robots, leaders
+and followers. The followers are of two classes, which we call green and blue. Robots of the
+same class could be equipped with identical tools, for example. The task is to group each
+leader with a balanced number of followers from each class (±1). We call this the equilibrium
+criterion.
+The strategy is as follows. Leaders are randomly distributed over the arena and do not
+move. Followers move randomly broadcasting a message (broadcast) containing a unique
+identification code, their class, and the message type. When a leader receives a broadcast
+message, it sends an offer message if adding that robot would fulfil the equilibrium criterion.
+When a follower receives an offer, it stops, sends an acceptance message to the leader, and
+starts relaying any message to and from their leader.
+
+
+G1: represents the movement capabilities
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="False" x="350" y="200" />
+
+    <event id="0" name="moveFW" controllable="True" observable="True" />
+    <event id="1" name="turnCW" controllable="True" observable="True" />
+    <event id="2" name="turnCCW" controllable="True" observable="True" />
+    <event id="3" name="moveEnded" controllable="False" observable="True" />
+    <event id="4" name="moveStop" controllable="True" observable="True" />
+
+    <transition source="0" target="1" event="0" />
+    <transition source="0" target="1" event="1" />
+    <transition source="0" target="1" event="2" />
+    <transition source="1" target="0" event="3" />
+    <transition source="1" target="0" event="4" />
+  </data>
+</model>
+
+
+G2: represents a timer. Controllable event startTimer starts the timer. After the defined time has
+elapsed, uncontrollable event timeout is generated.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="False" x="350" y="200" />
+    <event id="0" name="startTimer" controllable="True" observable="True" />
+    <event id="1" name="timeout" controllable="False" observable="True" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="0" event="1" />
+  </data>
+</model>
+
+G3: represents the message sending capability. Controllable events sendBG and sendBB enable the broadcasting
+message of available green and blue followers, respectively. Controllable events sendOG and
+sendOB are the messages emitted by a leader to offer membership in the group to a specific
+green or blue follower, respectively. Controllable events sendAG and sendAB are the messages
+that confirm the acceptance of the green or blue follower, respectively. Controllable event
+sendE causes followers that are already part of a group to relay the last received message
+that is related to its leader. Controllable event msgStop stops the sending of the current message.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="False" x="350" y="200" />
+
+    <event id="0" name="sendBG" controllable="True" observable="True" />
+    <event id="1" name="sendBB" controllable="True" observable="True" />
+    <event id="2" name="sendOG" controllable="True" observable="True" />
+    <event id="3" name="sendOB" controllable="True" observable="True" />
+    <event id="4" name="sendAG" controllable="True" observable="True" />
+    <event id="5" name="sendAB" controllable="True" observable="True" />
+    <event id="6" name="sendE" controllable="True" observable="True" />
+    <event id="7" name="msgStop" controllable="True" observable="True" />
+
+    <transition source="0" target="1" event="0" />
+    <transition source="0" target="1" event="1" />
+    <transition source="0" target="1" event="2" />
+    <transition source="0" target="1" event="3" />
+    <transition source="0" target="1" event="4" />
+    <transition source="0" target="1" event="5" />
+    <transition source="0" target="1" event="6" />
+
+    <transition source="1" target="0" event="7" />
+  </data>
+</model>
+
+
+G4: defines the message receiving capability. Controllable event getMessage reads the most recent received message in the buffer. 
+Uncontrollable events receiveBG and receiveBB are triggered when a broadcast message of a blue or green follower
+is received; receiveOG and receiveOB are triggered when a message is received that offers
+membership to a green or blue follower, respectively; receiveAG and receiveAB are triggered
+when receiving an acceptance message by a green or blue follower, respectively, to join a group.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="False" x="350" y="200" />
+
+    <event id="0" name="receiveBG" controllable="False" observable="True" />
+    <event id="1" name="receiveBB" controllable="False" observable="True" />
+    <event id="2" name="receiveOG" controllable="False" observable="True" />
+    <event id="3" name="receiveOB" controllable="False" observable="True" />
+    <event id="4" name="receiveAG" controllable="False" observable="True" />
+    <event id="5" name="receiveAB" controllable="False" observable="True" />
+    <event id="6" name="getMessage" controllable="True" observable="True" />
+
+    <transition source="0" target="1" event="6" />
+    <transition source="1" target="0" event="0" />
+    <transition source="1" target="0" event="1" />
+    <transition source="1" target="0" event="2" />
+    <transition source="1" target="0" event="3" />
+    <transition source="1" target="0" event="4" />
+    <transition source="1" target="0" event="5" />
+  </data>
+</model>
+
+
+G5: defines the robot configuration subsystem. The robots can be configured as a leader by the uncontrollable event setLeader, 
+or as a follower by setGreen or setBlue; it is not possible for a robot to change its configuration. The configuration is
+randomly selected during initialisation. Followers can join a group triggering the controllable event join.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <state id="2" name="q3" initial="False" marked="True" x="150" y="200" />
+    <state id="3" name="q4" initial="False" marked="True" x="350" y="200" />
+    <state id="4" name="q5" initial="False" marked="True" x="150" y="200" />
+
+    <event id="0" name="setLeader" controllable="False" observable="True" />
+    <event id="1" name="setGreen" controllable="False" observable="True" />
+    <event id="2" name="join" controllable="True" observable="True" />
+    <event id="3" name="setBlue" controllable="False" observable="True" />
+
+    <transition source="0" target="3" event="3" />
+    <transition source="0" target="1" event="1" />
+    <transition source="0" target="2" event="0" />
+    <transition source="1" target="4" event="2" />
+    <transition source="3" target="4" event="2" />
+
+  </data>
+</model>
+
+
+G6: in this behavior model the leader can choose not to send an offer by
+the controllable events ignoreOG and ignoreOB. This is used to implement the equilibrium
+criterion.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <event id="0" name="ignoreOG" controllable="True" observable="True" />
+    <event id="1" name="ignoreOB" controllable="True" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="1" />
+  </data>
+</model>
+
+
+E1: defines that followers that have not yet joined any group can move. All other robots are not allowed to move.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <state id="2" name="q3" initial="False" marked="True" x="150" y="200" />
+
+    <event id="0" name="setLeader" controllable="False" observable="True" />
+    <event id="1" name="setGreen" controllable="False" observable="True" />
+    <event id="2" name="join" controllable="True" observable="True" />
+    <event id="3" name="setBlue" controllable="False" observable="True" />
+    <event id="4" name="moveFW" controllable="True" observable="True" />
+    <event id="5" name="moveStop" controllable="True" observable="True" />
+    <event id="6" name="turnCW" controllable="True" observable="True" />
+    <event id="7" name="turnCCW" controllable="True" observable="True" />
+
+    <transition source="0" target="1" event="3" />
+    <transition source="0" target="1" event="1" />
+    <transition source="1" target="1" event="4" />
+    <transition source="1" target="1" event="6" />
+    <transition source="1" target="1" event="7" />
+    <transition source="0" target="2" event="0" />
+    <transition source="1" target="2" event="2" />
+    <transition source="2" target="2" event="5" />
+  </data>
+</model>
+
+
+E2: defines that a leader robot can send an offer to a follower
+when it receives a corresponding broadcast message. Alternatively, it can choose to ignore the request.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <state id="2" name="q3" initial="False" marked="True" x="150" y="200" />
+    <state id="3" name="q4" initial="False" marked="True" x="150" y="200" />
+
+    <event id="0" name="setLeader" controllable="False" observable="True" />
+    <event id="1" name="receiveBB" controllable="False" observable="True" />
+    <event id="2" name="receiveBG" controllable="False" observable="True" />
+    <event id="3" name="sendOG" controllable="True" observable="True" />
+    <event id="4" name="sendOB" controllable="True" observable="True" />
+    <event id="5" name="ignoreOG" controllable="True" observable="True" />
+    <event id="6" name="ignoreOB" controllable="True" observable="True" />
+
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="0" event="2" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="2" event="2" />
+    <transition source="2" target="1" event="3" />
+    <transition source="2" target="1" event="5" />
+    <transition source="1" target="3" event="1" />
+    <transition source="3" target="1" event="4" />
+    <transition source="3" target="1" event="6" />
+  </data>
+</model>
+
+E3: controls the followers cycle of messages. Robots broadcast
+their colour and identification code until they receive an offer for their colour. When this
+occurs, they send an acceptance message and join the group. When a follower joins a group,
+it relays the messages it receives, using an echo function triggered by controllable event sendE
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <state id="2" name="q3" initial="False" marked="True" x="150" y="200" />
+    <state id="3" name="q4" initial="False" marked="True" x="150" y="200" />
+    <state id="4" name="q5" initial="False" marked="True" x="350" y="200" />
+    <state id="5" name="q6" initial="False" marked="True" x="150" y="200" />
+    <state id="6" name="q7" initial="False" marked="True" x="150" y="200" />
+
+    <event id="0" name="join" controllable="True" observable="True" />
+    <event id="1" name="setGreen" controllable="False" observable="True" />
+    <event id="2" name="setBlue" controllable="False" observable="True" />
+    <event id="3" name="receiveOB" controllable="False" observable="True" />
+    <event id="4" name="receiveOG" controllable="False" observable="True" />
+    <event id="5" name="sendAB" controllable="True" observable="True" />
+    <event id="6" name="sendBB" controllable="True" observable="True" />
+    <event id="7" name="sendAG" controllable="True" observable="True" />
+    <event id="8" name="sendBG" controllable="True" observable="True" />
+    <event id="9" name="sendE" controllable="True" observable="True" />
+
+    <transition source="0" target="0" event="3" />
+    <transition source="0" target="0" event="4" />
+    <transition source="0" target="1" event="1" />
+    <transition source="0" target="2" event="2" />
+    <transition source="1" target="1" event="3" />
+    <transition source="1" target="1" event="8" />
+    <transition source="2" target="2" event="4" />
+    <transition source="2" target="2" event="6" />
+    <transition source="2" target="4" event="3" />
+
+    <transition source="1" target="3" event="4" />
+    <transition source="2" target="4" event="3" />
+    <transition source="4" target="5" event="5" />
+    <transition source="4" target="5" event="7" />
+    <transition source="5" target="6" event="0" />
+
+    <transition source="6" target="6" event="3" />
+    <transition source="6" target="6" event="4" />
+    <transition source="6" target="6" event="9" />
+  </data>
+</model>
+
+E4: controls the transmission mechanisms. A message is transmitted by
+the subsystem over a pre-defined period of time. Once a message is sent, it can only be stopped
+after the timeout of the subsystem
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+
+    <event id="0" name="timeout" controllable="False" observable="True" />
+    <event id="1" name="msgStop" controllable="True" observable="True" />
+    <event id="2" name="sendOB" controllable="True" observable="True" />
+    <event id="3" name="sendOG" controllable="True" observable="True" />
+    <event id="4" name="sendAB" controllable="True" observable="True" />
+    <event id="5" name="sendBB" controllable="True" observable="True" />
+    <event id="6" name="sendAG" controllable="True" observable="True" />
+    <event id="7" name="sendBG" controllable="True" observable="True" />
+    <event id="8" name="sendE" controllable="True" observable="True" />
+
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="1" event="2" />
+    <transition source="0" target="1" event="3" />
+    <transition source="0" target="1" event="4" />
+    <transition source="0" target="1" event="5" />
+    <transition source="0" target="1" event="6" />
+    <transition source="0" target="1" event="7" />
+    <transition source="0" target="1" event="8" />
+    <transition source="1" target="0" event="0" />
+  </data>
+</model>
+
+E5: implements the equilibrium criterion for the leader. 
+In state q1 , the system is in equilibrium and can make offers to both classes of
+followers. In state q2 , there is one more blue follower than green followers. Therefore, offers
+can only be made to green followers. State q3 describes the equivalent situation where there
+are more green than blue followers.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <state id="2" name="q3" initial="False" marked="True" x="350" y="200" />
+
+    <event id="0" name="sendOB" controllable="True" observable="True" />
+    <event id="1" name="sendOG" controllable="True" observable="True" />
+    <event id="2" name="ignoreOB" controllable="True" observable="True" />
+    <event id="3" name="ignoreOG" controllable="True" observable="True" />
+
+    <transition source="0" target="1" event="0" />
+    <transition source="0" target="2" event="1" />
+    <transition source="2" target="2" event="3" />
+    <transition source="2" target="1" event="2" />
+    <transition source="1" target="0" event="3" />
+    <transition source="1" target="1" event="2" />
+    <transition source="2" target="2" event="3" />
+  </data>
+</model>
+
+E6: defines the relay mode of a follower. Any received message is retransmitted after joining a group by event sendE. For all
+messages, an identification code filter is implemented to minimise the traffic load in a layer
+that links the abstract discrete events
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <state id="2" name="q3" initial="False" marked="True" x="350" y="200" />
+
+    <event id="0" name="receiveBG" controllable="False" observable="True" />
+    <event id="1" name="receiveOG" controllable="False" observable="True" />
+    <event id="2" name="receiveAG" controllable="False" observable="True" />
+    <event id="3" name="receiveBB" controllable="False" observable="True" />
+    <event id="4" name="receiveOB" controllable="False" observable="True" />
+    <event id="5" name="receiveAB" controllable="False" observable="True" />
+    <event id="6" name="sendE" controllable="False" observable="True" />
+    <event id="7" name="join" controllable="False" observable="True" />
+
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="0" event="2" />
+    <transition source="0" target="0" event="3" />
+    <transition source="0" target="0" event="4" />
+    <transition source="0" target="0" event="5" />
+    <transition source="1" target="2" event="0" />
+    <transition source="1" target="2" event="1" />
+    <transition source="1" target="2" event="2" />
+    <transition source="1" target="2" event="3" />
+    <transition source="1" target="2" event="4" />
+    <transition source="1" target="2" event="5" />
+    <transition source="0" target="1" event="7" />
+    <transition source="2" target="1" event="6" />
+  </data>
+</model>

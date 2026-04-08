@@ -23,31 +23,23 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Sequence, Set, Tuple
+from typing import Dict, List, Sequence, Set
 
 from collections import defaultdict
-from dataclasses import dataclass
-
-from pathlib import Path
-from ament_index_python.packages import get_package_share_directory
 
 import requests
 import yaml
+from pipeline_prompts import (
+    DEFAULT_CONSTRAINTS,
+    SYSTEM_PROMPT,
+    build_pipeline_prompt,
+    load_example_tasks,
+    merge_prompt_semantics,
+)
 
 THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(THIS_DIR))
 DEFAULT_NADZORU_ROOT = Path.home() / "Documents/Nadzoru2"
-DEFAULT_SOURCE_AUTOMATA_DIR = THIS_DIR / "hardcoded_find_obj"
-DEFAULT_SOURCE_AUTOMATA_DIR_EXPLORE = THIS_DIR / "hardcoded_coverage"
-DEFAULT_SOURCE_AUTOMATA_DIR_WALL_FOLLOW = THIS_DIR / "hardcoded_wall_follow"
-DEFAULT_SOURCE_AUTOMATA_DIR_ZIGZAG = THIS_DIR / "hardcoded_zigzag"
-
-TASK_AUTOMATA_DIRS = {
-    "find_marker": DEFAULT_SOURCE_AUTOMATA_DIR,
-    "explore": DEFAULT_SOURCE_AUTOMATA_DIR_EXPLORE,
-    "wall_follow": DEFAULT_SOURCE_AUTOMATA_DIR_WALL_FOLLOW,
-    "zigzag": DEFAULT_SOURCE_AUTOMATA_DIR_ZIGZAG,
-}
 
 
 DEFAULT_REAL_YAML_OUT_DIR = (
@@ -56,11 +48,10 @@ DEFAULT_REAL_YAML_OUT_DIR = (
 )
 
 DEFAULT_PROFILE_PATH = THIS_DIR / "task_profiles.json"
-DEFAULT_OUTPUT_DIR = THIS_DIR / "full_pipeline"
+DEFAULT_OUTPUT_DIR = THIS_DIR / "generated_pipeline_outputs"
 DEFAULT_LLM_DIR = THIS_DIR
 DEFAULT_LLM_SUFFIX = "_nadzoru.json"
 DEFAULT_YAML_PREFIX = "sup_gpt_"
-DEFAULT_SUPERVISOR_ID = "Sup_reactive_motion"
 
 # Hardcoded LLM options (used only if RUN_LLM is True).
 RUN_LLM = True
@@ -72,75 +63,7 @@ DEFAULT_GOAL = "Find the marker object and get close to it and stop while stayin
 DEFAULT_TIMEOUT_S = 120.0
 DEFAULT_RETRIES = 2
 
-DEFAULT_STATES = ["clear", "obs_left", "obs_right", "obs_front"]
-DEFAULT_CONSTRAINTS = [
-    # Alphabet / validity
-    "Do NOT introduce any new controllable or uncontrollable events. Use ONLY the provided event lists.",
-    "Do NOT invent sensor events beyond the given uncontrollable list (e.g., no 'battery_low', etc.).",
-    "All transitions must be formatted exactly as: (\"state\", \"event\", \"next\").",
-
-    # Determinism (critical)
-    "Determinism required: for each (state, event) pair, specify EXACTLY ONE next state. No duplicates.",
-    "No epsilon transitions. Every transition must be labeled by one event from the lists.",
-
-    # Uncontrollable coverage (your requirement)
-    "For EVERY state, include an outgoing transition for ALL uncontrollable events (total w.r.t. uncontrollables).",
-
-    # Controllable presence / progress
-    "For EVERY non-terminal state, include at least ONE controllable transition (otherwise the robot may stall).",
-    "Avoid enabling multiple controllable actions in the same state (runtime may choose randomly among them).",
-    "Exception: obs_front may enable BOTH move_backward and full_rotate if you strongly need it.",
-
-    # Runtime semantics: uncontrollable first
-    "Runtime semantics: uncontrollable events are processed BEFORE a controllable action each step.",
-    "Therefore, in action/commit/scan/recovery states, non-critical uncontrollables (e.g., path_clear, marker_seen/marker_lost) should usually SELF-LOOP to avoid preempting the intended controllable in the same step.",
-    "Only safety-critical uncontrollables (obstacle_*, marker_close) should force leaving an action/commit state.",
-
-    # Safety rules
-    "Never allow move_forward from obs_front (obstacle_front).",
-    "After obstacle_front, do NOT return directly to move_forward; pass through a recovery/escape step (e.g., move_backward and/or rotate/full_rotate).",
-    "If marker_close occurs in ANY state, transition to a terminal goal/stop state where stop is the only controllable action.",
-
-    # Anti-oscillation
-    "Avoid oscillations: do NOT enable both rotate_clockwise and rotate_counterclockwise as controllables in the same state.",
-    "Keep the behavior consistent: obs_left should prefer rotate_clockwise OR a clear escape policy; obs_right should prefer rotate_counterclockwise (or vice versa), but do not alternate rapidly.",
-
-    # Commit-state discipline (fixed)
-    "You MAY introduce helper states such as forward_commit, rotate_commit_cw, rotate_commit_ccw, scan_full, recover_back, marker_track, marker_approach.",
-    "Commit/scan/recovery states must be ONE-SHOT on their primary controllable action: the primary controllable must transition OUT to a decision/perception state (e.g., clear), NOT self-loop.",
-    "Examples (illustrative only): forward_commit: move_forward->clear; rotate_commit_cw: rotate_clockwise->clear; rotate_commit_ccw: rotate_counterclockwise->clear; scan_full: full_rotate->clear; recover_back: move_backward->scan_full or ->clear.",
-    "Do NOT create infinite controllable loops like full_rotate->scan_full, move_backward->recover_back, or move_forward->forward_commit.",
-
-    # Marker priority
-    "When marker_seen occurs (and marker_close has not occurred), prefer switching to a marker-tracking mode/state where the primary controllable is move_to_marker.",
-    "When marker_lost occurs during marker tracking, transition to a search behavior (e.g., scan_full) rather than continuing move_to_marker blindly.",
-]
-
-STATE_SEMANTICS = {
-    "clear": "no obstacle in front/left/right; safe to advance.",
-    "obs_front": "obstacle detected in front region; forward is unsafe.",
-    "obs_left": "obstacle close on left; left turn is unsafe; right turn may be preferred.",
-    "obs_right": "obstacle close on right; right turn is unsafe; left turn may be preferred.",
-}
-
-EVENT_SEMANTICS = {
-    "path_clear": "sensors say forward corridor is clear (no front obstacle).",
-    "obstacle_front": "front sensor region is blocked.",
-    "obstacle_left": "left sensor region is blocked.",
-    "obstacle_right": "right sensor region is blocked.",
-    "marker_seen": "marker currently detected in camera.",
-    "marker_lost": "marker currently not detected in camera.",
-    "marker_close": "marker distance < threshold (goal condition).",
-    "move_forward": "apply forward motion for 0.2 s (one pulse).",
-    "move_backward": "apply backward motion for 0.2 s (one pulse).",
-    "rotate_clockwise": "apply clockwise rotation for 0.2 s (one pulse).",
-    "rotate_counterclockwise": "apply counterclockwise rotation for 0.2 s (one pulse).",
-    "full_rotate": "rotate 360 degrees (atomic action; completes a full scan).",
-    "move_to_marker": "move toward marker for 0.2 s (one pulse) while tracking.",
-    "stop": "set velocity to zero (stop).",
-}
-
-# Skip JSON->XML and use existing E1.xml in full_pipeline.
+# Skip JSON->XML and use an existing E1.xml in the generated output folder.
 START_FROM_XML_ONLY = False
 START_FROM_XML_INDEX = "1"
 
@@ -156,6 +79,7 @@ def _validate_llm_json(
     llm_json_path: Path,
     controllable: Sequence[str],
     uncontrollable: Sequence[str],
+    task: str | None = None,
 ) -> None:
     data = json.loads(llm_json_path.read_text(encoding="utf-8"))
 
@@ -198,11 +122,20 @@ def _validate_llm_json(
         msg = "\n".join([f"  missing ({s}, {ev})" for s, ev in missing[:50]])
         raise ValueError(f"Missing uncontrollable transitions (totality violated):\n{msg}")
 
-    # 4) Must have at least one controllable per state (prevents stalling)
+    # 4) Must have at least one controllable per non-terminal state.
+    # Allow explicit terminal sinks with no controllables if they self-loop on
+    # all uncontrollables.
     for s in sorted(states):
         outs_ctrl = [ev for ev in controllable if (s, ev) in nexts]
         if not outs_ctrl:
-            raise ValueError(f"State '{s}' has no controllable transitions (may stall).")
+            terminal_sink = True
+            for ev in uncontrollable:
+                tgt = next(iter(nexts[(s, ev)]))
+                if tgt != s:
+                    terminal_sink = False
+                    break
+            if not terminal_sink:
+                raise ValueError(f"State '{s}' has no controllable transitions (may stall).")
 
     # 5) Prevent infinite controllable self-loops in action-like states
     # With your 0.5s tick / 0.2s hold, controllable self-loops are dangerous.
@@ -242,6 +175,58 @@ def _validate_llm_json(
                             f"Goal state must self-loop on all uncontrollables."
                         )            
 
+    if task == "explore":
+        ctrl_by_state = {
+            s: [ev for ev in controllable if (s, ev) in nexts]
+            for s in sorted(states)
+        }
+
+        for s, ctrls in ctrl_by_state.items():
+            if len(ctrls) != 1:
+                raise ValueError(
+                    f"Explore safety violation: state '{s}' enables controllables {ctrls}. "
+                    "Explore requires exactly one controllable per non-terminal state."
+                )
+
+        def single_ctrl_for_next_state(src_state: str, obstacle_event: str) -> tuple[str, List[str]]:
+            target = next(iter(nexts[(src_state, obstacle_event)]))
+            ctrls = ctrl_by_state.get(target, [])
+            return target, ctrls
+
+        for s in sorted(states):
+            front_target, front_ctrls = single_ctrl_for_next_state(s, "obstacle_front")
+            if front_ctrls[0] not in {"full_rotate", "rotate_clockwise", "rotate_counterclockwise"}:
+                raise ValueError(
+                    f"Explore safety violation: obstacle_front from '{s}' leads to '{front_target}' "
+                    f"with controllable {front_ctrls[0]!r}. Expected a deterministic recovery rotate/full_rotate."
+                )
+
+            left_target, left_ctrls = single_ctrl_for_next_state(s, "obstacle_left")
+            if left_ctrls[0] != "rotate_clockwise":
+                raise ValueError(
+                    f"Explore safety violation: obstacle_left from '{s}' leads to '{left_target}' "
+                    f"with controllable {left_ctrls[0]!r}. Expected 'rotate_clockwise'."
+                )
+
+            right_target, right_ctrls = single_ctrl_for_next_state(s, "obstacle_right")
+            if right_ctrls[0] != "rotate_counterclockwise":
+                raise ValueError(
+                    f"Explore safety violation: obstacle_right from '{s}' leads to '{right_target}' "
+                    f"with controllable {right_ctrls[0]!r}. Expected 'rotate_counterclockwise'."
+                )
+
+            for target, ctrls, event_name in (
+                (front_target, front_ctrls, "obstacle_front"),
+                (left_target, left_ctrls, "obstacle_left"),
+                (right_target, right_ctrls, "obstacle_right"),
+            ):
+                bad = [ev for ev in ctrls if ev in {"move_forward", "random_walk"}]
+                if bad:
+                    raise ValueError(
+                        f"Explore safety violation: {event_name} from '{s}' leads to '{target}' "
+                        f"with forbidden controllables {bad}."
+                    )
+
 
 def _ensure_nadzoru_imports(nadzoru_root: Path) -> None:
     if not nadzoru_root.exists():
@@ -260,92 +245,7 @@ def read_api_key() -> str:
         f"{DEFAULT_KEY_FILE}"
     )
 
-
-def _merge_semantics(
-    base: Dict[str, str],
-    overrides: Dict[str, str] | None,
-) -> Dict[str, str]:
-    merged = dict(base)
-    if overrides:
-        merged.update(overrides)
-    return merged
-
-
-def build_prompt(
-    goal: str,
-    states: List[str],
-    controllable: List[str],
-    uncontrollable: List[str],
-    scenario: str | None,
-    guidance: List[str] | None,
-    state_semantics: Dict[str, str],
-    event_semantics: Dict[str, str],
-) -> str:
-    states = sorted(states)
-    lines: List[str] = []
-    lines.append(
-        "We operate a DES-based supervisor for a mobile robot with multiple "
-        "sensing modes. Each entry describes a sensor switch "
-        "(uncontrollable event) or an allowed control action."
-    )
-    lines.append("Timing: supervisor tick = 0.5 s. If a controllable is chosen, its motion command is applied for 0.2 s (one pulse), then released until the next tick.")
-    lines.append("Exception: full_rotate is an atomic 360-degree rotation (complete scan action).")
-    lines.append("")
-    lines.append("Controllable events: " + ", ".join(controllable))
-    lines.append("Uncontrollable events: " + ", ".join(uncontrollable))
-    lines.append("Current states: " + ", ".join(states))
-    lines.append("")
-    state_semantics_lines = [
-        f"- {name}: {state_semantics[name]}"
-        for name in states
-        if name in state_semantics
-    ]
-    if state_semantics_lines:
-        lines.append("State semantics:")
-        lines.extend(state_semantics_lines)
-        lines.append("")
-
-    event_semantics_lines = [
-        f"- {name}: {event_semantics[name]}"
-        for name in controllable + uncontrollable
-        if name in event_semantics
-    ]
-    if event_semantics_lines:
-        lines.append("Event semantics:")
-        lines.extend(event_semantics_lines)
-        lines.append("")
-    if scenario:
-        lines.append("Scenario context: " + scenario)
-        lines.append("")
-    if guidance:
-        lines.append("Behaviour guidance:")
-        for item in guidance:
-            lines.append(f"- {item}")
-        lines.append("")
-    lines.append(
-        "Design a new transition structure from scratch using the states "
-        "above. You may propose additional helper states if justified."
-    )
-    lines.append("")
-    lines.append(f"Goal: {goal}. Avoid oscillations and ensure safe reactions to obstacles.")
-    lines.append("")
-    lines.append(
-        "Return JSON with this schema:\n"
-        "{\n"
-        '  "rationale": "<short reasoning>",\n'
-        '  "new_states": ["optional", "state", "names"],\n'
-        '  "transitions": [\n'
-        '     "(\\"state\\", \\"event\\", \\"next\\")",\n'
-        '     "... additional lines ..."\n'
-        '  ],\n'
-        '  "strategy": ["bullet list of goal-seeking ideas"]\n'
-        "}"
-    )
-
-    return "\n".join(lines)
-
-
-def parse_json_response(content: str) -> Dict[str, str]:
+def parse_json_response(content: str) -> Dict[str, object]:
     def strip_line_comments(text: str) -> str:
         out = []
         in_string = False
@@ -376,11 +276,14 @@ def parse_json_response(content: str) -> Dict[str, str]:
             i += 1
         return "".join(out)
 
-    def normalize_payload(data: object) -> Dict[str, str]:
+    def normalize_payload(data: object) -> Dict[str, object]:
         if not isinstance(data, dict):
             raise ValueError(f"Expected a JSON object, got {type(data).__name__}.")
-        transitions = data.get("transitions")
-        if isinstance(transitions, list):
+        data = dict(data)
+
+        def normalize_transition_list(transitions: object) -> List[str]:
+            if not isinstance(transitions, list):
+                raise ValueError("Transitions must be a list.")
             normalized = []
             for item in transitions:
                 if isinstance(item, str):
@@ -390,8 +293,25 @@ def parse_json_response(content: str) -> Dict[str, str]:
                     normalized.append(f'(\"{s}\", \"{ev}\", \"{t}\")')
                 else:
                     raise ValueError(f"Unsupported transition entry: {item!r}")
-            data = dict(data)
-            data["transitions"] = normalized
+            return normalized
+
+        transitions = data.get("transitions")
+        if isinstance(transitions, list):
+            data["transitions"] = normalize_transition_list(transitions)
+
+        for section_name in ("G", "E"):
+            section = data.get(section_name)
+            if not isinstance(section, list):
+                continue
+            normalized_section = []
+            for automaton in section:
+                if not isinstance(automaton, dict):
+                    raise ValueError(f"{section_name} entries must be objects.")
+                automaton = dict(automaton)
+                if "transitions" in automaton:
+                    automaton["transitions"] = normalize_transition_list(automaton["transitions"])
+                normalized_section.append(automaton)
+            data[section_name] = normalized_section
         return data
 
     def try_json(text: str):
@@ -440,7 +360,7 @@ def call_chat_completion(
     temperature: float,
     timeout_s: float,
     retries: int,
-) -> Dict[str, str]:
+) -> Dict[str, object]:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -451,10 +371,7 @@ def call_chat_completion(
         "messages": [
             {
                 "role": "system",
-                "content": (
-                    "You are a DES/control expert. Respond ONLY with valid JSON "
-                    "describing improved supervisor transitions."
-                ),
+                "content": SYSTEM_PROMPT,
             },
             {"role": "user", "content": prompt},
         ],
@@ -529,62 +446,185 @@ def _next_output_index(output_dir: Path) -> str:
     return str(max_idx + 1)
 
 
+def _normalize_name_list(values: object, field_name: str) -> List[str]:
+    if values is None:
+        return []
+    if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
+        raise ValueError(f"{field_name} must be a list of strings.")
+    return list(values)
+
+
+def _normalize_automaton_payload(
+    section_name: str,
+    position: int,
+    payload: object,
+) -> Dict[str, object]:
+    if not isinstance(payload, dict):
+        raise ValueError(f"{section_name}[{position}] must be an object.")
+    normalized = dict(payload)
+    transitions = normalized.get("transitions")
+    if not isinstance(transitions, list) or not transitions:
+        raise ValueError(f"{section_name}[{position}] must include a non-empty transitions list.")
+    for transition in transitions:
+        _parse_transition(transition)
+
+    normalized["name"] = str(normalized.get("name") or f"{section_name}{position + 1}")
+    normalized["purpose"] = str(normalized.get("purpose") or "")
+    normalized["states"] = _normalize_name_list(normalized.get("states"), f"{section_name}[{position}].states")
+    normalized["initial_states"] = _normalize_name_list(
+        normalized.get("initial_states"),
+        f"{section_name}[{position}].initial_states",
+    )
+    normalized["marked_states"] = _normalize_name_list(
+        normalized.get("marked_states"),
+        f"{section_name}[{position}].marked_states",
+    )
+    normalized["controllable_events"] = _normalize_name_list(
+        normalized.get("controllable_events"),
+        f"{section_name}[{position}].controllable_events",
+    )
+    normalized["uncontrollable_events"] = _normalize_name_list(
+        normalized.get("uncontrollable_events"),
+        f"{section_name}[{position}].uncontrollable_events",
+    )
+    return normalized
+
+
+def _normalize_pipeline_payload(payload: Dict[str, object]) -> Dict[str, object]:
+    normalized = dict(payload)
+    g_list = normalized.get("G")
+    e_list = normalized.get("E")
+    if not isinstance(g_list, list) or not g_list:
+        raise ValueError("API response must contain a non-empty 'G' list.")
+    if not isinstance(e_list, list) or not e_list:
+        raise ValueError("API response must contain a non-empty 'E' list.")
+
+    normalized["G"] = [
+        _normalize_automaton_payload("G", index, entry)
+        for index, entry in enumerate(g_list)
+    ]
+    normalized["E"] = [
+        _normalize_automaton_payload("E", index, entry)
+        for index, entry in enumerate(e_list)
+    ]
+
+    event_controllability: Dict[str, bool] = {}
+    used_names: Set[str] = set()
+    for section_name in ("G", "E"):
+        for automaton in normalized[section_name]:
+            name = str(automaton["name"])
+            if name in used_names:
+                raise ValueError(f"Duplicate automaton name in API response: {name}")
+            used_names.add(name)
+
+            for event in automaton["controllable_events"]:
+                prev = event_controllability.setdefault(event, True)
+                if prev is not True:
+                    raise ValueError(f"Event '{event}' has conflicting controllability across automata.")
+            for event in automaton["uncontrollable_events"]:
+                prev = event_controllability.setdefault(event, False)
+                if prev is not False:
+                    raise ValueError(f"Event '{event}' has conflicting controllability across automata.")
+    return normalized
+
+
+def _write_automaton_xml(automaton_payload: Dict[str, object], output_path: Path) -> None:
+    import json_to_nadzoru_xml
+
+    transitions = automaton_payload["transitions"]
+    transition_dicts = [json_to_nadzoru_xml._parse_transition_line(line) for line in transitions]
+    state_names = json_to_nadzoru_xml._collect_states(
+        automaton_payload["states"],
+        None,
+        transition_dicts,
+    )
+    if not state_names:
+        raise ValueError(f"No states detected for automaton {automaton_payload['name']}.")
+
+    initial_states = automaton_payload["initial_states"] or state_names[:1]
+    marked_states = automaton_payload["marked_states"] or state_names
+    states = json_to_nadzoru_xml._states_with_flags(state_names, initial_states, marked_states)
+    events = json_to_nadzoru_xml._event_entries(
+        automaton_payload["controllable_events"],
+        automaton_payload["uncontrollable_events"],
+        transition_dicts,
+    )
+    xml_payload = json_to_nadzoru_xml._build_xml(
+        str(automaton_payload["name"]),
+        states,
+        events,
+        transition_dicts,
+    )
+    output_path.write_bytes(xml_payload)
+
+
 def _prepare_output_dir(
     output_dir: Path,
-    source_dir: Path,
     index: str,
+    llm_payload: Dict[str, object] | None,
     keep_existing_e: bool,
-) -> Dict[str, Path]:
+) -> Dict[str, object]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    for stale in ("G1.xml", "G2.xml"):
-        stale_path = output_dir / stale
-        if stale_path.exists():
-            stale_path.unlink()
-    g1_src = source_dir / "G1.xml"
-    g2_src = source_dir / "G2.xml"
-    if not g1_src.exists() or not g2_src.exists():
-        raise SystemExit("G1.xml or G2.xml not found in hardcoded automata folder.")
-
-    e_xml = output_dir / f"E{index}.xml"
     sloc_xml = output_dir / f"Sloc{index}.xml"
     script_path = output_dir / "script.txt"
     sloc_name = f"Sloc{index}"
-    script_path.write_text(
-        "\n".join(
-            [
-                "# Auto-generated script",
-                "",
-                "Gloc = Sync(G1,G2)",
-                f"Kloc = Sync(Gloc, E{index})",
-                f"{sloc_name} = SupC(Gloc, Kloc)",
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
-    if keep_existing_e and e_xml.exists():
-        e_xml = e_xml
+    gloc_name = f"Gloc{index}"
+    kloc_name = f"Kloc{index}"
+    g_xml_paths: List[Path] = []
+    e_xml_paths: List[Path] = []
+
+    if llm_payload is not None:
+        g_names: List[str] = []
+        e_names: List[str] = []
+        for pos, automaton in enumerate(llm_payload["G"], start=1):
+            path = output_dir / f"G{index}_{pos}.xml"
+            _write_automaton_xml(automaton, path)
+            g_xml_paths.append(path)
+            g_names.append(str(automaton["name"]))
+        for pos, automaton in enumerate(llm_payload["E"], start=1):
+            path = output_dir / f"E{index}_{pos}.xml"
+            _write_automaton_xml(automaton, path)
+            e_xml_paths.append(path)
+            e_names.append(str(automaton["name"]))
+
+        plant_expr = g_names[0]
+        for name in g_names[1:]:
+            plant_expr = f"Sync({plant_expr}, {name})"
+
+        spec_expr = plant_expr
+        for name in e_names:
+            spec_expr = f"Sync({spec_expr}, {name})"
+
+        script_path.write_text(
+            "\n".join(
+                [
+                    "# Auto-generated script",
+                    "",
+                    f"{gloc_name} = {plant_expr}",
+                    f"{kloc_name} = {spec_expr}",
+                    f"{sloc_name} = SupC({gloc_name}, {kloc_name})",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+    else:
+        e_xml = output_dir / f"E{index}.xml"
+        if not keep_existing_e or not e_xml.exists():
+            raise SystemExit("START_FROM_XML_ONLY requires an existing E XML file.")
+        e_xml_paths.append(e_xml)
     return {
-        "e_xml": e_xml,
+        "e_xml": e_xml_paths[0] if len(e_xml_paths) == 1 else None,
+        "e_xml_paths": e_xml_paths,
         "sloc_xml": sloc_xml,
         "script": script_path,
-        "g1": g1_src,
-        "g2": g2_src,
+        "g_xml_paths": g_xml_paths,
+        "g_names": g_names if llm_payload is not None else [],
+        "e_names": e_names if llm_payload is not None else [],
+        "gloc_name": gloc_name,
+        "kloc_name": kloc_name,
         "sloc_name": sloc_name,
     }
-
-
-def _load_automatons(xml_dirs: Sequence[Path]) -> Dict[str, "Automaton"]:
-    from machine.automaton import Automaton
-
-    automatons: Dict[str, Automaton] = {}
-    for xml_dir in xml_dirs:
-        for xml_path in sorted(xml_dir.glob("*.xml")):
-            automaton = Automaton()
-            automaton.load(str(xml_path))
-            automatons[automaton.get_id_name()] = automaton
-    return automatons
-
 
 def _load_automaton(xml_path: Path) -> "Automaton":
     from machine.automaton import Automaton
@@ -735,39 +775,12 @@ def _build_sct_yaml(automatons: Sequence["Automaton"]) -> Dict[str, object]:
         "sup_data": sup_data,
     }
 
-
-def _convert_json_to_xml(
-    json_path: Path,
-    output_path: Path,
-    profile: str,
-    supervisor_id: str,
-    controllable_events: Sequence[str],
-    uncontrollable_events: Sequence[str],
-) -> None:
-    import json_to_nadzoru_xml
-
-    args = argparse.Namespace(
-        json=str(json_path),
-        output=str(output_path),
-        states=None,
-        initial=["clear"],
-        marked=None,
-        controllable=list(controllable_events),
-        uncontrollable=list(uncontrollable_events),
-        profile=profile,
-        profile_path=str(DEFAULT_PROFILE_PATH),
-        supervisor_id=supervisor_id,
-    )
-    json_to_nadzoru_xml.convert_json_to_xml(args)
-
-
 def _run_llm(task: str, llm_json: Path) -> None:
     profiles = _load_profiles(DEFAULT_PROFILE_PATH)
     if task not in profiles:
         raise SystemExit(f"Unknown task: {task}")
     profile = profiles[task]
 
-    states = list(DEFAULT_STATES)
     controllable = profile.get("controllable_events")
     uncontrollable = profile.get("uncontrollable_events")
     if not isinstance(controllable, list) or not all(isinstance(x, str) for x in controllable):
@@ -791,18 +804,19 @@ def _run_llm(task: str, llm_json: Path) -> None:
     profile_event_semantics = profile.get("event_semantics")
     if profile_event_semantics is not None and not isinstance(profile_event_semantics, dict):
         raise SystemExit("Profile event_semantics must be an object mapping names to strings.")
-    merged_state_semantics = _merge_semantics(STATE_SEMANTICS, profile_state_semantics)
-    merged_event_semantics = _merge_semantics(EVENT_SEMANTICS, profile_event_semantics)
+    merged_state_semantics, merged_event_semantics = merge_prompt_semantics(
+        profile_state_semantics,
+        profile_event_semantics,
+    )
 
-    prompt = build_prompt(
+    prompt = build_pipeline_prompt(
         goal=goal,
-        states=states,
         controllable=controllable,
         uncontrollable=uncontrollable,
-        scenario=None,
         guidance=guidance_lines or None,
         state_semantics=merged_state_semantics,
         event_semantics=merged_event_semantics,
+        example_tasks=load_example_tasks(),
     )
 
     api_key = read_api_key()
@@ -814,7 +828,10 @@ def _run_llm(task: str, llm_json: Path) -> None:
         DEFAULT_TIMEOUT_S,
         DEFAULT_RETRIES,
     )
-    llm_json.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    llm_json.write_text(
+        json.dumps(_normalize_pipeline_payload(result), indent=2),
+        encoding="utf-8",
+    )
 
 
 def _load_profiles(path: Path) -> Dict[str, Dict[str, object]]:
@@ -859,11 +876,6 @@ def main() -> int:
         raise SystemExit(f"Profile '{args.task}' missing valid uncontrollable_events list.")
 
     run_llm = args.run_llm and not args.skip_llm
-    if args.task not in TASK_AUTOMATA_DIRS:
-        raise SystemExit(f"No automata folder configured for task: {args.task}")
-    source_automata_dir = TASK_AUTOMATA_DIRS[args.task]
-
-
     if run_llm:
         DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         llm_json_path = _next_llm_json_path(DEFAULT_OUTPUT_DIR, args.task)
@@ -873,36 +885,50 @@ def main() -> int:
 
     if not run_llm and not START_FROM_XML_ONLY and not llm_json_path.exists():
         raise SystemExit(f"Expected input not found: {llm_json_path}")
+    if START_FROM_XML_ONLY:
+        raise SystemExit(
+            "START_FROM_XML_ONLY is not supported with the generated G/E pipeline. "
+            "Use --skip-llm with a saved JSON response that contains both G and E."
+        )
 
     index = START_FROM_XML_INDEX if START_FROM_XML_ONLY else _next_output_index(DEFAULT_OUTPUT_DIR)
+    llm_payload = None
+    if not START_FROM_XML_ONLY:
+        llm_payload = _normalize_pipeline_payload(
+            json.loads(llm_json_path.read_text(encoding="utf-8"))
+        )
     paths = _prepare_output_dir(
         DEFAULT_OUTPUT_DIR,
-        source_automata_dir,
         index,
+        llm_payload,
         START_FROM_XML_ONLY,
     )
     if not START_FROM_XML_ONLY:
-        # Hard gate: reject bad supervisors early
-        _validate_llm_json(llm_json_path, controllable_events, uncontrollable_events)
-
-        _convert_json_to_xml(
-            llm_json_path,
-            paths["e_xml"],
-            args.task,
-            DEFAULT_SUPERVISOR_ID,
-            controllable_events,
-            uncontrollable_events,
-        )
+        for automaton in llm_payload["E"]:
+            temp_json = {
+                "transitions": automaton["transitions"],
+                "new_states": automaton["states"],
+            }
+            temp_path = DEFAULT_OUTPUT_DIR / f".tmp_{automaton['name']}_{index}.json"
+            temp_path.write_text(json.dumps(temp_json), encoding="utf-8")
+            try:
+                _validate_llm_json(
+                    temp_path,
+                    automaton["controllable_events"],
+                    automaton["uncontrollable_events"],
+                    task=args.task,
+                )
+            finally:
+                temp_path.unlink(missing_ok=True)
     elif not paths["e_xml"].exists():
         raise SystemExit(f"Expected input not found: {paths['e_xml']}")
 
     _ensure_nadzoru_imports(DEFAULT_NADZORU_ROOT)
-    # Load previously generated automatons from the output dir only.
-    # Explicitly load G1/G2 from the task source dir to avoid name collisions
-    # (e.g., preexisting Sloc*.xml in hardcoded folders).
-    automata = _load_automatons([DEFAULT_OUTPUT_DIR])
-    automata["G1"] = _load_automaton(paths["g1"])
-    automata["G2"] = _load_automaton(paths["g2"])
+    automata: Dict[str, "Automaton"] = {}
+    for name, xml_path in zip(paths["g_names"], paths["g_xml_paths"]):
+        automata[name] = _load_automaton(xml_path)
+    for name, xml_path in zip(paths["e_names"], paths["e_xml_paths"]):
+        automata[name] = _load_automaton(xml_path)
     try:
         _run_nadzoru_script(
             paths["script"],
@@ -914,8 +940,8 @@ def main() -> int:
         raise SystemExit(
             "Nadzoru script failed. "
             f"Script: {paths['script']} "
-            f"E XML: {paths['e_xml']} "
-            f"Source automata: {source_automata_dir} "
+            f"E XMLs: {paths['e_xml_paths']} "
+            f"G XMLs: {paths['g_xml_paths']} "
             f"Error: {exc}"
         ) from exc
 
@@ -923,7 +949,7 @@ def main() -> int:
         raise SystemExit(
             "Expected output not found. "
             f"Missing: {paths['sloc_xml']} "
-            f"Inputs: E={paths['e_xml']} G1={paths['g1']} G2={paths['g2']} "
+            f"Inputs: E={paths['e_xml_paths']} G={paths['g_xml_paths']} "
             f"Script={paths['script']}"
         )
     _check_sloc_valid(paths["sloc_xml"], paths["sloc_name"])    

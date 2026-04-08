@@ -1,0 +1,106 @@
+if no other robot was detected, the robot would move
+backward along a circular trajectory, with scaled wheel velocities (vl0, vr 0) = (-0.7, -1).
+If another robot was detected, the robot would turn clockwise on the spot, with scaled wheel
+velocities (vl1, vr1) = (1, -1).
+
+G1: represents the binary sensor; uncontrollable events S0 and S1 represent sensor
+readings I = 0 and I = 1, respectively. 
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <event id="0" name="S0" controllable="False" observable="True" />
+    <event id="1" name="S1" controllable="False" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="1" />
+  </data>
+</model>
+
+
+G2: represents the possible movements. Controllable events V0 and V1 represent the pairs (vl0, vr0) and (vl1, vr1),
+respectively. The movements are executed until a new command is issued.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <event id="0" name="V0" controllable="True" observable="True" />
+    <event id="1" name="V1" controllable="True" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="1" />
+  </data>
+</model>
+
+E1: enables event V0 (robot moving backward along circular trajectory) if no other robot is perceived (S0).
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="V0" controllable="True" observable="True" />
+    <event id="1" name="S0" controllable="False" observable="True" />
+    <event id="2" name="S1" controllable="False" observable="True" />
+    <transition source="0" target="0" event="2" />
+    <transition source="0" target="1" event="1" />
+    <transition source="1" target="1" event="1" />
+    <transition source="1" target="0" event="0" />
+    <transition source="1" target="0" event="2" />
+  </data>
+</model>
+
+E2: enables event V1 (robot turning on the spot) if another robot is perceived (S1)
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="V1" controllable="True" observable="True" />
+    <event id="1" name="S0" controllable="False" observable="True" />
+    <event id="2" name="S1" controllable="False" observable="True" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="1" event="2" />
+    <transition source="1" target="1" event="2" />
+    <transition source="1" target="0" event="1" />
+    <transition source="1" target="0" event="0" />
+  </data>
+</model>
+
+
+E3: prevent the same movement event from occurring consecutively (yet, the robot will perform its current
+movement indefinitely)
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="V0" controllable="True" observable="True" />
+    <event id="1" name="V1" controllable="True" observable="True" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="0" event="1" />
+  </data>
+</model>
+
+E4: prevent the same movement event from occurring consecutively (yet, the robot will perform its current
+movement indefinitely)
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="V0" controllable="True" observable="True" />
+    <event id="1" name="V1" controllable="True" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="1" event="1" />
+    <transition source="1" target="0" event="0" />
+  </data>
+</model>
+
+
+
+

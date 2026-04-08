@@ -140,13 +140,13 @@ def generate_launch_description():
                 ],
                 output="screen",
             )
-            nodes += [
-                marker_spawn,
-                TimerAction(
-                    period=2.0,
-                    actions=[marker_mover],
-                ),
-            ]
+            # nodes += [
+            #     marker_spawn,
+            #     TimerAction(
+            #         period=2.0,
+            #         actions=[marker_mover],
+            #     ),
+            # ]
 
         # --- One bridge for all robots ---
         bridge_args = []

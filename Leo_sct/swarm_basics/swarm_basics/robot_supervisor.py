@@ -53,23 +53,27 @@ class RobotSupervisor(Node):
         # -------------------------------
         # Parameters
         # -------------------------------
-        self.supervisor_period = float(self.declare_parameter("supervisor_period", 0.5).value)
+        self.supervisor_period = float(self.declare_parameter("supervisor_period", 0.1).value)
         self.motion_hold_duration = float(self.declare_parameter("motion_hold_duration", 0.2).value)
 
         # Full-rotate execution settings
         # Cap at 180 degrees max, even if overridden via parameters.
         self.full_rotate_target_rad = min(
             math.pi,
-            float(self.declare_parameter("full_rotate_target_rad", math.pi / 2.0).value),
+            float(self.declare_parameter("full_rotate_target_rad", math.pi / 3.0).value),
         )
         self.full_rotate_omega = float(self.declare_parameter("full_rotate_omega", 2.0).value)  # rad/s
         self.full_rotate_timeout_s = float(self.declare_parameter("full_rotate_timeout_s", 2.0).value)
+        self.full_rotate_retrigger_block_s = float(
+            self.declare_parameter("full_rotate_retrigger_block_s", 0.6).value
+        )
 
         # Obstacle-front escape bias: block full_rotate briefly after obstacle_front
         self.full_rotate_block_after_obs_front = float(
             self.declare_parameter("full_rotate_block_after_obs_front", 0.8).value
         )  # seconds
         self.block_full_rotate_until = 0.0
+        self.front_obstacle_active = False
         self.recovery_back_hold_s = float(
             self.declare_parameter("recovery_back_hold_s", 0.35).value
         )
@@ -77,7 +81,7 @@ class RobotSupervisor(Node):
         # 90-degree rotate settings
         self.rotate_90_target_rad = min(
             math.pi,
-            float(self.declare_parameter("rotate_90_target_rad", math.pi / 2.0).value),
+            float(self.declare_parameter("rotate_90_target_rad", math.pi / 3.0).value),
         )
         self.rotate_90_omega = float(
             self.declare_parameter("rotate_90_omega", 1.5).value
@@ -164,6 +168,7 @@ class RobotSupervisor(Node):
         self.full_rotate_prev_yaw = 0.0
         self.full_rotate_using_timed_fallback = False
         self.full_rotate_stall_count = 0
+        self.last_full_rotate_completed_at = 0.0
 
         # -------------------------------
         # Publishers/Subscribers
@@ -401,13 +406,14 @@ class RobotSupervisor(Node):
 
     def middle_check(self, sup_data):
         hit = "CORNER" in self.obstacle_zones
-        if hit:
+        if hit and not self.front_obstacle_active:
             now = time.time()
             # If we're in a front-obstacle situation, block full_rotate for ~1 tick
             self.block_full_rotate_until = max(
                 self.block_full_rotate_until,
                 now + self.full_rotate_block_after_obs_front,
             )
+        self.front_obstacle_active = hit
         return hit
 
     def left_check(self, sup_data):
@@ -711,11 +717,19 @@ class RobotSupervisor(Node):
             return
 
         if spec.is_full_rotate:
+            now = time.time()
+            if (now - self.last_full_rotate_completed_at) < self.full_rotate_retrigger_block_s:
+                self.get_logger().info("full_rotate blocked by recent completion; stopping this tick")
+                self.active_event = None
+                self.motion_until = 0.0
+                self._publish_stop()
+                return
             # Cooldown: prevent repeated "scan in place" when we're stuck in obs_front
-            if time.time() < self.block_full_rotate_until:
-                self.get_logger().info("full_rotate blocked by cooldown; publishing stop this tick")
-                self.active_event = "EV_rotate_clockwise"
-                self._start_rotate_90(-self.rotate_90_omega)
+            if now < self.block_full_rotate_until:
+                self.get_logger().info("full_rotate blocked by cooldown; stopping this tick")
+                self.active_event = None
+                self.motion_until = 0.0
+                self._publish_stop()
                 return
             self.active_event = ev_name
             self._start_full_rotate(spec.angular_z)
@@ -762,6 +776,7 @@ class RobotSupervisor(Node):
             if self._update_full_rotate():
                 # stop rotation and resume supervisor next tick
                 self.full_rotate_active = False
+                self.last_full_rotate_completed_at = now
                 self.active_event = None
                 self.motion_until = 0.0
                 self._publish_stop()

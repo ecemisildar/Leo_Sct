@@ -1,0 +1,163 @@
+Each robot can detect the presence of an object or another robot in its direct line of sight. Its line-of-sight sensor I thus indicates
+what it is pointing at: I = 0 if it is pointing at nothing (or the walls of the environment, if
+this is bounded); I = 1 if it is pointing at an object; and I = 2 if it is pointing at another
+robot.
+
+G1: represents the sensor. Uncontrollable events S0 , S1 , and S2 represent the presence of nothing (I = 0),
+an object (I = 1), or another robot (I = 2) in the line of sight. 
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <event id="0" name="S0" controllable="False" observable="True" />
+    <event id="1" name="S1" controllable="False" observable="True" />
+    <event id="2" name="S2" controllable="False" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="0" event="2" />
+  </data>
+</model>
+
+G2: defines the possible movements. Controllable events V0, V1, and V2 represent pairs (vl0, vr0), (vl1, vr1),
+and (vl2, vr2), respectively. The movements are executed indefinitely.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <event id="0" name="V0" controllable="True" observable="True" />
+    <event id="1" name="V1" controllable="True" observable="True" />
+    <event id="2" name="V2" controllable="True" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="0" event="2" />
+  </data>
+</model>
+
+
+E1: the perception of nothing (S0) with the wheel velocities, which are specified by parameters vlI and vrI through
+controllable events VI, I ∈ {0, 1, 2}. 
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="S0" controllable="False" observable="True" />
+    <event id="1" name="S1" controllable="False" observable="True" />
+    <event id="2" name="S2" controllable="False" observable="True" />
+    <event id="3" name="V0" controllable="True" observable="True" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="0" event="2" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="1" event="0" />
+    <transition source="1" target="0" event="1" />
+    <transition source="1" target="0" event="2" />
+    <transition source="1" target="0" event="3" />
+  </data>
+</model>
+
+
+
+E2: the perception of an object (S1) with the wheel velocities, which are specified by parameters vlI and vrI through
+controllable events VI, I ∈ {0, 1, 2}. 
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="S0" controllable="False" observable="True" />
+    <event id="1" name="S1" controllable="False" observable="True" />
+    <event id="2" name="S2" controllable="False" observable="True" />
+    <event id="3" name="V1" controllable="True" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="2" />
+    <transition source="0" target="1" event="1" />
+    <transition source="1" target="1" event="1" />
+    <transition source="1" target="0" event="0" />
+    <transition source="1" target="0" event="2" />
+    <transition source="1" target="0" event="3" />
+  </data>
+</model>
+
+E3: the perception of another robot (S2) with the wheel velocities, which are specified by parameters vlI and vrI through
+controllable events VI, I ∈ {0, 1, 2}. 
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="S0" controllable="False" observable="True" />
+    <event id="1" name="S1" controllable="False" observable="True" />
+    <event id="2" name="S2" controllable="False" observable="True" />
+    <event id="3" name="V2" controllable="True" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="1" event="2" />
+    <transition source="1" target="1" event="2" />
+    <transition source="1" target="0" event="0" />
+    <transition source="1" target="0" event="1" />
+    <transition source="1" target="0" event="3" />
+  </data>
+</model>
+
+E4: guarantee that events V0 , V1 , and V2 occur in alternation (e.g., when event V0 occurs it cannot occur again until
+either event V1 or event V2 occurs).
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="V0" controllable="True" observable="True" />
+    <event id="1" name="V1" controllable="True" observable="True" />
+    <event id="2" name="V2" controllable="True" observable="True" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="0" event="2" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="0" event="1" />
+    <transition source="1" target="0" event="2" />
+  </data>
+</model>
+
+E5: guarantee that events V0 , V1 , and V2 occur in alternation (e.g., when event V0 occurs it cannot occur again until
+either event V1 or event V2 occurs).
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="V0" controllable="True" observable="True" />
+    <event id="1" name="V1" controllable="True" observable="True" />
+    <event id="2" name="V2" controllable="True" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="2" />
+    <transition source="0" target="1" event="1" />
+    <transition source="1" target="0" event="0" />
+    <transition source="1" target="0" event="2" />
+  </data>
+</model>
+
+
+E6: guarantee that events V0 , V1 , and V2 occur in alternation (e.g., when event V0 occurs it cannot occur again until
+either event V1 or event V2 occurs).
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="V0" controllable="True" observable="True" />
+    <event id="1" name="V1" controllable="True" observable="True" />
+    <event id="2" name="V2" controllable="True" observable="True" />
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="1" event="2" />
+    <transition source="1" target="0" event="0" />
+    <transition source="1" target="0" event="1" />
+  </data>
+</model>

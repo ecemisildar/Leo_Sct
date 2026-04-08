@@ -1,0 +1,242 @@
+
+The system comprises an arbitrary number of leader and follower robots. Each leader assumes
+one of multiple types, characterised by its colour. Here, colours red, green, and blue are
+assigned at the beginning of the experiment. The segregation strategy separates follower
+robots into distinct groups, whereby each follower robot belongs to at most one leader. 
+Each leader broadcasts a signal containing its colour within a limited range.
+Follower robots within the signal range of only one type of leader belong to that leader and
+do not move. Followers that do not receive a signal also do not move. Followers that receive
+a signal from more than one type of leader move randomly.
+
+
+
+G1: represents a user input device that
+triggers the uncontrollable event press. It is used to configure the robot
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" />
+    <event id="0" name="press" controllable="False" observable="True" />
+    <transition source="0" target="0" event="0" />
+  </data>
+</model>
+
+
+
+G2: defines the robot type
+By default, the robot is a follower (state q1). Followers do not transmit any message. There are three types of leaders, which are set by the controllable events sendR, sendG,
+and sendB. These events enable the broadcast of the messages red, green, and blue, respectively. The follower type can be set by the controllable event sendNothing.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" /> 
+    <state id="1" name="q2" initial="False" marked="False" x="350" y="200" />
+    <state id="2" name="q3" initial="False" marked="False" x="550" y="280" />
+    <state id="3" name="q4" initial="False" marked="False" x="150" y="280" />
+    <event id="0" name="sendR" controllable="True" observable="True" />
+    <event id="1" name="sendG" controllable="True" observable="True" />
+    <event id="2" name="sendB" controllable="True" observable="True" />
+    <event id="3" name="sendNothing" controllable="True" observable="True" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="2" event="1" />
+    <transition source="2" target="3" event="2" />
+    <transition source="3" target="0" event="3" />
+  </data>
+</model>
+
+
+G3: represents the robots motion capabilities. The motion is started through controllable events moveFW (move
+forward), turnCW (turn clockwise), and turnCCW (turn counter clockwise). The motion proceeds for a random period of time, and then, the uncontrollable event moveEnded is generated.
+The motion can also be stopped by the controller through controllable event moveStop.
+
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" /> 
+    <state id="1" name="q2" initial="False" marked="False" x="150" y="200" />
+    <event id="0" name="moveFW" controllable="True" observable="True" />
+    <event id="1" name="turnCW" controllable="True" observable="True" />
+    <event id="2" name="turnCCW" controllable="True" observable="True" />
+    <event id="3" name="moveEnded" controllable="False" observable="True" />
+    <event id="4" name="moveStop" controllable="True" observable="True" />
+    <transition source="0" target="1" event="0" />
+    <transition source="0" target="1" event="1" />
+    <transition source="0" target="1" event="2" />
+    <transition source="1" target="0" event="3" />
+    <transition source="1" target="0" event="4" />
+  </data>
+</model>
+
+G4: represent three different sensor outcomes that detect the presence of red leaders. 
+The uncontrollable event getR, indicate that the robot has received a message, from a red,
+leader during the sample period of 0.2 s. On the other hand, the event getNotR, occurs if no such message was received.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" /> 
+    <state id="1" name="q2" initial="False" marked="False" x="350" y="200" />
+    <event id="0" name="getR" controllable="False" observable="True" />
+    <event id="1" name="getNotR" controllable="False" observable="True" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="0" event="1" />
+  </data>
+</model>
+
+G5: represent three different sensor outcomes that detect the presence of green leaders. 
+The uncontrollable event getG, indicate that the robot has received a message, from a green, 
+leader during the sample period of 0.2 s. On the other hand, the event getNotG, occurs if no such message was received.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" /> 
+    <state id="1" name="q2" initial="False" marked="False" x="350" y="200" />
+    <event id="0" name="getG" controllable="False" observable="True" />
+    <event id="1" name="getNotG" controllable="False" observable="True" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="0" event="1" />
+  </data>
+</model>
+
+G6: represent three different sensor outcomes that detect the presence of blue leaders. 
+The uncontrollable event getR, indicate that the robot has received a message, from a blue,
+leader during the sample period of 0.2 s. On the other hand, the event getNotB, occurs if no such message was received.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" /> 
+    <state id="1" name="q2" initial="False" marked="False" x="350" y="200" />
+    <event id="0" name="getB" controllable="False" observable="True" />
+    <event id="1" name="getNotB" controllable="False" observable="True" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="0" event="1" />
+  </data>
+</model>
+
+
+E1: The user can configure the robot type. 
+When press occurs, specification model E reaches state q2 , where the events
+sendR, sendG, sendB, and sendNothing are enabled. As seen in model G2, the robot
+type is restricted to change sequentially through states of follower (q1), red leader (q2), green
+leader (q3), and blue leader (q4).
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" /> 
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <event id="0" name="press" controllable="False" observable="True" />
+    <event id="1" name="sendNothing" controllable="True" observable="True" />
+    <event id="2" name="sendR" controllable="True" observable="True" />
+    <event id="3" name="sendG" controllable="True" observable="True" />
+    <event id="4" name="sendB" controllable="True" observable="True" />
+    <transition source="0" target="1" event="0" />
+    <transition source="1" target="1" event="0" />
+    <transition source="1" target="0" event="1" />
+    <transition source="1" target="0" event="2" />
+    <transition source="1" target="0" event="3" />
+    <transition source="1" target="0" event="4" />
+  </data>
+</model>
+
+
+E2: Allows only followers to move. It also sets up the message broadcasting of leaders.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" /> 
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+
+    <event id="0" name="moveFW" controllable="True" observable="True" />
+    <event id="1" name="turnCW" controllable="True" observable="True" />
+    <event id="2" name="turnCCW" controllable="True" observable="True" />
+    <event id="3" name="sendNothing" controllable="True" observable="True" />
+    <event id="4" name="sendR" controllable="True" observable="True" />
+    <event id="5" name="sendG" controllable="True" observable="True" />
+    <event id="6" name="sendB" controllable="True" observable="True" />
+
+    <transition source="0" target="0" event="0" />
+    <transition source="0" target="0" event="1" />
+    <transition source="0" target="0" event="2" />
+
+    <transition source="0" target="1" event="4" />
+    <transition source="0" target="1" event="5" />
+    <transition source="0" target="1" event="6" />
+
+    <transition source="1" target="1" event="0" />
+    <transition source="1" target="1" event="0" />
+    <transition source="1" target="1" event="0" />
+
+    <transition source="1" target="0" event="3" />
+  </data>
+</model>
+
+E3: Only the stop event (moveStop) is enabled while being in state q1 (no signal received) or
+state q2 (one type of leader signal received). Consequently, the robot does not move. However,
+if signals of two types of leaders (state q3) or all three types of leaders (state q4) are received,
+the previously described motion events are enabled. The controller can, therefore, choose
+from all three movement options.
+
+<?xml version='1.0' encoding='utf-8'?>
+<model version="0.0" type="FSA" id="Sup_reactive_motion">
+  <data>
+    <state id="0" name="q1" initial="True" marked="True" x="150" y="200" /> 
+    <state id="1" name="q2" initial="False" marked="True" x="350" y="200" />
+    <state id="2" name="q3" initial="False" marked="True" x="150" y="200" /> 
+    <state id="3" name="q4" initial="False" marked="True" x="350" y="200" />
+
+    <event id="0" name="moveFW" controllable="True" observable="True" />
+    <event id="1" name="turnCW" controllable="True" observable="True" />
+    <event id="2" name="turnCCW" controllable="True" observable="True" />
+    <event id="3" name="moveStop" controllable="True" observable="True" />
+    <event id="4" name="getR" controllable="False" observable="True" />
+    <event id="5" name="getNotR" controllable="False" observable="True" />
+    <event id="6" name="getG" controllable="False" observable="True" />
+    <event id="7" name="getNotG" controllable="False" observable="True" />
+    <event id="8" name="getB" controllable="False" observable="True" />
+    <event id="9" name="getNotB" controllable="False" observable="True" />
+    
+    <transition source="0" target="0" event="3" />
+
+    <transition source="0" target="1" event="4" />
+    <transition source="0" target="1" event="6" />
+    <transition source="0" target="1" event="8" />
+
+    <transition source="1" target="0" event="5" />
+    <transition source="1" target="0" event="7" />
+    <transition source="1" target="0" event="9" />
+
+    <transition source="1" target="1" event="3" />
+
+    <transition source="1" target="2" event="4" />
+    <transition source="1" target="2" event="6" />
+    <transition source="1" target="2" event="8" />
+    
+    <transition source="2" target="1" event="5" />
+    <transition source="2" target="1" event="7" />
+    <transition source="2" target="1" event="9" />
+
+    <transition source="2" target="2" event="0" />
+    <transition source="2" target="2" event="1" />
+    <transition source="2" target="2" event="2" />
+
+    <transition source="2" target="3" event="4" />
+    <transition source="2" target="3" event="6" />
+    <transition source="2" target="3" event="8" />
+    
+    <transition source="3" target="2" event="5" />
+    <transition source="3" target="2" event="7" />
+    <transition source="3" target="2" event="9" />
+
+    <transition source="3" target="3" event="0" />
+    <transition source="3" target="3" event="1" />
+    <transition source="3" target="3" event="2" />
+
+  </data>
+</model>

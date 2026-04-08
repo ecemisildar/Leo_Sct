@@ -43,9 +43,9 @@ public:
     front_obstacle_distance_pub_ =
       this->create_publisher<std_msgs::msg::Float32>("front_obstacle_distance", 10);
 
-    enter_thresh_ = this->declare_parameter<double>("enter_thresh", 0.60);
-    exit_thresh_ = this->declare_parameter<double>("exit_thresh", 0.80);
-    emergency_thresh_ = this->declare_parameter<double>("emergency_thresh", 0.30);
+    enter_thresh_ = this->declare_parameter<double>("enter_thresh", 0.8);
+    exit_thresh_ = this->declare_parameter<double>("exit_thresh", 1.0);
+    emergency_thresh_ = this->declare_parameter<double>("emergency_thresh", 0.60);
     side_enter_thresh_ = this->declare_parameter<double>("side_enter_thresh", enter_thresh_);
     side_exit_thresh_ = this->declare_parameter<double>("side_exit_thresh", exit_thresh_);
     left_enter_thresh_ = this->declare_parameter<double>("left_enter_thresh", side_enter_thresh_);
@@ -57,18 +57,24 @@ public:
     max_depth_ = this->declare_parameter<double>("max_depth", 10.0);
 
     stride_ = this->declare_parameter<int>("stride", 2);
-    percentile_ = this->declare_parameter<double>("percentile", 0.10);
-    near_count_k_ = this->declare_parameter<int>("near_count_k", 4);
-    valid_count_min_ = this->declare_parameter<int>("valid_count_min", 60);
+    percentile_ = this->declare_parameter<double>("percentile", 0.005);
+    near_count_k_ = this->declare_parameter<int>("near_count_k", 2);
+    valid_count_min_ = this->declare_parameter<int>("valid_count_min", 20);
 
-    crop_y0_frac_ = this->declare_parameter<double>("crop_y0_frac", 0.30);
-    crop_y1_frac_ = this->declare_parameter<double>("crop_y1_frac", 0.80);
+    crop_y0_frac_ = this->declare_parameter<double>("crop_y0_frac", 0.20);
+    crop_y1_frac_ = this->declare_parameter<double>("crop_y1_frac", 0.85);
     front_gain_ = this->declare_parameter<double>("front_gain", 1.40);
 
-    hold_ms_ = this->declare_parameter<int>("hold_ms", 250);
+    hold_ms_ = this->declare_parameter<int>("hold_ms", 120);
+    corner_hold_ms_ = this->declare_parameter<int>("corner_hold_ms", 120);
+    side_hold_ms_ = this->declare_parameter<int>("side_hold_ms", 60);
     show_debug_ = this->declare_parameter<bool>("show_debug", false);
-    clear_skip_ = this->declare_parameter<int>("clear_skip", 3);
-    safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 5);
+    clear_skip_ = this->declare_parameter<int>("clear_skip", 1);
+    safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 1);
+    corner_safe_frames_required_ = this->declare_parameter<int>("corner_safe_frames_required", 1);
+    side_safe_frames_required_ = this->declare_parameter<int>("side_safe_frames_required", 1);
+    zone_log_enabled_ = this->declare_parameter<bool>("zone_log_enabled", true);
+    zone_log_throttle_ms_ = this->declare_parameter<int>("zone_log_throttle_ms", 500);
 
     aruco_enabled_ = this->declare_parameter<bool>("aruco_enabled", aruco_enabled_);
     aruco_debug_ = this->declare_parameter<bool>("aruco_debug", aruco_debug_);
@@ -149,16 +155,23 @@ private:
     cv::Rect right_roi;
   };
 
+  struct ZoneCheckResult
+  {
+    bool is_obstacle;
+    const char * reason;
+  };
+
   void depthCallback(const sensor_msgs::msg::Image::ConstSharedPtr & depth_msg)
   {
     const auto now = clock_->now();
 
-    if (last_state_ == "CLEAR" && clear_skip_ > 1) {
+    if (!zone_log_enabled_ && last_state_ == "CLEAR" && clear_skip_ > 1) {
       clear_skip_counter_ = (clear_skip_counter_ + 1) % clear_skip_;
       if (clear_skip_counter_ != 0) {
         std_msgs::msg::String out;
         out.data = last_state_;
         zones_pub_->publish(out);
+        logZoneState(last_state_, nullptr);
         return;
       }
     } else {
@@ -212,7 +225,13 @@ private:
       last_non_clear_time_ = now;
     } else {
       const double age_ms = (now - last_non_clear_time_).seconds() * 1000.0;
-      if (age_ms >= 0.0 && age_ms < static_cast<double>(hold_ms_)) {
+      int hold_ms = hold_ms_;
+      if (last_non_clear_zone_ == "CORNER") {
+        hold_ms = corner_hold_ms_;
+      } else if (last_non_clear_zone_ == "LEFT" || last_non_clear_zone_ == "RIGHT") {
+        hold_ms = side_hold_ms_;
+      }
+      if (age_ms >= 0.0 && age_ms < static_cast<double>(hold_ms)) {
         zone_now = last_non_clear_zone_;
       }
     }
@@ -220,6 +239,7 @@ private:
     std_msgs::msg::String out;
     out.data = zone_now;
     zones_pub_->publish(out);
+    logZoneState(zone_now, &zs);
 
     if (show_debug_) {
       cv::Mat vis;
@@ -527,22 +547,80 @@ private:
     return {vals[k], near_cnt, valid_cnt};
   }
 
-  bool zoneIsObstacle(const RoiStats & rs, double thresh) const
+  ZoneCheckResult zoneCheck(const RoiStats & rs, double thresh) const
   {
     if (rs.p <= 0.0f) {
-      return false;
+      return {false, "no_percentile"};
     }
     if (rs.valid_count < valid_count_min_) {
-      return false;
+      return {false, "low_valid_count"};
     }
     if (rs.p >= static_cast<float>(thresh)) {
+      return {false, "percentile_above_thresh"};
+    }
+    if (rs.near_count < near_count_k_) {
+      return {false, "low_near_count"};
+    }
+    return {true, "obstacle"};
+  }
+
+  bool zoneIsObstacle(const RoiStats & rs, double thresh) const
+  {
+    if (rs.valid_count < valid_count_min_) {
       return false;
     }
     return rs.near_count >= near_count_k_;
   }
 
+  void logZoneDecisionDetails(
+    const ZoneStats & zs,
+    const ZoneCheckResult & front_check,
+    const ZoneCheckResult & left_check,
+    const ZoneCheckResult & right_check)
+  {
+    if (!zone_log_enabled_) {
+      return;
+    }
+
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(),
+      *this->get_clock(),
+      1000,
+      "Zone checks front[%s p=%.3f near=%d valid=%d enter=%.3f exit=%.3f emergency=%.3f] "
+      "left[%s p=%.3f near=%d valid=%d enter=%.3f exit=%.3f] "
+      "right[%s p=%.3f near=%d valid=%d enter=%.3f exit=%.3f]",
+      front_check.reason,
+      zs.front.p,
+      zs.front.near_count,
+      zs.front.valid_count,
+      enter_thresh_,
+      exit_thresh_,
+      emergency_thresh_,
+      left_check.reason,
+      zs.left.p,
+      zs.left.near_count,
+      zs.left.valid_count,
+      left_enter_thresh_,
+      left_exit_thresh_,
+      right_check.reason,
+      zs.right.p,
+      zs.right.near_count,
+      zs.right.valid_count,
+      right_enter_thresh_,
+      right_exit_thresh_);
+  }
+
   std::string determineZoneHysteresis(const ZoneStats & zs)
   {
+    const bool front_enter = zoneIsObstacle(zs.front, enter_thresh_);
+    const bool left_enter = zoneIsObstacle(zs.left, left_enter_thresh_);
+    const bool right_enter = zoneIsObstacle(zs.right, right_enter_thresh_);
+    const ZoneCheckResult front_enter_check =
+      front_enter ? ZoneCheckResult{true, "obstacle"} : zoneCheck(zs.front, enter_thresh_);
+    const ZoneCheckResult left_enter_check =
+      left_enter ? ZoneCheckResult{true, "obstacle"} : zoneCheck(zs.left, left_enter_thresh_);
+    const ZoneCheckResult right_enter_check =
+      right_enter ? ZoneCheckResult{true, "obstacle"} : zoneCheck(zs.right, right_enter_thresh_);
     const bool front_emergency =
       (zs.front.p > 0.0f) &&
       (zs.front.valid_count >= valid_count_min_) &&
@@ -556,9 +634,12 @@ private:
     }
 
     if (last_state_ != "CLEAR") {
-      const bool front_close = zoneIsObstacle(zs.front, exit_thresh_);
-      const bool left_close = zoneIsObstacle(zs.left, left_exit_thresh_);
-      const bool right_close = zoneIsObstacle(zs.right, right_exit_thresh_);
+      const ZoneCheckResult front_exit_check = zoneCheck(zs.front, exit_thresh_);
+      const ZoneCheckResult left_exit_check = zoneCheck(zs.left, left_exit_thresh_);
+      const ZoneCheckResult right_exit_check = zoneCheck(zs.right, right_exit_thresh_);
+      const bool front_close = front_exit_check.is_obstacle;
+      const bool left_close = left_exit_check.is_obstacle;
+      const bool right_close = right_exit_check.is_obstacle;
 
       if (front_close || left_close || right_close) {
         safe_frames_ = 0;
@@ -580,8 +661,15 @@ private:
         return last_state_;
       }
 
+      logZoneDecisionDetails(zs, front_exit_check, left_exit_check, right_exit_check);
       safe_frames_++;
-      if (safe_frames_ >= std::max(1, safe_frames_required_)) {
+      int frames_required = safe_frames_required_;
+      if (last_state_ == "CORNER") {
+        frames_required = corner_safe_frames_required_;
+      } else if (last_state_ == "LEFT" || last_state_ == "RIGHT") {
+        frames_required = side_safe_frames_required_;
+      }
+      if (safe_frames_ >= std::max(1, frames_required)) {
         last_state_ = "CLEAR";
         safe_frames_ = 0;
         return last_state_;
@@ -589,23 +677,62 @@ private:
       return last_state_;
     }
 
-    if (zoneIsObstacle(zs.front, enter_thresh_)) {
+    if (front_enter) {
       last_state_ = "CORNER";
       safe_frames_ = 0;
       return last_state_;
     }
-    if (zoneIsObstacle(zs.left, left_enter_thresh_)) {
+    if (left_enter) {
       last_state_ = "LEFT";
       safe_frames_ = 0;
       return last_state_;
     }
-    if (zoneIsObstacle(zs.right, right_enter_thresh_)) {
+    if (right_enter) {
       last_state_ = "RIGHT";
       safe_frames_ = 0;
       return last_state_;
     }
 
+    logZoneDecisionDetails(zs, front_enter_check, left_enter_check, right_enter_check);
     return "CLEAR";
+  }
+
+  void logZoneState(const std::string & zone, const ZoneStats * zs)
+  {
+    if (!zone_log_enabled_) {
+      return;
+    }
+
+    const bool zone_changed = zone != last_logged_zone_;
+    if (!zone_changed) {
+      RCLCPP_INFO_THROTTLE(
+        this->get_logger(),
+        *this->get_clock(),
+        static_cast<int64_t>(std::max(1, zone_log_throttle_ms_)),
+        "Zone=%s",
+        zone.c_str());
+      return;
+    }
+
+    last_logged_zone_ = zone;
+    if (zs == nullptr) {
+      RCLCPP_INFO(this->get_logger(), "Zone=%s", zone.c_str());
+      return;
+    }
+
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Zone=%s left[p=%.3f near=%d valid=%d] front[p=%.3f near=%d valid=%d] right[p=%.3f near=%d valid=%d]",
+      zone.c_str(),
+      zs->left.p,
+      zs->left.near_count,
+      zs->left.valid_count,
+      zs->front.p,
+      zs->front.near_count,
+      zs->front.valid_count,
+      zs->right.p,
+      zs->right.near_count,
+      zs->right.valid_count);
   }
 
   void applyArucoDepthMask(cv::Mat & depth, const rclcpp::Time & now)
@@ -724,12 +851,18 @@ private:
   double crop_y1_frac_{0.80};
   double front_gain_{1.40};
 
-  int hold_ms_{250};
+  int hold_ms_{50};
+  int corner_hold_ms_{30};
+  int side_hold_ms_{50};
   bool show_debug_{false};
   int clear_skip_{1};
   int clear_skip_counter_{0};
+  bool zone_log_enabled_{true};
+  int zone_log_throttle_ms_{500};
 
   int safe_frames_required_{5};
+  int corner_safe_frames_required_{1};
+  int side_safe_frames_required_{2};
   int safe_frames_{0};
 
   bool aruco_enabled_{true};
@@ -758,6 +891,7 @@ private:
   std::vector<int> last_marker_ids_;
 
   std::string last_state_{"CLEAR"};
+  std::string last_logged_zone_{""};
   std::string last_non_clear_zone_{"CORNER"};
   rclcpp::Time last_non_clear_time_;
 };

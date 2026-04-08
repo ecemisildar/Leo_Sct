@@ -1,0 +1,400 @@
+[
+  {
+    "name": "aggregation",
+    "summary": "Robots aggregate by switching between a free-motion mode and a turn-on-contact mode depending on whether another robot is detected.",
+    "patterns": [
+      "Separate sensing and motion into plant automata",
+      "Use small specification automata to bind sensor outcomes to actions",
+      "Add another specification to avoid repeated identical commands"
+    ],
+    "plants": [
+      {
+        "name": "G1",
+        "purpose": "Binary perception sensor with uncontrollable outcomes S0 and S1",
+        "states": ["q1"],
+        "controllable_events": [],
+        "uncontrollable_events": ["S0", "S1"],
+        "transitions": [
+          "(\"q1\", \"S0\", \"q1\")",
+          "(\"q1\", \"S1\", \"q1\")"
+        ]
+      },
+      {
+        "name": "G2",
+        "purpose": "Movement capability with controllable commands V0 and V1",
+        "states": ["q1"],
+        "controllable_events": ["V0", "V1"],
+        "uncontrollable_events": [],
+        "transitions": [
+          "(\"q1\", \"V0\", \"q1\")",
+          "(\"q1\", \"V1\", \"q1\")"
+        ]
+      }
+    ],
+    "specifications": [
+      {
+        "name": "E1",
+        "purpose": "Enable V0 when no other robot is detected",
+        "states": ["q1", "q2"],
+        "controllable_events": ["V0"],
+        "uncontrollable_events": ["S0", "S1"],
+        "transitions": [
+          "(\"q1\", \"S1\", \"q1\")",
+          "(\"q1\", \"S0\", \"q2\")",
+          "(\"q2\", \"S0\", \"q2\")",
+          "(\"q2\", \"V0\", \"q1\")",
+          "(\"q2\", \"S1\", \"q1\")"
+        ]
+      },
+      {
+        "name": "E2",
+        "purpose": "Enable V1 when another robot is detected",
+        "states": ["q1", "q2"],
+        "controllable_events": ["V1"],
+        "uncontrollable_events": ["S0", "S1"],
+        "transitions": [
+          "(\"q1\", \"S0\", \"q1\")",
+          "(\"q1\", \"S1\", \"q2\")",
+          "(\"q2\", \"S1\", \"q2\")",
+          "(\"q2\", \"S0\", \"q1\")",
+          "(\"q2\", \"V1\", \"q1\")"
+        ]
+      },
+      {
+        "name": "E3",
+        "purpose": "Prevent V0 from occurring twice in a row",
+        "states": ["q1", "q2"],
+        "controllable_events": ["V0", "V1"],
+        "uncontrollable_events": [],
+        "transitions": [
+          "(\"q1\", \"V1\", \"q1\")",
+          "(\"q1\", \"V0\", \"q2\")",
+          "(\"q2\", \"V1\", \"q1\")"
+        ]
+      },
+      {
+        "name": "E4",
+        "purpose": "Prevent V1 from occurring twice in a row",
+        "states": ["q1", "q2"],
+        "controllable_events": ["V0", "V1"],
+        "uncontrollable_events": [],
+        "transitions": [
+          "(\"q1\", \"V0\", \"q1\")",
+          "(\"q1\", \"V1\", \"q2\")",
+          "(\"q2\", \"V0\", \"q1\")"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "object_clustering",
+    "summary": "Robots react differently when they see nothing, an object, or another robot in their line of sight.",
+    "patterns": [
+      "Model each sensing modality outcome with an uncontrollable plant event",
+      "Use one specification per perception-to-action binding",
+      "Use an extra specification to enforce alternation among motion commands"
+    ],
+    "plants": [
+      {
+        "name": "G1",
+        "purpose": "Line-of-sight sensor with outcomes S0, S1, and S2",
+        "states": ["q1"],
+        "controllable_events": [],
+        "uncontrollable_events": ["S0", "S1", "S2"],
+        "transitions": [
+          "(\"q1\", \"S0\", \"q1\")",
+          "(\"q1\", \"S1\", \"q1\")",
+          "(\"q1\", \"S2\", \"q1\")"
+        ]
+      },
+      {
+        "name": "G2",
+        "purpose": "Movement capability with commands V0, V1, and V2",
+        "states": ["q1"],
+        "controllable_events": ["V0", "V1", "V2"],
+        "uncontrollable_events": [],
+        "transitions": [
+          "(\"q1\", \"V0\", \"q1\")",
+          "(\"q1\", \"V1\", \"q1\")",
+          "(\"q1\", \"V2\", \"q1\")"
+        ]
+      }
+    ],
+    "specifications": [
+      {
+        "name": "E1",
+        "purpose": "Bind S0 to motion command V0",
+        "states": ["q1", "q2"],
+        "controllable_events": ["V0"],
+        "uncontrollable_events": ["S0", "S1", "S2"],
+        "transitions": [
+          "(\"q1\", \"S1\", \"q1\")",
+          "(\"q1\", \"S2\", \"q1\")",
+          "(\"q1\", \"S0\", \"q2\")",
+          "(\"q2\", \"S0\", \"q2\")",
+          "(\"q2\", \"S1\", \"q1\")",
+          "(\"q2\", \"S2\", \"q1\")",
+          "(\"q2\", \"V0\", \"q1\")"
+        ]
+      },
+      {
+        "name": "E2",
+        "purpose": "Bind S1 to motion command V1",
+        "states": ["q1", "q2"],
+        "controllable_events": ["V1"],
+        "uncontrollable_events": ["S0", "S1", "S2"],
+        "transitions": [
+          "(\"q1\", \"S0\", \"q1\")",
+          "(\"q1\", \"S2\", \"q1\")",
+          "(\"q1\", \"S1\", \"q2\")",
+          "(\"q2\", \"S1\", \"q2\")",
+          "(\"q2\", \"S0\", \"q1\")",
+          "(\"q2\", \"S2\", \"q1\")",
+          "(\"q2\", \"V1\", \"q1\")"
+        ]
+      },
+      {
+        "name": "E3",
+        "purpose": "Bind S2 to motion command V2",
+        "states": ["q1", "q2"],
+        "controllable_events": ["V2"],
+        "uncontrollable_events": ["S0", "S1", "S2"],
+        "transitions": [
+          "(\"q1\", \"S0\", \"q1\")",
+          "(\"q1\", \"S1\", \"q1\")",
+          "(\"q1\", \"S2\", \"q2\")",
+          "(\"q2\", \"S2\", \"q2\")",
+          "(\"q2\", \"S0\", \"q1\")",
+          "(\"q2\", \"S1\", \"q1\")",
+          "(\"q2\", \"V2\", \"q1\")"
+        ]
+      },
+      {
+        "name": "E4",
+        "purpose": "Force alternation among V0, V1, and V2",
+        "states": ["q0", "after_v0"],
+        "controllable_events": ["V0", "V1", "V2"],
+        "uncontrollable_events": [],
+        "transitions": [
+          "(\"q0\", \"V1\", \"q0\")",
+          "(\"q0\", \"V2\", \"q0\")",
+          "(\"q0\", \"V0\", \"after_v0\")",
+          "(\"after_v0\", \"V1\", \"q0\")",
+          "(\"after_v0\", \"V2\", \"q0\")"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "segregation",
+    "summary": "Follower robots stop when they receive one leader colour only and move randomly when conflicting leader colours are present.",
+    "patterns": [
+      "Split configuration, motion, and colour sensing into distinct plants",
+      "Represent each leader-colour detection channel with its own automaton",
+      "Use specifications to encode grouping policy from multi-sensor combinations"
+    ],
+    "plants": [
+      {
+        "name": "G1",
+        "purpose": "User input device for initial configuration",
+        "states": ["q1"],
+        "controllable_events": [],
+        "uncontrollable_events": ["press"],
+        "transitions": [
+          "(\"q1\", \"press\", \"q1\")"
+        ]
+      },
+      {
+        "name": "G2",
+        "purpose": "Robot role/type broadcaster",
+        "states": ["q1", "q2", "q3", "q4"],
+        "controllable_events": ["sendR", "sendG", "sendB", "sendNothing"],
+        "uncontrollable_events": [],
+        "transitions": [
+          "(\"q1\", \"sendR\", \"q2\")",
+          "(\"q2\", \"sendG\", \"q3\")",
+          "(\"q3\", \"sendB\", \"q4\")",
+          "(\"q4\", \"sendNothing\", \"q1\")"
+        ]
+      },
+      {
+        "name": "G3",
+        "purpose": "Motion subsystem with move and stop commands",
+        "states": ["idle", "moving"],
+        "controllable_events": ["moveFW", "turnCW", "turnCCW", "moveStop"],
+        "uncontrollable_events": ["moveEnded"],
+        "transitions": [
+          "(\"idle\", \"moveFW\", \"moving\")",
+          "(\"idle\", \"turnCW\", \"moving\")",
+          "(\"idle\", \"turnCCW\", \"moving\")",
+          "(\"moving\", \"moveEnded\", \"idle\")",
+          "(\"moving\", \"moveStop\", \"idle\")"
+        ]
+      },
+      {
+        "name": "G4",
+        "purpose": "Red leader detection channel",
+        "states": ["q1", "q2"],
+        "controllable_events": [],
+        "uncontrollable_events": ["getR", "getNotR"],
+        "transitions": [
+          "(\"q1\", \"getR\", \"q2\")",
+          "(\"q2\", \"getNotR\", \"q1\")"
+        ]
+      },
+      {
+        "name": "G5",
+        "purpose": "Green leader detection channel",
+        "states": ["q1", "q2"],
+        "controllable_events": [],
+        "uncontrollable_events": ["getG", "getNotG"],
+        "transitions": [
+          "(\"q1\", \"getG\", \"q2\")",
+          "(\"q2\", \"getNotG\", \"q1\")"
+        ]
+      },
+      {
+        "name": "G6",
+        "purpose": "Blue leader detection channel",
+        "states": ["q1", "q2"],
+        "controllable_events": [],
+        "uncontrollable_events": ["getB", "getNotB"],
+        "transitions": [
+          "(\"q1\", \"getB\", \"q2\")",
+          "(\"q2\", \"getNotB\", \"q1\")"
+        ]
+      }
+    ],
+    "specifications": [
+      {
+        "name": "E_policy",
+        "purpose": "Representative policy sketch: stop under a single colour, move when conflicting colours are active",
+        "states": ["none", "red_only", "green_only", "blue_only", "conflict"],
+        "controllable_events": ["moveFW", "moveStop"],
+        "uncontrollable_events": ["getR", "getG", "getB", "getNotR", "getNotG", "getNotB"],
+        "transitions": [
+          "(\"none\", \"getR\", \"red_only\")",
+          "(\"none\", \"getG\", \"green_only\")",
+          "(\"none\", \"getB\", \"blue_only\")",
+          "(\"none\", \"moveStop\", \"none\")",
+          "(\"red_only\", \"moveStop\", \"red_only\")",
+          "(\"red_only\", \"getG\", \"conflict\")",
+          "(\"red_only\", \"getB\", \"conflict\")",
+          "(\"green_only\", \"moveStop\", \"green_only\")",
+          "(\"green_only\", \"getR\", \"conflict\")",
+          "(\"green_only\", \"getB\", \"conflict\")",
+          "(\"blue_only\", \"moveStop\", \"blue_only\")",
+          "(\"blue_only\", \"getR\", \"conflict\")",
+          "(\"blue_only\", \"getG\", \"conflict\")",
+          "(\"conflict\", \"moveFW\", \"conflict\")",
+          "(\"conflict\", \"getNotR\", \"none\")",
+          "(\"conflict\", \"getNotG\", \"none\")",
+          "(\"conflict\", \"getNotB\", \"none\")"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "group_formation",
+    "summary": "Leaders and followers coordinate by movement, messaging, and timer subsystems to build balanced groups.",
+    "patterns": [
+      "Use several plant automata for movement, timing, sending, receiving, and role configuration",
+      "Encode communication protocol as specifications layered on top of those plants",
+      "Keep each automaton small and focused on one subsystem"
+    ],
+    "plants": [
+      {
+        "name": "G1",
+        "purpose": "Movement capability with move start and stop completion events",
+        "states": ["idle", "moving"],
+        "controllable_events": ["moveFW", "turnCW", "turnCCW", "moveStop"],
+        "uncontrollable_events": ["moveEnded"],
+        "transitions": [
+          "(\"idle\", \"moveFW\", \"moving\")",
+          "(\"idle\", \"turnCW\", \"moving\")",
+          "(\"idle\", \"turnCCW\", \"moving\")",
+          "(\"moving\", \"moveEnded\", \"idle\")",
+          "(\"moving\", \"moveStop\", \"idle\")"
+        ]
+      },
+      {
+        "name": "G2",
+        "purpose": "Timer subsystem with startTimer and timeout",
+        "states": ["ready", "waiting"],
+        "controllable_events": ["startTimer"],
+        "uncontrollable_events": ["timeout"],
+        "transitions": [
+          "(\"ready\", \"startTimer\", \"waiting\")",
+          "(\"waiting\", \"timeout\", \"ready\")"
+        ]
+      },
+      {
+        "name": "G3",
+        "purpose": "Message sending subsystem",
+        "states": ["idle", "sending"],
+        "controllable_events": ["sendBG", "sendBB", "sendOG", "sendOB", "sendAG", "sendAB", "sendE", "msgStop"],
+        "uncontrollable_events": [],
+        "transitions": [
+          "(\"idle\", \"sendBG\", \"sending\")",
+          "(\"idle\", \"sendBB\", \"sending\")",
+          "(\"idle\", \"sendOG\", \"sending\")",
+          "(\"idle\", \"sendOB\", \"sending\")",
+          "(\"idle\", \"sendAG\", \"sending\")",
+          "(\"idle\", \"sendAB\", \"sending\")",
+          "(\"idle\", \"sendE\", \"sending\")",
+          "(\"sending\", \"msgStop\", \"idle\")"
+        ]
+      },
+      {
+        "name": "G4",
+        "purpose": "Message receiving subsystem",
+        "states": ["idle", "reading"],
+        "controllable_events": ["getMessage"],
+        "uncontrollable_events": ["receiveBG", "receiveBB", "receiveOG", "receiveOB", "receiveAG", "receiveAB"],
+        "transitions": [
+          "(\"idle\", \"getMessage\", \"reading\")",
+          "(\"reading\", \"receiveBG\", \"idle\")",
+          "(\"reading\", \"receiveBB\", \"idle\")",
+          "(\"reading\", \"receiveOG\", \"idle\")",
+          "(\"reading\", \"receiveOB\", \"idle\")",
+          "(\"reading\", \"receiveAG\", \"idle\")",
+          "(\"reading\", \"receiveAB\", \"idle\")"
+        ]
+      },
+      {
+        "name": "G5",
+        "purpose": "Representative configuration subsystem with leader and follower roles",
+        "states": ["unconfigured", "leader", "green_follower", "blue_follower"],
+        "controllable_events": [],
+        "uncontrollable_events": ["setLeader", "setGreen", "setBlue"],
+        "transitions": [
+          "(\"unconfigured\", \"setLeader\", \"leader\")",
+          "(\"unconfigured\", \"setGreen\", \"green_follower\")",
+          "(\"unconfigured\", \"setBlue\", \"blue_follower\")"
+        ]
+      }
+    ],
+    "specifications": [
+      {
+        "name": "E_protocol",
+        "purpose": "Representative communication ordering: broadcast, offer, accept, then relay",
+        "states": ["searching", "offered", "joined"],
+        "controllable_events": ["sendBG", "sendBB", "sendOG", "sendOB", "sendAG", "sendAB", "sendE"],
+        "uncontrollable_events": ["receiveBG", "receiveBB", "receiveOG", "receiveOB", "receiveAG", "receiveAB"],
+        "transitions": [
+          "(\"searching\", \"receiveBG\", \"searching\")",
+          "(\"searching\", \"receiveBB\", \"searching\")",
+          "(\"searching\", \"sendOG\", \"offered\")",
+          "(\"searching\", \"sendOB\", \"offered\")",
+          "(\"offered\", \"receiveOG\", \"offered\")",
+          "(\"offered\", \"receiveOB\", \"offered\")",
+          "(\"offered\", \"sendAG\", \"joined\")",
+          "(\"offered\", \"sendAB\", \"joined\")",
+          "(\"joined\", \"sendE\", \"joined\")",
+          "(\"joined\", \"receiveAG\", \"joined\")",
+          "(\"joined\", \"receiveAB\", \"joined\")"
+        ]
+      }
+    ]
+  }
+]
