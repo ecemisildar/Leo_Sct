@@ -1,0 +1,4330 @@
+{
+  "gloc_name": "Gloc6",
+  "sloc_name": "Sloc6",
+  "states": [
+    {
+      "sloc_state": "clear,forward_commit,s_clear",
+      "gloc_state": "clear,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "move_forward",
+          "target": "clear,idle,s_scan",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "clear,forward_commit,s_scan",
+      "gloc_state": "clear,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,forward_commit,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "clear,idle,s_clear",
+      "gloc_state": "clear,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "move_forward",
+          "target": "clear,forward_commit,s_scan",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,idle,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "clear,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "clear,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "clear,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "clear,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "clear,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "clear,idle,s_scan",
+      "gloc_state": "clear,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "clear,scan_full,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,idle,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "clear,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "clear,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "clear,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "clear,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "clear,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "clear,marker_approach,s_clear",
+      "gloc_state": "clear,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,marker_approach,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "clear,rotate_commit_ccw,s_clear",
+      "gloc_state": "clear,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "clear,rotate_commit_ccw,s_scan",
+      "gloc_state": "clear,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_ccw,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "clear,rotate_commit_cw,s_clear",
+      "gloc_state": "clear,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "clear,rotate_commit_cw,s_scan",
+      "gloc_state": "clear,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_cw,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "clear,scan_full,s_clear",
+      "gloc_state": "clear,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_close,forward_commit,s_stop_goal",
+      "gloc_state": "marker_close,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "marker_close,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_close,idle,s_stop_goal",
+      "gloc_state": "marker_close,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "stop",
+          "target": "marker_close,stop_goal,s_stop_goal",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_close,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "marker_close,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_close,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_close,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_close,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_close,marker_approach,s_stop_goal",
+      "gloc_state": "marker_close,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "marker_close,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_close,rotate_commit_ccw,s_stop_goal",
+      "gloc_state": "marker_close,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_close,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_close,rotate_commit_cw,s_stop_goal",
+      "gloc_state": "marker_close,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_close,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_close,scan_full,s_stop_goal",
+      "gloc_state": "marker_close,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_close,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_close,stop_goal,s_stop_goal",
+      "gloc_state": "marker_close,stop_goal",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,stop_goal,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_close,stop_goal,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_close,stop_goal,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "marker_close,stop_goal,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "marker_close,stop_goal,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "marker_close,stop_goal,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_close,stop_goal,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "stop",
+          "target": "marker_close,stop_goal,s_stop_goal",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "marker_lost,forward_commit,s_clear",
+      "gloc_state": "marker_lost,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "move_forward",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "marker_lost,forward_commit,s_obs_front",
+      "gloc_state": "marker_lost,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,forward_commit,s_obs_left",
+      "gloc_state": "marker_lost,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,forward_commit,s_obs_right",
+      "gloc_state": "marker_lost,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,forward_commit,s_scan",
+      "gloc_state": "marker_lost,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,forward_commit,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,idle,s_clear",
+      "gloc_state": "marker_lost,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "move_forward",
+          "target": "marker_lost,forward_commit,s_scan",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,idle,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "marker_lost,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,idle,s_obs_front",
+      "gloc_state": "marker_lost,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,rotate_commit_cw,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "marker_lost,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "marker_lost,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,idle,s_obs_left",
+      "gloc_state": "marker_lost,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,rotate_commit_cw,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "marker_lost,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "marker_lost,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,idle,s_obs_right",
+      "gloc_state": "marker_lost,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,rotate_commit_ccw,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "marker_lost,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "marker_lost,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,idle,s_scan",
+      "gloc_state": "marker_lost,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "marker_lost,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "marker_lost,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,marker_approach,s_clear",
+      "gloc_state": "marker_lost,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,marker_approach,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,marker_approach,s_obs_front",
+      "gloc_state": "marker_lost,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,marker_approach,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,marker_approach,s_obs_left",
+      "gloc_state": "marker_lost,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,marker_approach,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,marker_approach,s_obs_right",
+      "gloc_state": "marker_lost,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,marker_approach,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,marker_approach,s_scan",
+      "gloc_state": "marker_lost,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,marker_approach,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_ccw,s_clear",
+      "gloc_state": "marker_lost,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_ccw,s_obs_front",
+      "gloc_state": "marker_lost,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_ccw,s_obs_left",
+      "gloc_state": "marker_lost,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_ccw,s_obs_right",
+      "gloc_state": "marker_lost,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_ccw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_ccw,s_scan",
+      "gloc_state": "marker_lost,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_ccw,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_cw,s_clear",
+      "gloc_state": "marker_lost,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_cw,s_obs_front",
+      "gloc_state": "marker_lost,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_cw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_cw,s_obs_left",
+      "gloc_state": "marker_lost,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_cw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_cw,s_obs_right",
+      "gloc_state": "marker_lost,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,rotate_commit_cw,s_scan",
+      "gloc_state": "marker_lost,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,rotate_commit_cw,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,scan_full,s_clear",
+      "gloc_state": "marker_lost,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,scan_full,s_obs_front",
+      "gloc_state": "marker_lost,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,scan_full,s_obs_left",
+      "gloc_state": "marker_lost,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,scan_full,s_obs_right",
+      "gloc_state": "marker_lost,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_lost,scan_full,s_scan",
+      "gloc_state": "marker_lost,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_lost,idle,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_lost,scan_full,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "marker_seen,forward_commit,s_marker_track",
+      "gloc_state": "marker_seen,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "marker_seen,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_seen,idle,s_marker_approach",
+      "gloc_state": "marker_seen,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_seen,idle,s_marker_approach",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_seen,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "marker_seen,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_seen,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_seen,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "marker_seen,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_seen,idle,s_marker_track",
+      "gloc_state": "marker_seen,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_seen,marker_approach,s_marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_seen,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "marker_seen,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_seen,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_seen,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "marker_seen,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_seen,marker_approach,s_marker_approach",
+      "gloc_state": "marker_seen,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_seen,marker_approach,s_marker_approach",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "marker_seen,marker_approach,s_marker_track",
+      "gloc_state": "marker_seen,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "move_to_marker",
+          "target": "marker_seen,idle,s_marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "marker_seen,rotate_commit_ccw,s_marker_track",
+      "gloc_state": "marker_seen,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "marker_seen,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_seen,rotate_commit_cw,s_marker_track",
+      "gloc_state": "marker_seen,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "marker_seen,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "marker_seen,scan_full,s_marker_track",
+      "gloc_state": "marker_seen,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "marker_seen,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_front,forward_commit,s_obs_front",
+      "gloc_state": "obs_front,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_front,idle,s_obs_front",
+      "gloc_state": "obs_front,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_front,rotate_commit_cw,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_front,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "obs_front,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "obs_front,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_front,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "obs_front,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_front,idle,s_scan",
+      "gloc_state": "obs_front,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_front,scan_full,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,idle,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "obs_front,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "obs_front,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_front,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_front,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "obs_front,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_front,marker_approach,s_obs_front",
+      "gloc_state": "obs_front,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,marker_approach,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_front,rotate_commit_ccw,s_obs_front",
+      "gloc_state": "obs_front,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_front,rotate_commit_cw,s_obs_front",
+      "gloc_state": "obs_front,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_front,idle,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "obs_front,rotate_commit_cw,s_scan",
+      "gloc_state": "obs_front,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_cw,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_front,scan_full,s_clear",
+      "gloc_state": "obs_front,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_front,scan_full,s_obs_front",
+      "gloc_state": "obs_front,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_left,forward_commit,s_obs_left",
+      "gloc_state": "obs_left,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_left,idle,s_obs_left",
+      "gloc_state": "obs_left,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_left,rotate_commit_cw,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_left,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "obs_left,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "obs_left,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_left,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "obs_left,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_left,idle,s_scan",
+      "gloc_state": "obs_left,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_left,scan_full,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,idle,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "obs_left,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "obs_left,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_left,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_left,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "obs_left,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_left,marker_approach,s_obs_left",
+      "gloc_state": "obs_left,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,marker_approach,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_left,rotate_commit_ccw,s_obs_left",
+      "gloc_state": "obs_left,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_left,rotate_commit_cw,s_obs_left",
+      "gloc_state": "obs_left,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_left,idle,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "obs_left,rotate_commit_cw,s_scan",
+      "gloc_state": "obs_left,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_cw,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_left,scan_full,s_clear",
+      "gloc_state": "obs_left,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_left,scan_full,s_obs_left",
+      "gloc_state": "obs_left,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_right,forward_commit,s_obs_right",
+      "gloc_state": "obs_right,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,forward_commit,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,forward_commit,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_right,idle,s_obs_right",
+      "gloc_state": "obs_right,idle",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_right,rotate_commit_ccw,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_right,scan_full",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "obs_right,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "obs_right,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_right,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "obs_right,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_right,idle,s_scan",
+      "gloc_state": "obs_right,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_right,scan_full,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "marker_close",
+          "target": "marker_close,idle,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,idle,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,idle,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,idle,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "obs_right,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_to_marker",
+          "target": "obs_right,marker_approach",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_right,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_right,rotate_commit_ccw",
+          "controllable": true
+        },
+        {
+          "event": "stop",
+          "target": "obs_right,stop_goal",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_right,marker_approach,s_obs_right",
+      "gloc_state": "obs_right,marker_approach",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,marker_approach,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,marker_approach,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,marker_approach,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,marker_approach,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,marker_approach,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,marker_approach,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_to_marker",
+          "target": "obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_right,rotate_commit_ccw,s_obs_right",
+      "gloc_state": "obs_right,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_right,idle,s_scan",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "obs_right,rotate_commit_ccw,s_scan",
+      "gloc_state": "obs_right,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_ccw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_ccw,s_scan",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_ccw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_ccw,s_scan",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_right,rotate_commit_cw,s_obs_right",
+      "gloc_state": "obs_right,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,rotate_commit_cw,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,rotate_commit_cw,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_right,scan_full,s_clear",
+      "gloc_state": "obs_right,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "obs_right,scan_full,s_obs_right",
+      "gloc_state": "obs_right,scan_full",
+      "enabled_transitions": [
+        {
+          "event": "marker_close",
+          "target": "marker_close,scan_full,s_stop_goal",
+          "controllable": false
+        },
+        {
+          "event": "marker_lost",
+          "target": "marker_lost,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "marker_seen",
+          "target": "marker_seen,scan_full,s_marker_track",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_front",
+          "target": "obs_front,scan_full,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left,scan_full,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right,scan_full,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "clear,scan_full,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "obs_right,idle",
+          "controllable": true
+        }
+      ]
+    }
+  ]
+}

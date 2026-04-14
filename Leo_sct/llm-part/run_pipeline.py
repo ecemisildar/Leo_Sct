@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import time
+import warnings
 from pathlib import Path
 from typing import Dict, List, Sequence, Set
 
@@ -75,6 +76,24 @@ def _parse_transition(t: str) -> tuple[str, str, str]:
         raise ValueError(f"Bad transition format: {t!r}")
     return m.group(1), m.group(2), m.group(3)
 
+
+def _add_missing_uncontrollable_self_loops(
+    transitions: List[tuple[str, str, str]],
+    uncontrollable: Sequence[str],
+) -> List[tuple[str, str, str]]:
+    states: Set[str] = set()
+    for s, _, t in transitions:
+        states.add(s)
+        states.add(t)
+
+    existing = {(s, ev) for s, ev, _ in transitions}
+    completed = list(transitions)
+    for s in sorted(states):
+        for ev in uncontrollable:
+            if (s, ev) not in existing:
+                completed.append((s, ev, s))
+    return completed
+
 def _validate_llm_json(
     llm_json_path: Path,
     controllable: Sequence[str],
@@ -89,6 +108,7 @@ def _validate_llm_json(
     allowed_events = set(controllable) | set(uncontrollable)
 
     transitions = [_parse_transition(t) for t in data["transitions"]]
+    transitions = _add_missing_uncontrollable_self_loops(transitions, uncontrollable)
 
     # 1) Event alphabet check
     bad_events = sorted({ev for _, ev, _ in transitions if ev not in allowed_events})
@@ -180,13 +200,7 @@ def _validate_llm_json(
             s: [ev for ev in controllable if (s, ev) in nexts]
             for s in sorted(states)
         }
-
-        for s, ctrls in ctrl_by_state.items():
-            if len(ctrls) != 1:
-                raise ValueError(
-                    f"Explore safety violation: state '{s}' enables controllables {ctrls}. "
-                    "Explore requires exactly one controllable per non-terminal state."
-                )
+        explore_warnings: List[str] = []
 
         def single_ctrl_for_next_state(src_state: str, obstacle_event: str) -> tuple[str, List[str]]:
             target = next(iter(nexts[(src_state, obstacle_event)]))
@@ -195,24 +209,54 @@ def _validate_llm_json(
 
         for s in sorted(states):
             front_target, front_ctrls = single_ctrl_for_next_state(s, "obstacle_front")
-            if front_ctrls[0] not in {"full_rotate", "rotate_clockwise", "rotate_counterclockwise"}:
-                raise ValueError(
+            if not front_ctrls:
+                explore_warnings.append(
                     f"Explore safety violation: obstacle_front from '{s}' leads to '{front_target}' "
-                    f"with controllable {front_ctrls[0]!r}. Expected a deterministic recovery rotate/full_rotate."
+                    "with no controllable recovery action."
+                )
+                continue
+            recovery_front = [
+                ev for ev in front_ctrls
+                if ev in {"full_rotate", "rotate_clockwise", "rotate_counterclockwise"}
+            ]
+            if not recovery_front:
+                explore_warnings.append(
+                    f"Explore safety violation: obstacle_front from '{s}' leads to '{front_target}' "
+                    f"with controllables {front_ctrls}. Expected at least one recovery action."
                 )
 
             left_target, left_ctrls = single_ctrl_for_next_state(s, "obstacle_left")
-            if left_ctrls[0] != "rotate_clockwise":
-                raise ValueError(
+            if not left_ctrls:
+                explore_warnings.append(
                     f"Explore safety violation: obstacle_left from '{s}' leads to '{left_target}' "
-                    f"with controllable {left_ctrls[0]!r}. Expected 'rotate_clockwise'."
+                    "with no controllable recovery action."
+                )
+                continue
+            left_recovery = [
+                ev for ev in left_ctrls
+                if ev in {"rotate_clockwise", "full_rotate"}
+            ]
+            if not left_recovery:
+                explore_warnings.append(
+                    f"Explore safety violation: obstacle_left from '{s}' leads to '{left_target}' "
+                    f"with controllables {left_ctrls}. Expected a left-side recovery action."
                 )
 
             right_target, right_ctrls = single_ctrl_for_next_state(s, "obstacle_right")
-            if right_ctrls[0] != "rotate_counterclockwise":
-                raise ValueError(
+            if not right_ctrls:
+                explore_warnings.append(
                     f"Explore safety violation: obstacle_right from '{s}' leads to '{right_target}' "
-                    f"with controllable {right_ctrls[0]!r}. Expected 'rotate_counterclockwise'."
+                    "with no controllable recovery action."
+                )
+                continue
+            right_recovery = [
+                ev for ev in right_ctrls
+                if ev in {"rotate_counterclockwise", "full_rotate"}
+            ]
+            if not right_recovery:
+                explore_warnings.append(
+                    f"Explore safety violation: obstacle_right from '{s}' leads to '{right_target}' "
+                    f"with controllables {right_ctrls}. Expected a right-side recovery action."
                 )
 
             for target, ctrls, event_name in (
@@ -221,11 +265,15 @@ def _validate_llm_json(
                 (right_target, right_ctrls, "obstacle_right"),
             ):
                 bad = [ev for ev in ctrls if ev in {"move_forward", "random_walk"}]
+                if event_name == "obstacle_front" and recovery_front:
+                    bad = [ev for ev in bad if ev == "random_walk"]
                 if bad:
-                    raise ValueError(
+                    explore_warnings.append(
                         f"Explore safety violation: {event_name} from '{s}' leads to '{target}' "
                         f"with forbidden controllables {bad}."
                     )
+        for msg in explore_warnings:
+            warnings.warn(msg)
 
 
 def _ensure_nadzoru_imports(nadzoru_root: Path) -> None:
@@ -465,8 +513,7 @@ def _normalize_automaton_payload(
     transitions = normalized.get("transitions")
     if not isinstance(transitions, list) or not transitions:
         raise ValueError(f"{section_name}[{position}] must include a non-empty transitions list.")
-    for transition in transitions:
-        _parse_transition(transition)
+    parsed_transitions = [_parse_transition(transition) for transition in transitions]
 
     normalized["name"] = str(normalized.get("name") or f"{section_name}{position + 1}")
     normalized["purpose"] = str(normalized.get("purpose") or "")
@@ -487,7 +534,34 @@ def _normalize_automaton_payload(
         normalized.get("uncontrollable_events"),
         f"{section_name}[{position}].uncontrollable_events",
     )
+    parsed_transitions = _add_missing_uncontrollable_self_loops(
+        parsed_transitions,
+        normalized["uncontrollable_events"],
+    )
+    normalized["transitions"] = [
+        f'("{src}", "{ev}", "{dst}")'
+        for src, ev, dst in parsed_transitions
+    ]
     return normalized
+
+
+def _is_empty_automaton_payload(payload: object) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    transitions = payload.get("transitions")
+    if transitions not in (None, []):
+        return False
+    for key in (
+        "states",
+        "initial_states",
+        "marked_states",
+        "controllable_events",
+        "uncontrollable_events",
+    ):
+        value = payload.get(key)
+        if value not in (None, []):
+            return False
+    return not str(payload.get("name") or "").strip() and not str(payload.get("purpose") or "").strip()
 
 
 def _normalize_pipeline_payload(payload: Dict[str, object]) -> Dict[str, object]:
@@ -502,11 +576,17 @@ def _normalize_pipeline_payload(payload: Dict[str, object]) -> Dict[str, object]
     normalized["G"] = [
         _normalize_automaton_payload("G", index, entry)
         for index, entry in enumerate(g_list)
+        if not _is_empty_automaton_payload(entry)
     ]
     normalized["E"] = [
         _normalize_automaton_payload("E", index, entry)
         for index, entry in enumerate(e_list)
+        if not _is_empty_automaton_payload(entry)
     ]
+    if not normalized["G"]:
+        raise ValueError("API response 'G' list only contained empty automata.")
+    if not normalized["E"]:
+        raise ValueError("API response 'E' list only contained empty automata.")
 
     event_controllability: Dict[str, bool] = {}
     used_names: Set[str] = set()
@@ -566,7 +646,10 @@ def _prepare_output_dir(
 ) -> Dict[str, object]:
     output_dir.mkdir(parents=True, exist_ok=True)
     sloc_xml = output_dir / f"Sloc{index}.xml"
+    gloc_xml = output_dir / f"Gloc{index}.xml"
+    kloc_xml = output_dir / f"Kloc{index}.xml"
     script_path = output_dir / "script.txt"
+    disabled_report = output_dir / f"disabled_transitions_{index}.json"
     sloc_name = f"Sloc{index}"
     gloc_name = f"Gloc{index}"
     kloc_name = f"Kloc{index}"
@@ -617,7 +700,10 @@ def _prepare_output_dir(
         "e_xml": e_xml_paths[0] if len(e_xml_paths) == 1 else None,
         "e_xml_paths": e_xml_paths,
         "sloc_xml": sloc_xml,
+        "gloc_xml": gloc_xml,
+        "kloc_xml": kloc_xml,
         "script": script_path,
+        "disabled_report": disabled_report,
         "g_xml_paths": g_xml_paths,
         "g_names": g_names if llm_payload is not None else [],
         "e_names": e_names if llm_payload is not None else [],
@@ -681,6 +767,90 @@ def _run_nadzoru_script(
         automaton.save()
         generated.append(output_path)
     return generated
+
+
+def _save_disabled_transition_report(
+    gloc: "Automaton",
+    sloc: "Automaton",
+    report_path: Path,
+) -> None:
+    gloc_states = list(gloc.states)
+    gloc_by_name = {state.name: state for state in gloc_states}
+    sorted_gloc_names = sorted(gloc_by_name.keys(), key=len, reverse=True)
+
+    def match_gloc_state_name(sloc_state_name: str) -> str | None:
+        for name in sorted_gloc_names:
+            if sloc_state_name == name or sloc_state_name.startswith(name + ","):
+                return name
+        return None
+
+    report = {
+        "gloc_name": gloc.get_id_name(),
+        "sloc_name": sloc.get_id_name(),
+        "states": [],
+    }
+
+    for sloc_state in sorted(sloc.states, key=lambda s: s.name):
+        gloc_state_name = match_gloc_state_name(sloc_state.name)
+        if gloc_state_name is None:
+            report["states"].append(
+                {
+                    "sloc_state": sloc_state.name,
+                    "gloc_state": None,
+                    "enabled_transitions": [
+                        {
+                            "event": t.event.name,
+                            "target": t.to_state.name,
+                            "controllable": bool(t.event.controllable),
+                        }
+                        for t in sorted(
+                            sloc_state.out_transitions,
+                            key=lambda t: (t.event.name, t.to_state.name),
+                        )
+                    ],
+                    "disabled_transitions": [],
+                    "note": "No matching Gloc state name prefix found.",
+                }
+            )
+            continue
+
+        gloc_state = gloc_by_name[gloc_state_name]
+        enabled_events = {t.event.name for t in sloc_state.out_transitions}
+        disabled = []
+        for transition in sorted(
+            gloc_state.out_transitions,
+            key=lambda t: (t.event.name, t.to_state.name),
+        ):
+            if transition.event.name in enabled_events:
+                continue
+            disabled.append(
+                {
+                    "event": transition.event.name,
+                    "target": transition.to_state.name,
+                    "controllable": bool(transition.event.controllable),
+                }
+            )
+
+        report["states"].append(
+            {
+                "sloc_state": sloc_state.name,
+                "gloc_state": gloc_state_name,
+                "enabled_transitions": [
+                    {
+                        "event": t.event.name,
+                        "target": t.to_state.name,
+                        "controllable": bool(t.event.controllable),
+                    }
+                    for t in sorted(
+                        sloc_state.out_transitions,
+                        key=lambda t: (t.event.name, t.to_state.name),
+                    )
+                ],
+                "disabled_transitions": disabled,
+            }
+        )
+
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
 def _check_sloc_valid(sloc_path: Path, sloc_name: str) -> None:
     from machine.automaton import Automaton
@@ -775,7 +945,12 @@ def _build_sct_yaml(automatons: Sequence["Automaton"]) -> Dict[str, object]:
         "sup_data": sup_data,
     }
 
-def _run_llm(task: str, llm_json: Path) -> None:
+def _run_llm(
+    task: str,
+    llm_json: Path,
+    user_task: str | None = None,
+    print_prompt: bool = False,
+) -> None:
     profiles = _load_profiles(DEFAULT_PROFILE_PATH)
     if task not in profiles:
         raise SystemExit(f"Unknown task: {task}")
@@ -811,6 +986,7 @@ def _run_llm(task: str, llm_json: Path) -> None:
 
     prompt = build_pipeline_prompt(
         goal=goal,
+        user_task=user_task,
         controllable=controllable,
         uncontrollable=uncontrollable,
         guidance=guidance_lines or None,
@@ -819,12 +995,17 @@ def _run_llm(task: str, llm_json: Path) -> None:
         example_tasks=load_example_tasks(),
     )
 
+    if print_prompt:
+        print("----- BEGIN PIPELINE PROMPT -----")
+        print(prompt)
+        print("----- END PIPELINE PROMPT -----")
+
     api_key = read_api_key()
     result = call_chat_completion(
         api_key,
         prompt,
         DEFAULT_MODEL,
-        0.2,
+        0.0,
         DEFAULT_TIMEOUT_S,
         DEFAULT_RETRIES,
     )
@@ -838,6 +1019,18 @@ def _load_profiles(path: Path) -> Dict[str, Dict[str, object]]:
     if not path.exists():
         raise SystemExit(f"Profile file not found: {path}")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _read_optional_text(value: str | None, file_path: str | None) -> str | None:
+    if value and file_path:
+        raise SystemExit("Use only one of --user-task or --user-task-file.")
+    if file_path:
+        text = Path(file_path).read_text(encoding="utf-8").strip()
+        return text or None
+    if value:
+        text = value.strip()
+        return text or None
+    return None
 
 
 def main() -> int:
@@ -860,6 +1053,19 @@ def main() -> int:
         action="store_true",
         help="Skip the LLM step and use the latest JSON output.",
     )
+    parser.add_argument(
+        "--user-task",
+        help="Free-form user task text. Kept separate from the default task profile constraints.",
+    )
+    parser.add_argument(
+        "--user-task-file",
+        help="Path to a text file containing the free-form user task.",
+    )
+    parser.add_argument(
+        "--print-prompt",
+        action="store_true",
+        help="Print the final composed LLM prompt before running the pipeline.",
+    )
     args = parser.parse_args()
 
     profiles = _load_profiles(DEFAULT_PROFILE_PATH)
@@ -876,10 +1082,16 @@ def main() -> int:
         raise SystemExit(f"Profile '{args.task}' missing valid uncontrollable_events list.")
 
     run_llm = args.run_llm and not args.skip_llm
+    user_task = _read_optional_text(args.user_task, args.user_task_file)
     if run_llm:
         DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         llm_json_path = _next_llm_json_path(DEFAULT_OUTPUT_DIR, args.task)
-        _run_llm(args.task, llm_json_path)
+        _run_llm(
+            args.task,
+            llm_json_path,
+            user_task=user_task,
+            print_prompt=args.print_prompt,
+        )
     else:
         llm_json_path = _latest_llm_json_path(DEFAULT_OUTPUT_DIR, args.task)
 
@@ -953,6 +1165,11 @@ def main() -> int:
             f"Script={paths['script']}"
         )
     _check_sloc_valid(paths["sloc_xml"], paths["sloc_name"])    
+    _save_disabled_transition_report(
+        _load_automaton(paths["gloc_xml"]),
+        _load_automaton(paths["sloc_xml"]),
+        paths["disabled_report"],
+    )
 
     from machine.automaton import Automaton
 

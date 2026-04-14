@@ -14,13 +14,9 @@ import xml.etree.ElementTree as ET
 # ----------------------------
 # CONFIG (no args)
 # ----------------------------
-_PACKAGE_ROOT_CANDIDATES = [
-    Path("/ros2_ws/src/Leo_sct/src/swarm_basics"),
-    Path.home() / "ros2_ws/src/Leo_sct/src/swarm_basics",
-]
-PACKAGE_ROOT = next((p for p in _PACKAGE_ROOT_CANDIDATES if p.exists()), _PACKAGE_ROOT_CANDIDATES[-1])
+PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = PACKAGE_ROOT / "results"
-WORLD_SDF = PACKAGE_ROOT / "worlds" / "random_world.sdf"
+WORLD_SDF = PACKAGE_ROOT / "swarm_basics" / "worlds" / "random_world.sdf"
 
 ENV_MIN = -7
 ENV_MAX = 7
@@ -29,19 +25,47 @@ OBSTACLE_OCCUPANCY_THRESHOLD = 0.4
 # ----------------------------
 
 
-def pick_latest_run_dir(results_dir: Path) -> Path:
-    runs = [p for p in results_dir.iterdir() if p.is_dir() and p.name.startswith("run_")]
-    if not runs:
-        raise SystemExit(f"No run_* folders found under {results_dir}")
-    runs.sort(key=lambda p: p.stat().st_mtime)
-    return runs[-1]
+def pick_latest_run_dir(results_dir: Path) -> tuple[str, Path]:
+    run_dirs = [
+        path for path in results_dir.glob("run_*")
+        if path.is_dir() and (path / "coverage_timeseries.csv").exists()
+    ]
+    if run_dirs:
+        run_dirs.sort(key=lambda p: p.stat().st_mtime)
+        run_dir = run_dirs[-1]
+        return run_dir.name, run_dir
+
+    legacy_runs = list(results_dir.glob("run_*_coverage_timeseries.csv"))
+    if not legacy_runs:
+        raise SystemExit(
+            f"No run folders or legacy run_*_coverage_timeseries.csv files found under {results_dir}"
+        )
+    legacy_runs.sort(key=lambda p: p.stat().st_mtime)
+    run_id = legacy_runs[-1].name.removesuffix("_coverage_timeseries.csv")
+    return run_id, results_dir
 
 
-def pick_latest_bump_file(run_dir: Path) -> Path | None:
-    if not run_dir.exists():
+def pick_matching_bump_file(run_dir: Path, run_id: str) -> Path | None:
+    if run_dir.exists():
+        run_bumps = sorted(run_dir.glob("bumps_*.csv"), key=lambda p: p.stat().st_mtime)
+        if run_bumps:
+            return run_bumps[-1]
+
+    parent_dir = run_dir.parent if run_dir != RESULTS_DIR else run_dir
+    if not parent_dir.exists():
         return None
-    files = sorted(run_dir.glob("bumps_*.csv"), key=lambda p: p.stat().st_mtime)
-    return files[-1] if files else None
+    run_hms = run_id.rsplit("_", 1)[-1]
+    files = []
+    for path in parent_dir.glob("bumps_*.csv"):
+        stem = path.stem
+        suffix = stem.rsplit("_", 1)[-1]
+        if len(suffix) != 6 or not suffix.isdigit():
+            continue
+        files.append((abs(int(suffix) - int(run_hms)), path))
+    if not files:
+        return None
+    files.sort(key=lambda item: item[0])
+    return files[0][1] if files[0][0] <= 2 else None
 
 
 def read_bump_rows(path: Path):
@@ -359,8 +383,10 @@ def plot_collisions(rows, cov_times, covs, out_png: Path):
 
 
 def main():
-    run_dir = pick_latest_run_dir(RESULTS_DIR)
+    run_id, run_dir = pick_latest_run_dir(RESULTS_DIR)
     visited_csv = run_dir / "coverage_visited_cells.csv"
+    if not visited_csv.exists():
+        visited_csv = RESULTS_DIR / f"{run_id}_coverage_visited_cells.csv"
     if not visited_csv.exists():
         raise SystemExit(f"Missing {visited_csv}")
 
@@ -369,6 +395,8 @@ def main():
         raise SystemExit(f"Empty visited cells in {visited_csv}")
 
     paths_csv = run_dir / "coverage_paths.csv"
+    if not paths_csv.exists():
+        paths_csv = RESULTS_DIR / f"{run_id}_coverage_paths.csv"
     paths = read_robot_paths(paths_csv) if paths_csv.exists() else {}
 
     cells = build_cells(ENV_MIN, ENV_MAX)
@@ -381,13 +409,15 @@ def main():
     plot_coverage_map(cells, visited, blocked, paths, map_out)
 
     cov_csv = run_dir / "coverage_timeseries.csv"
+    if not cov_csv.exists():
+        cov_csv = RESULTS_DIR / f"{run_id}_coverage_timeseries.csv"
     cov_times, covs = ([], [])
     if cov_csv.exists():
         cov_times, covs = read_coverage_timeseries(cov_csv)
 
-    bump_file = pick_latest_bump_file(run_dir)
+    bump_file = pick_matching_bump_file(run_dir, run_id)
     if bump_file is None:
-        print(f"[WARN] No bump file found in {run_dir}. Plotting zeros.")
+        print(f"[WARN] No bump file found for {run_id}. Plotting zeros.")
         rows = []
     else:
         rows = read_bump_rows(bump_file)
@@ -396,10 +426,10 @@ def main():
 
     out_png = run_dir / "collisions_vs_time_offline.png"
     if not plot_collisions(rows, cov_times, covs, out_png):
-        print(f"[WARN] Could not plot collisions for {run_dir}")
+        print(f"[WARN] Could not plot collisions for {run_id}")
         return
 
-    print(f"[OK] {run_dir.name}")
+    print(f"[OK] {run_id}")
     print(f"  coverage_map: {map_out}")
     if bump_file is not None:
         print(f"  bump_file: {bump_file}")

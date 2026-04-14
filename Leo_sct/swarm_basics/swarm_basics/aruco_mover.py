@@ -17,7 +17,7 @@ class ArucoMover(Node):
         self.center_y = float(self.declare_parameter("center_y", 0.0).value)
         self.z = float(self.declare_parameter("z", 0.375).value)
         self.radius = float(self.declare_parameter("radius", 4.0).value)
-        self.angular_speed = float(self.declare_parameter("angular_speed", 0.35).value)
+        self.angular_speed = float(self.declare_parameter("angular_speed", 0.35).value) # 0.35
         self.update_rate_hz = float(self.declare_parameter("update_rate_hz", 2.0).value)
         self.face_motion = bool(self.declare_parameter("face_motion", True).value)
 

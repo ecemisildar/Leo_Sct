@@ -15,7 +15,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 class CoverageCounter(Node):
     """
     - Tracks visited grid cells from Gazebo poses (TFMessage)
-    - Saves results directly into results/
+    - Saves results into results/<run_id>/
     - Logs paths + visited cells to CSV for offline analysis
     - Does not render or save plots (handled by offline scripts)
     """
@@ -27,7 +27,7 @@ class CoverageCounter(Node):
         package_root = Path.home() / "ros2_ws/src/Leo_sct/src/swarm_basics"
 
         results_dir_default = package_root / "results"
-        self.results_dir = Path(
+        self.results_root = Path(
             str(self.declare_parameter("results_dir", str(results_dir_default)).value)
         )
         run_id_param = str(self.declare_parameter("run_id", "").value).strip()
@@ -39,14 +39,14 @@ class CoverageCounter(Node):
         self.obstacle_occupancy_threshold = 0.4
         self.world_sdf = package_root / "worlds" / "random_world.sdf"
 
+        self.results_dir = self.results_root / self.run_id
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
-        prefix = f"{self.run_id}_" if self.run_id else ""
-        self.coverage_csv_path = self.results_dir / f"{prefix}coverage_timeseries.csv"
-        self.paths_csv_path = self.results_dir / f"{prefix}coverage_paths.csv"
-        self.visited_cells_csv_path = self.results_dir / f"{prefix}coverage_visited_cells.csv"
-        self.status_path = self.results_dir / f"{prefix}SAVE_STATUS.txt"
-        self.error_path = self.results_dir / f"{prefix}SAVE_ERROR.txt"
+        self.coverage_csv_path = self.results_dir / "coverage_timeseries.csv"
+        self.paths_csv_path = self.results_dir / "coverage_paths.csv"
+        self.visited_cells_csv_path = self.results_dir / "coverage_visited_cells.csv"
+        self.status_path = self.results_dir / "SAVE_STATUS.txt"
+        self.error_path = self.results_dir / "SAVE_ERROR.txt"
 
         self._saved_ok = False
         self._saving_now = False
@@ -94,6 +94,7 @@ class CoverageCounter(Node):
 
         self._write_status(
             "Node started\n"
+            f"run_id: {self.run_id}\n"
             f"results_dir: {self.results_dir}\n"
         )
 

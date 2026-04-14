@@ -71,7 +71,7 @@ def generate_launch_description():
     )
     run_duration = DeclareLaunchArgument(
         "run_duration",
-        default_value="50000.0",
+        default_value="200.0",
         description="Seconds before shutting down the launch",
     )
     total_robots = DeclareLaunchArgument(

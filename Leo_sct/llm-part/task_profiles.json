@@ -1,6 +1,6 @@
 {
   "explore": {
-    "goal": "Cover the entire arena efficiently while staying safe",
+    "goal": "Explore conservatively, avoid collisions reliably, and make steady coverage progress",
     "controllable_events": [
       "move_forward",
       "rotate_clockwise",
@@ -15,14 +15,20 @@
       "obstacle_right"
     ],
     "constraints": [
-      "Focus on systematic exploration; avoid long dwell times in one spot.",
-      "Do not collide with obstacles and robots.",
-      "Prefer forward movement unless obstacle cues demand recovery.",
+      "The robot executes controllable motion as open-loop pulses, so obstacle avoidance must be conservative and recovery-oriented.",
+      "Do not collide with obstacles or other robots.",
+      "In clear non-obstacle states, prefer random_walk as the default exploration action; move_forward may be used only in dedicated short-progress states.",
+      "At least one clear or search state must enable random_walk so it is used as part of the exploration policy.",
       "Every non-terminal explore state must enable exactly one controllable action.",
-      "States reached by obstacle_front must enable exactly one deterministic recovery controllable: full_rotate, rotate_clockwise, or rotate_counterclockwise.",
+      "The initial clear exploration state must not use move_forward as its only controllable.",
+      "If obstacle_front occurs, transition to a dedicated recovery state whose only controllable is rotate_clockwise or rotate_counterclockwise.",
+      "Do not use full_rotate as the first response to obstacle_front.",
       "States reached by obstacle_left must enable exactly one controllable and it must be rotate_clockwise.",
       "States reached by obstacle_right must enable exactly one controllable and it must be rotate_counterclockwise.",
-      "No state reached by any obstacle event may enable move_forward or random_walk."
+      "No state reached by any obstacle event may enable move_forward or random_walk.",
+      "After any obstacle event, the supervisor must pass through a turn-recovery state before returning to exploration.",
+      "Use full_rotate only as a deliberate search or scan action in safe non-obstacle states, not as immediate obstacle recovery.",
+      "Avoid long forward streaks; exploration should alternate between random_walk, short forward progress, and recovery turns."
     ],
     "include_default_constraints": true
   },

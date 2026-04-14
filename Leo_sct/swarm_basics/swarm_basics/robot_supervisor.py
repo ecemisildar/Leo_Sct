@@ -816,7 +816,7 @@ class RobotSupervisor(Node):
             self._publish_stop()
             return
 
-        self.get_logger().info(f"Selected controllable event: {ev_name}")
+        # self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
 
 

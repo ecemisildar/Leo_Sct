@@ -1,0 +1,733 @@
+[0.248s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--packages-select', 'leo_image', 'leo_description']
+[0.248s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=False, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=22, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['leo_image', 'leo_description'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, meson_args=[], ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x7b349469e9e0>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7b349469dfc0>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7b349469dfc0>>, mixin_verb=('build',))
+[0.419s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.420s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.420s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.420s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.420s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.420s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.420s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/ecem/ros2_ws/src/Leo_sct'
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.420s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.430s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'meson', 'python']
+[0.430s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.430s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'meson'
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extensions ['ignore', 'ignore_ament_install']
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extension 'ignore'
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extension 'ignore_ament_install'
+[0.432s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extensions ['colcon_pkg']
+[0.433s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extension 'colcon_pkg'
+[0.433s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extensions ['colcon_meta']
+[0.433s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extension 'colcon_meta'
+[0.433s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extensions ['ros']
+[0.433s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extension 'ros'
+[0.433s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extensions ['cmake', 'meson', 'python']
+[0.433s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extension 'cmake'
+[0.433s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extension 'meson'
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extension 'python'
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extensions ['python_setup_py']
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2) by extension 'python_setup_py'
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo) by extensions ['ignore', 'ignore_ament_install']
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo) by extension 'ignore'
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo) by extension 'ignore_ament_install'
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo) by extensions ['colcon_pkg']
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo) by extension 'colcon_pkg'
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo) by extensions ['colcon_meta']
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo) by extension 'colcon_meta'
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo) by extensions ['ros']
+[0.434s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo) by extension 'ros'
+[0.436s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_common-ros2/leo' with type 'ros.ament_cmake' and name 'leo'
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_description) by extensions ['ignore', 'ignore_ament_install']
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_description) by extension 'ignore'
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_description) by extension 'ignore_ament_install'
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_description) by extensions ['colcon_pkg']
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_description) by extension 'colcon_pkg'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_description) by extensions ['colcon_meta']
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_description) by extension 'colcon_meta'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_description) by extensions ['ros']
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_description) by extension 'ros'
+[0.437s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_common-ros2/leo_description' with type 'ros.ament_cmake' and name 'leo_description'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_msgs) by extensions ['ignore', 'ignore_ament_install']
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_msgs) by extension 'ignore'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_msgs) by extension 'ignore_ament_install'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_msgs) by extensions ['colcon_pkg']
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_msgs) by extension 'colcon_pkg'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_msgs) by extensions ['colcon_meta']
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_msgs) by extension 'colcon_meta'
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_msgs) by extensions ['ros']
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_msgs) by extension 'ros'
+[0.438s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_common-ros2/leo_msgs' with type 'ros.ament_cmake' and name 'leo_msgs'
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_teleop) by extensions ['ignore', 'ignore_ament_install']
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_teleop) by extension 'ignore'
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_teleop) by extension 'ignore_ament_install'
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_teleop) by extensions ['colcon_pkg']
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_teleop) by extension 'colcon_pkg'
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_teleop) by extensions ['colcon_meta']
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_teleop) by extension 'colcon_meta'
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_teleop) by extensions ['ros']
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(leo_common-ros2/leo_teleop) by extension 'ros'
+[0.439s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_common-ros2/leo_teleop' with type 'ros.ament_cmake' and name 'leo_teleop'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extensions ['ignore', 'ignore_ament_install']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extension 'ignore'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extension 'ignore_ament_install'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extensions ['colcon_pkg']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extension 'colcon_pkg'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extensions ['colcon_meta']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extension 'colcon_meta'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extensions ['ros']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extension 'ros'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extensions ['cmake', 'meson', 'python']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extension 'cmake'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extension 'meson'
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extension 'python'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extensions ['python_setup_py']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2) by extension 'python_setup_py'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_follow_aruco_marker) by extensions ['ignore', 'ignore_ament_install']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_follow_aruco_marker) by extension 'ignore'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_follow_aruco_marker) by extension 'ignore_ament_install'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_follow_aruco_marker) by extensions ['colcon_pkg']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_follow_aruco_marker) by extension 'colcon_pkg'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_follow_aruco_marker) by extensions ['colcon_meta']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_follow_aruco_marker) by extension 'colcon_meta'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_follow_aruco_marker) by extensions ['ros']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_follow_aruco_marker) by extension 'ros'
+[0.442s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_examples-ros2/leo_example_follow_aruco_marker' with type 'ros.ament_cmake' and name 'leo_example_follow_aruco_marker'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_line_follower) by extensions ['ignore', 'ignore_ament_install']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_line_follower) by extension 'ignore'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_line_follower) by extension 'ignore_ament_install'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_line_follower) by extensions ['colcon_pkg']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_line_follower) by extension 'colcon_pkg'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_line_follower) by extensions ['colcon_meta']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_line_follower) by extension 'colcon_meta'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_line_follower) by extensions ['ros']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_line_follower) by extension 'ros'
+[0.443s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_examples-ros2/leo_example_line_follower' with type 'ros.ament_cmake' and name 'leo_example_line_follower'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_object_detection) by extensions ['ignore', 'ignore_ament_install']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_object_detection) by extension 'ignore'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_object_detection) by extension 'ignore_ament_install'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_object_detection) by extensions ['colcon_pkg']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_object_detection) by extension 'colcon_pkg'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_object_detection) by extensions ['colcon_meta']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_object_detection) by extension 'colcon_meta'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_object_detection) by extensions ['ros']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_example_object_detection) by extension 'ros'
+[0.444s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_examples-ros2/leo_example_object_detection' with type 'ros.ament_cmake' and name 'leo_example_object_detection'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_examples) by extensions ['ignore', 'ignore_ament_install']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_examples) by extension 'ignore'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_examples) by extension 'ignore_ament_install'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_examples) by extensions ['colcon_pkg']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_examples) by extension 'colcon_pkg'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_examples) by extensions ['colcon_meta']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_examples) by extension 'colcon_meta'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_examples) by extensions ['ros']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(leo_examples-ros2/leo_examples) by extension 'ros'
+[0.444s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_examples-ros2/leo_examples' with type 'ros.ament_cmake' and name 'leo_examples'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_image) by extensions ['ignore', 'ignore_ament_install']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_image) by extension 'ignore'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_image) by extension 'ignore_ament_install'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_image) by extensions ['colcon_pkg']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_image) by extension 'colcon_pkg'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_image) by extensions ['colcon_meta']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_image) by extension 'colcon_meta'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_image) by extensions ['ros']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_image) by extension 'ros'
+[0.445s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_image' with type 'ros.ament_cmake' and name 'leo_image'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extensions ['ignore', 'ignore_ament_install']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extension 'ignore'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extension 'ignore_ament_install'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extensions ['colcon_pkg']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extension 'colcon_pkg'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extensions ['colcon_meta']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extension 'colcon_meta'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extensions ['ros']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extension 'ros'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extensions ['cmake', 'meson', 'python']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extension 'cmake'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extension 'meson'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extension 'python'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extensions ['python_setup_py']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2) by extension 'python_setup_py'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_bringup) by extensions ['ignore', 'ignore_ament_install']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_bringup) by extension 'ignore'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_bringup) by extension 'ignore_ament_install'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_bringup) by extensions ['colcon_pkg']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_bringup) by extension 'colcon_pkg'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_bringup) by extensions ['colcon_meta']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_bringup) by extension 'colcon_meta'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_bringup) by extensions ['ros']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_bringup) by extension 'ros'
+[0.448s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_simulator-ros2/leo_gz_bringup' with type 'ros.ament_cmake' and name 'leo_gz_bringup'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_plugins) by extensions ['ignore', 'ignore_ament_install']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_plugins) by extension 'ignore'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_plugins) by extension 'ignore_ament_install'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_plugins) by extensions ['colcon_pkg']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_plugins) by extension 'colcon_pkg'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_plugins) by extensions ['colcon_meta']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_plugins) by extension 'colcon_meta'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_plugins) by extensions ['ros']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_plugins) by extension 'ros'
+[0.452s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_simulator-ros2/leo_gz_plugins' with type 'ros.ament_cmake' and name 'leo_gz_plugins'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_worlds) by extensions ['ignore', 'ignore_ament_install']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_worlds) by extension 'ignore'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_worlds) by extension 'ignore_ament_install'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_worlds) by extensions ['colcon_pkg']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_worlds) by extension 'colcon_pkg'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_worlds) by extensions ['colcon_meta']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_worlds) by extension 'colcon_meta'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_worlds) by extensions ['ros']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_gz_worlds) by extension 'ros'
+[0.453s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_simulator-ros2/leo_gz_worlds' with type 'ros.ament_cmake' and name 'leo_gz_worlds'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_simulator) by extensions ['ignore', 'ignore_ament_install']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_simulator) by extension 'ignore'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_simulator) by extension 'ignore_ament_install'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_simulator) by extensions ['colcon_pkg']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_simulator) by extension 'colcon_pkg'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_simulator) by extensions ['colcon_meta']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_simulator) by extension 'colcon_meta'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_simulator) by extensions ['ros']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(leo_simulator-ros2/leo_simulator) by extension 'ros'
+[0.454s] DEBUG:colcon.colcon_core.package_identification:Package 'leo_simulator-ros2/leo_simulator' with type 'ros.ament_cmake' and name 'leo_simulator'
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extensions ['ignore', 'ignore_ament_install']
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extension 'ignore'
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extension 'ignore_ament_install'
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extensions ['colcon_pkg']
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extension 'colcon_pkg'
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extensions ['colcon_meta']
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extension 'colcon_meta'
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extensions ['ros']
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extension 'ros'
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extensions ['cmake', 'meson', 'python']
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extension 'cmake'
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extension 'meson'
+[0.455s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extension 'python'
+[0.455s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extensions ['python_setup_py']
+[0.455s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part) by extension 'python_setup_py'
+[0.455s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extensions ['ignore', 'ignore_ament_install']
+[0.455s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extension 'ignore'
+[0.455s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extension 'ignore_ament_install'
+[0.455s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extensions ['colcon_pkg']
+[0.455s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extension 'colcon_pkg'
+[0.456s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extensions ['colcon_meta']
+[0.456s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extension 'colcon_meta'
+[0.456s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extensions ['ros']
+[0.456s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extension 'ros'
+[0.456s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extensions ['cmake', 'meson', 'python']
+[0.456s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extension 'cmake'
+[0.456s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extension 'meson'
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extension 'python'
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extensions ['python_setup_py']
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/__pycache__) by extension 'python_setup_py'
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extensions ['ignore', 'ignore_ament_install']
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extension 'ignore'
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extension 'ignore_ament_install'
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extensions ['colcon_pkg']
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extension 'colcon_pkg'
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extensions ['colcon_meta']
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extension 'colcon_meta'
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extensions ['ros']
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extension 'ros'
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extensions ['cmake', 'meson', 'python']
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extension 'cmake'
+[0.457s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extension 'meson'
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extension 'python'
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extensions ['python_setup_py']
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/example_tasks) by extension 'python_setup_py'
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extensions ['ignore', 'ignore_ament_install']
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extension 'ignore'
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extension 'ignore_ament_install'
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extensions ['colcon_pkg']
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extension 'colcon_pkg'
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extensions ['colcon_meta']
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extension 'colcon_meta'
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extensions ['ros']
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extension 'ros'
+[0.458s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extensions ['cmake', 'meson', 'python']
+[0.459s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extension 'cmake'
+[0.459s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extension 'meson'
+[0.459s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extension 'python'
+[0.459s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extensions ['python_setup_py']
+[0.459s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/full_pipeline) by extension 'python_setup_py'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extensions ['ignore', 'ignore_ament_install']
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extension 'ignore'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extension 'ignore_ament_install'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extensions ['colcon_pkg']
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extension 'colcon_pkg'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extensions ['colcon_meta']
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extension 'colcon_meta'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extensions ['ros']
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extension 'ros'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extensions ['cmake', 'meson', 'python']
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extension 'cmake'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extension 'meson'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extension 'python'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extensions ['python_setup_py']
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/generated_pipeline_outputs) by extension 'python_setup_py'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extensions ['ignore', 'ignore_ament_install']
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extension 'ignore'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extension 'ignore_ament_install'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extensions ['colcon_pkg']
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extension 'colcon_pkg'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extensions ['colcon_meta']
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extension 'colcon_meta'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extensions ['ros']
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extension 'ros'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extensions ['cmake', 'meson', 'python']
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extension 'cmake'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extension 'meson'
+[0.462s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extension 'python'
+[0.462s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extensions ['python_setup_py']
+[0.462s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_coverage) by extension 'python_setup_py'
+[0.462s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extensions ['ignore', 'ignore_ament_install']
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extension 'ignore'
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extension 'ignore_ament_install'
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extensions ['colcon_pkg']
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extension 'colcon_pkg'
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extensions ['colcon_meta']
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extension 'colcon_meta'
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extensions ['ros']
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extension 'ros'
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extensions ['cmake', 'meson', 'python']
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extension 'cmake'
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extension 'meson'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extension 'python'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extensions ['python_setup_py']
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_find_obj) by extension 'python_setup_py'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extensions ['ignore', 'ignore_ament_install']
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extension 'ignore'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extension 'ignore_ament_install'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extensions ['colcon_pkg']
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extension 'colcon_pkg'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extensions ['colcon_meta']
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extension 'colcon_meta'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extensions ['ros']
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extension 'ros'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extensions ['cmake', 'meson', 'python']
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extension 'cmake'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extension 'meson'
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extension 'python'
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extensions ['python_setup_py']
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_wall_follow) by extension 'python_setup_py'
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extensions ['ignore', 'ignore_ament_install']
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extension 'ignore'
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extension 'ignore_ament_install'
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extensions ['colcon_pkg']
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extension 'colcon_pkg'
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extensions ['colcon_meta']
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extension 'colcon_meta'
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extensions ['ros']
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extension 'ros'
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extensions ['cmake', 'meson', 'python']
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extension 'cmake'
+[0.466s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extension 'meson'
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extension 'python'
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extensions ['python_setup_py']
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(llm-part/hardcoded_zigzag) by extension 'python_setup_py'
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extensions ['ignore', 'ignore_ament_install']
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extension 'ignore'
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extension 'ignore_ament_install'
+[0.467s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extensions ['colcon_pkg']
+[0.468s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extension 'colcon_pkg'
+[0.468s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extensions ['colcon_meta']
+[0.468s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extension 'colcon_meta'
+[0.468s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extensions ['ros']
+[0.468s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extension 'ros'
+[0.468s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extensions ['cmake', 'meson', 'python']
+[0.468s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extension 'cmake'
+[0.468s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extension 'meson'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extension 'python'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extensions ['python_setup_py']
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(results) by extension 'python_setup_py'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extensions ['ignore', 'ignore_ament_install']
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extension 'ignore'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extension 'ignore_ament_install'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extensions ['colcon_pkg']
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extension 'colcon_pkg'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extensions ['colcon_meta']
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extension 'colcon_meta'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extensions ['ros']
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extension 'ros'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extensions ['cmake', 'meson', 'python']
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extension 'cmake'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extension 'meson'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extension 'python'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extensions ['python_setup_py']
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco) by extension 'python_setup_py'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extensions ['ignore', 'ignore_ament_install']
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extension 'ignore'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extension 'ignore_ament_install'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extensions ['colcon_pkg']
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extension 'colcon_pkg'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extensions ['colcon_meta']
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extension 'colcon_meta'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extensions ['ros']
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extension 'ros'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extensions ['cmake', 'meson', 'python']
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extension 'cmake'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extension 'meson'
+[0.471s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extension 'python'
+[0.471s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extensions ['python_setup_py']
+[0.471s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world) by extension 'python_setup_py'
+[0.471s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extensions ['ignore', 'ignore_ament_install']
+[0.471s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extension 'ignore'
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extension 'ignore_ament_install'
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extensions ['colcon_pkg']
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extension 'colcon_pkg'
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extensions ['colcon_meta']
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extension 'colcon_meta'
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extensions ['ros']
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extension 'ros'
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extensions ['cmake', 'meson', 'python']
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extension 'cmake'
+[0.472s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extension 'meson'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extension 'python'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extensions ['python_setup_py']
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box) by extension 'python_setup_py'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extensions ['ignore', 'ignore_ament_install']
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extension 'ignore'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extension 'ignore_ament_install'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extensions ['colcon_pkg']
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extension 'colcon_pkg'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extensions ['colcon_meta']
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extension 'colcon_meta'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extensions ['ros']
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extension 'ros'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extensions ['cmake', 'meson', 'python']
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extension 'cmake'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extension 'meson'
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extension 'python'
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extensions ['python_setup_py']
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials) by extension 'python_setup_py'
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extensions ['ignore', 'ignore_ament_install']
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extension 'ignore'
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extension 'ignore_ament_install'
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extensions ['colcon_pkg']
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extension 'colcon_pkg'
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extensions ['colcon_meta']
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extension 'colcon_meta'
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extensions ['ros']
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extension 'ros'
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extensions ['cmake', 'meson', 'python']
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extension 'cmake'
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extension 'meson'
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extension 'python'
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extensions ['python_setup_py']
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/aruco_box/materials/textures) by extension 'python_setup_py'
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extensions ['ignore', 'ignore_ament_install']
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extension 'ignore'
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extension 'ignore_ament_install'
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extensions ['colcon_pkg']
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extension 'colcon_pkg'
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extensions ['colcon_meta']
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extension 'colcon_meta'
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extensions ['ros']
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extension 'ros'
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extensions ['cmake', 'meson', 'python']
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extension 'cmake'
+[0.476s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extension 'meson'
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extension 'python'
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extensions ['python_setup_py']
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box) by extension 'python_setup_py'
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extensions ['ignore', 'ignore_ament_install']
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extension 'ignore'
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extension 'ignore_ament_install'
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extensions ['colcon_pkg']
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extension 'colcon_pkg'
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extensions ['colcon_meta']
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extension 'colcon_meta'
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extensions ['ros']
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extension 'ros'
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extensions ['cmake', 'meson', 'python']
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extension 'cmake'
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extension 'meson'
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extension 'python'
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extensions ['python_setup_py']
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/doc) by extension 'python_setup_py'
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extensions ['ignore', 'ignore_ament_install']
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extension 'ignore'
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extension 'ignore_ament_install'
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extensions ['colcon_pkg']
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extension 'colcon_pkg'
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extensions ['colcon_meta']
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extension 'colcon_meta'
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extensions ['ros']
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extension 'ros'
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extensions ['cmake', 'meson', 'python']
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extension 'cmake'
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extension 'meson'
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extension 'python'
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extensions ['python_setup_py']
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/gz-world/gazebo_aruco_box/src) by extension 'python_setup_py'
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extensions ['ignore', 'ignore_ament_install']
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extension 'ignore'
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extension 'ignore_ament_install'
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extensions ['colcon_pkg']
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extension 'colcon_pkg'
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extensions ['colcon_meta']
+[0.480s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extension 'colcon_meta'
+[0.481s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extensions ['ros']
+[0.481s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extension 'ros'
+[0.481s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extensions ['cmake', 'meson', 'python']
+[0.481s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extension 'cmake'
+[0.481s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extension 'meson'
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extension 'python'
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extensions ['python_setup_py']
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros2-gazebo-aruco/images) by extension 'python_setup_py'
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extensions ['ignore', 'ignore_ament_install']
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extension 'ignore'
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extension 'ignore_ament_install'
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extensions ['colcon_pkg']
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extension 'colcon_pkg'
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extensions ['colcon_meta']
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extension 'colcon_meta'
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extensions ['ros']
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extension 'ros'
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extensions ['cmake', 'meson', 'python']
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extension 'cmake'
+[0.482s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extension 'meson'
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extension 'python'
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extensions ['python_setup_py']
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv) by extension 'python_setup_py'
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv) by extensions ['ignore', 'ignore_ament_install']
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv) by extension 'ignore'
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv) by extension 'ignore_ament_install'
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv) by extensions ['colcon_pkg']
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv) by extension 'colcon_pkg'
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv) by extensions ['colcon_meta']
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv) by extension 'colcon_meta'
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv) by extensions ['ros']
+[0.483s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv) by extension 'ros'
+[0.484s] DEBUG:colcon.colcon_core.package_identification:Package 'ros_aruco_opencv/aruco_opencv' with type 'ros.ament_cmake' and name 'aruco_opencv'
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv_msgs) by extensions ['ignore', 'ignore_ament_install']
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv_msgs) by extension 'ignore'
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv_msgs) by extension 'ignore_ament_install'
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv_msgs) by extensions ['colcon_pkg']
+[0.484s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv_msgs) by extension 'colcon_pkg'
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv_msgs) by extensions ['colcon_meta']
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv_msgs) by extension 'colcon_meta'
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv_msgs) by extensions ['ros']
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(ros_aruco_opencv/aruco_opencv_msgs) by extension 'ros'
+[0.485s] DEBUG:colcon.colcon_core.package_identification:Package 'ros_aruco_opencv/aruco_opencv_msgs' with type 'ros.ament_cmake' and name 'aruco_opencv_msgs'
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_basics) by extensions ['ignore', 'ignore_ament_install']
+[0.485s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_basics) by extension 'ignore'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_basics) by extension 'ignore_ament_install'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_basics) by extensions ['colcon_pkg']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_basics) by extension 'colcon_pkg'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_basics) by extensions ['colcon_meta']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_basics) by extension 'colcon_meta'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_basics) by extensions ['ros']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_basics) by extension 'ros'
+[0.486s] DEBUG:colcon.colcon_core.package_identification:Package 'swarm_basics' with type 'ros.ament_python' and name 'swarm_basics'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extensions ['ignore', 'ignore_ament_install']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extension 'ignore'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extension 'ignore_ament_install'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extensions ['colcon_pkg']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extension 'colcon_pkg'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extensions ['colcon_meta']
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extension 'colcon_meta'
+[0.486s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extensions ['ros']
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extension 'ros'
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extensions ['cmake', 'meson', 'python']
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extension 'cmake'
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extension 'meson'
+[0.487s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extension 'python'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extensions ['python_setup_py']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website) by extension 'python_setup_py'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extensions ['ignore', 'ignore_ament_install']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extension 'ignore'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extension 'ignore_ament_install'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extensions ['colcon_pkg']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extension 'colcon_pkg'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extensions ['colcon_meta']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extension 'colcon_meta'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extensions ['ros']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extension 'ros'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extensions ['cmake', 'meson', 'python']
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extension 'cmake'
+[0.488s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extension 'meson'
+[0.489s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extension 'python'
+[0.489s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extensions ['python_setup_py']
+[0.489s] Level 1:colcon.colcon_core.package_identification:_identify(website/__pycache__) by extension 'python_setup_py'
+[0.489s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.489s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.489s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.489s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.489s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'aruco_opencv_msgs' in 'ros_aruco_opencv/aruco_opencv_msgs'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_example_line_follower' in 'leo_examples-ros2/leo_example_line_follower'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_example_object_detection' in 'leo_examples-ros2/leo_example_object_detection'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_gz_plugins' in 'leo_simulator-ros2/leo_gz_plugins'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_gz_worlds' in 'leo_simulator-ros2/leo_gz_worlds'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_msgs' in 'leo_common-ros2/leo_msgs'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_teleop' in 'leo_common-ros2/leo_teleop'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'aruco_opencv' in 'ros_aruco_opencv/aruco_opencv'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo' in 'leo_common-ros2/leo'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_gz_bringup' in 'leo_simulator-ros2/leo_gz_bringup'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_example_follow_aruco_marker' in 'leo_examples-ros2/leo_example_follow_aruco_marker'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_simulator' in 'leo_simulator-ros2/leo_simulator'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'leo_examples' in 'leo_examples-ros2/leo_examples'
+[0.507s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'swarm_basics' in 'swarm_basics'
+[0.508s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.508s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.510s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 16 installed packages in /home/ecem/ros2_ws/install
+[0.511s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 401 installed packages in /opt/ros/humble
+[0.514s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.565s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'leo_description' is in: /home/ecem/ros2_ws/install/leo_description, /opt/ros/humble
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding leo_description
+
+This may be promoted to an error in a future release of colcon-override-check.
+[0.577s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'cmake_args' from command line to 'None'
+[0.577s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'cmake_target' from command line to 'None'
+[0.577s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.577s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'cmake_clean_cache' from command line to 'False'
+[0.577s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'cmake_clean_first' from command line to 'False'
+[0.577s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'cmake_force_configure' from command line to 'False'
+[0.578s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'meson_args' from command line to '[]'
+[0.578s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'ament_cmake_args' from command line to 'None'
+[0.578s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'catkin_cmake_args' from command line to 'None'
+[0.578s] Level 5:colcon.colcon_core.verb:set package 'leo_description' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.578s] DEBUG:colcon.colcon_core.verb:Building package 'leo_description' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/ecem/ros2_ws/src/Leo_sct/build/leo_description', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description', 'merge_install': False, 'meson_args': [], 'path': '/home/ecem/ros2_ws/src/Leo_sct/leo_common-ros2/leo_description', 'symlink_install': False, 'test_result_base': None}
+[0.589s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'cmake_args' from command line to 'None'
+[0.589s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'cmake_target' from command line to 'None'
+[0.590s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.590s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'cmake_clean_cache' from command line to 'False'
+[0.590s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'cmake_clean_first' from command line to 'False'
+[0.590s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'cmake_force_configure' from command line to 'False'
+[0.590s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'meson_args' from command line to '[]'
+[0.590s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'ament_cmake_args' from command line to 'None'
+[0.590s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'catkin_cmake_args' from command line to 'None'
+[0.590s] Level 5:colcon.colcon_core.verb:set package 'leo_image' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.590s] DEBUG:colcon.colcon_core.verb:Building package 'leo_image' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/ecem/ros2_ws/src/Leo_sct/build/leo_image', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image', 'merge_install': False, 'meson_args': [], 'path': '/home/ecem/ros2_ws/src/Leo_sct/leo_image', 'symlink_install': False, 'test_result_base': None}
+[0.590s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.591s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.591s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/ecem/ros2_ws/src/Leo_sct/leo_common-ros2/leo_description' with build type 'ament_cmake'
+[0.591s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/ecem/ros2_ws/src/Leo_sct/leo_common-ros2/leo_description'
+[0.594s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.594s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.594s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.603s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/ecem/ros2_ws/src/Leo_sct/leo_image' with build type 'ament_cmake'
+[0.603s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/ecem/ros2_ws/src/Leo_sct/leo_image'
+[0.603s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.604s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.613s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake /home/ecem/ros2_ws/src/Leo_sct/leo_common-ros2/leo_description -DCMAKE_INSTALL_PREFIX=/home/ecem/ros2_ws/src/Leo_sct/install/leo_description
+[0.618s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_image': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake --build /home/ecem/ros2_ws/src/Leo_sct/build/leo_image -- -j22 -l22
+[1.378s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake /home/ecem/ros2_ws/src/Leo_sct/leo_common-ros2/leo_description -DCMAKE_INSTALL_PREFIX=/home/ecem/ros2_ws/src/Leo_sct/install/leo_description
+[1.379s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake --build /home/ecem/ros2_ws/src/Leo_sct/build/leo_description -- -j22 -l22
+[1.425s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake --build /home/ecem/ros2_ws/src/Leo_sct/build/leo_description -- -j22 -l22
+[1.438s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake --install /home/ecem/ros2_ws/src/Leo_sct/build/leo_description
+[1.505s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(leo_description)
+[1.506s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake --install /home/ecem/ros2_ws/src/Leo_sct/build/leo_description
+[1.508s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description' for CMake module files
+[1.509s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description' for CMake config files
+[1.509s] Level 1:colcon.colcon_core.shell:create_environment_hook('leo_description', 'cmake_prefix_path')
+[1.510s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/hook/cmake_prefix_path.ps1'
+[1.510s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/hook/cmake_prefix_path.dsv'
+[1.511s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/hook/cmake_prefix_path.sh'
+[1.512s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/bin'
+[1.512s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/lib/pkgconfig/leo_description.pc'
+[1.512s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/lib/python3.10/site-packages'
+[1.513s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/bin'
+[1.513s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.ps1'
+[1.514s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.dsv'
+[1.514s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.sh'
+[1.515s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.bash'
+[1.516s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.zsh'
+[1.517s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/colcon-core/packages/leo_description)
+[1.517s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(leo_description)
+[1.518s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description' for CMake module files
+[1.518s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description' for CMake config files
+[1.518s] Level 1:colcon.colcon_core.shell:create_environment_hook('leo_description', 'cmake_prefix_path')
+[1.519s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/hook/cmake_prefix_path.ps1'
+[1.519s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/hook/cmake_prefix_path.dsv'
+[1.520s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/hook/cmake_prefix_path.sh'
+[1.520s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/bin'
+[1.520s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/lib/pkgconfig/leo_description.pc'
+[1.521s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/lib/python3.10/site-packages'
+[1.521s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/bin'
+[1.521s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.ps1'
+[1.522s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.dsv'
+[1.523s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.sh'
+[1.523s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.bash'
+[1.524s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/leo_description/package.zsh'
+[1.524s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/ecem/ros2_ws/src/Leo_sct/install/leo_description/share/colcon-core/packages/leo_description)
+[11.659s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_image' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake --build /home/ecem/ros2_ws/src/Leo_sct/build/leo_image -- -j22 -l22
+[11.661s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_image': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake --install /home/ecem/ros2_ws/src/Leo_sct/build/leo_image
+[11.673s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(leo_image)
+[11.674s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image' for CMake module files
+[11.674s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/ecem/ros2_ws/src/Leo_sct/build/leo_image' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ecem/ros2_ws/install/swarm_basics:/opt/ros/humble /usr/bin/cmake --install /home/ecem/ros2_ws/src/Leo_sct/build/leo_image
+[11.675s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image' for CMake config files
+[11.675s] Level 1:colcon.colcon_core.shell:create_environment_hook('leo_image', 'cmake_prefix_path')
+[11.675s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/hook/cmake_prefix_path.ps1'
+[11.676s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/hook/cmake_prefix_path.dsv'
+[11.676s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/hook/cmake_prefix_path.sh'
+[11.677s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/lib'
+[11.677s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/bin'
+[11.677s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/lib/pkgconfig/leo_image.pc'
+[11.677s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/lib/python3.10/site-packages'
+[11.677s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/bin'
+[11.678s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.ps1'
+[11.678s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.dsv'
+[11.678s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.sh'
+[11.679s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.bash'
+[11.679s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.zsh'
+[11.679s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/colcon-core/packages/leo_image)
+[11.680s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(leo_image)
+[11.680s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image' for CMake module files
+[11.681s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image' for CMake config files
+[11.681s] Level 1:colcon.colcon_core.shell:create_environment_hook('leo_image', 'cmake_prefix_path')
+[11.681s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/hook/cmake_prefix_path.ps1'
+[11.681s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/hook/cmake_prefix_path.dsv'
+[11.682s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/hook/cmake_prefix_path.sh'
+[11.682s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/lib'
+[11.682s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/bin'
+[11.682s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/lib/pkgconfig/leo_image.pc'
+[11.682s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/lib/python3.10/site-packages'
+[11.683s] Level 1:colcon.colcon_core.environment:checking '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/bin'
+[11.683s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.ps1'
+[11.683s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.dsv'
+[11.684s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.sh'
+[11.684s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.bash'
+[11.685s] INFO:colcon.colcon_core.shell:Creating package script '/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/leo_image/package.zsh'
+[11.685s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/ecem/ros2_ws/src/Leo_sct/install/leo_image/share/colcon-core/packages/leo_image)
+[11.685s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[11.685s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[11.685s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[11.686s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[11.692s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[11.692s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[11.692s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[11.692s] DEBUG:colcon.colcon_notification.desktop_notification.notify2:Failed to initialize notify2: org.freedesktop.DBus.Error.AccessDenied: Failed to connect to socket /run/user/1000/bus: Operation not permitted
+[11.692s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[11.692s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ecem/ros2_ws/src/Leo_sct/install/local_setup.ps1'
+[11.693s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/ecem/ros2_ws/src/Leo_sct/install/_local_setup_util_ps1.py'
+[11.694s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ecem/ros2_ws/src/Leo_sct/install/setup.ps1'
+[11.696s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ecem/ros2_ws/src/Leo_sct/install/local_setup.sh'
+[11.696s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/ecem/ros2_ws/src/Leo_sct/install/_local_setup_util_sh.py'
+[11.697s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ecem/ros2_ws/src/Leo_sct/install/setup.sh'
+[11.698s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ecem/ros2_ws/src/Leo_sct/install/local_setup.bash'
+[11.699s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ecem/ros2_ws/src/Leo_sct/install/setup.bash'
+[11.700s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/ecem/ros2_ws/src/Leo_sct/install/local_setup.zsh'
+[11.700s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/ecem/ros2_ws/src/Leo_sct/install/setup.zsh'

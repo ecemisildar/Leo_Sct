@@ -77,6 +77,7 @@ def generate_launch_description():
             executable="coverage_counter",
             name="coverage_counter",
             parameters=[
+                {"run_id": run_id},
                 {"run_duration": LaunchConfiguration("run_duration")},
                 {"results_dir": LaunchConfiguration("results_dir")},
             ],
@@ -156,9 +157,10 @@ def generate_launch_description():
                 f"/{ns}/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
                 f"/{ns}/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
                 # f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
-                f"/{ns}/depth_camera/depth_image@sensor_msgs/msg/Image@ignition.msgs.Image",
-                f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo",
-                f"/{ns}/depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image",
+                f"/{ns}/depth_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image",
+                f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
+                # RGB image bridge disabled while ArUco is not in use.
+                # f"/{ns}/depth_camera/image@sensor_msgs/msg/Image[ignition.msgs.Image",
                 f"/world/random_world/model/{ns}/link/{ns}/base_footprint/sensor/contact_sensor/contact"
                 f"@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts",
             ]
@@ -240,10 +242,16 @@ def generate_launch_description():
                 parameters=[
                     {"use_sim_time": True},
                     {"depth_topic": f"/{ns}/depth_camera/depth_image"},
-                    {"rgb_topic": f"/{ns}/depth_camera/image"},
-                    {"aruco_dictionary_id": 0},
-                    {"aruco_target_id": 0},
-                    {"aruco_seen_hold_ms": 200},
+                    {"aruco_enabled": False},
+                    {"zone_log_enabled": True},
+                    {"process_every_nth_depth_frame": 3},
+                    {"depth_watchdog_enabled": True},
+                    {"depth_stall_timeout_s": 4.0},
+                    # RGB / ArUco disabled for current runs.
+                    # {"rgb_topic": f"/{ns}/depth_camera/image"},
+                    # {"aruco_dictionary_id": 0},
+                    # {"aruco_target_id": 0},
+                    # {"aruco_seen_hold_ms": 200},
                 ],
                 output="screen"
             )
@@ -290,9 +298,12 @@ def generate_launch_description():
                 state_pub,
                 spawn_node,
                 behavior_node,
-                cpp_node,
-                aruco_tracker_node,
-                aruco_follower_node,
+                TimerAction(
+                    period=2.0,
+                    actions=[cpp_node],
+                ),
+                # aruco_tracker_node,
+                # aruco_follower_node,
             ]
 
         return nodes
@@ -327,6 +338,7 @@ def generate_launch_description():
             name="bump_counter",
             parameters=[
                 {"global_mode": True},
+                {"run_id": run_id},
                 {"results_dir": LaunchConfiguration("results_dir")},
             ],
             output="screen",

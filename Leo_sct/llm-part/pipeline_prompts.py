@@ -55,6 +55,7 @@ DEFAULT_EVENT_SEMANTICS = {
     "marker_lost": "marker currently not detected in camera.",
     "marker_close": "marker distance < threshold (goal condition).",
     "move_forward": "apply forward motion for 0.2 s (one pulse).",
+    "random_walk": "apply a short exploratory wandering motion for 0.2 s; suitable in clear/search states but not obstacle recovery states.",
     "move_backward": "apply backward motion for 0.2 s (one pulse).",
     "rotate_clockwise": "apply clockwise rotation for 0.2 s (one pulse).",
     "rotate_counterclockwise": "apply counterclockwise rotation for 0.2 s (one pulse).",
@@ -142,6 +143,7 @@ def _render_examples(examples: Sequence[Dict[str, object]]) -> str:
 
 def build_pipeline_prompt(
     goal: str,
+    user_task: str | None,
     controllable: Sequence[str],
     uncontrollable: Sequence[str],
     guidance: Sequence[str] | None,
@@ -152,8 +154,22 @@ def build_pipeline_prompt(
     lines: List[str] = []
     lines.append("Design a DES model for a mobile robot task.")
     lines.append("Return both plant automata G and specification automata E.")
+    lines.append(
+        "Important runtime semantics: controllable motion events are executed as open-loop pulses."
+    )
+    lines.append(
+        "A forward or random_walk action may continue briefly before the next obstacle event is processed."
+    )
+    lines.append(
+        "Therefore the design must be conservative: obstacle states must force immediate turn-based recovery,"
+        " and exploratory forward actions must stay out of obstacle-recovery states."
+    )
     lines.append("")
-    lines.append("Goal: " + goal)
+    if user_task:
+        lines.append("User task: " + user_task)
+        lines.append("Task profile goal: " + goal)
+    else:
+        lines.append("Goal: " + goal)
     lines.append("Controllable events: " + ", ".join(controllable))
     lines.append("Uncontrollable events: " + ", ".join(uncontrollable))
     lines.append("")
