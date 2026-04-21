@@ -1,0 +1,140 @@
+{
+  "rationale": "The plant models the robot's perception and actuation interface, separating sensor outcomes from motion commands. The specification enforces safe, coverage-oriented exploration: random_walk is preferred in clear states, move_forward is used for short progress, and recovery turns are used only when obstacles are detected. Recovery is conservative and returns to exploration as soon as the path is clear. Full_rotate is reserved for dead-end recovery only.",
+  "strategy": [
+    "Separate plant automata for perception and motion: G1 for perception, G2 for motion.",
+    "Specification E1 binds perception outcomes to safe, progress-oriented actions, enforcing conservative recovery and steady exploration."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Models robot's perception of obstacles via uncontrollable sensor events.",
+      "states": [
+        "percept"
+      ],
+      "initial_states": [
+        "percept"
+      ],
+      "marked_states": [
+        "percept"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"percept\", \"path_clear\", \"percept\")",
+        "(\"percept\", \"obstacle_front\", \"percept\")",
+        "(\"percept\", \"obstacle_left\", \"percept\")",
+        "(\"percept\", \"obstacle_right\", \"percept\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Models robot's motion subsystem with controllable movement commands.",
+      "states": [
+        "motion"
+      ],
+      "initial_states": [
+        "motion"
+      ],
+      "marked_states": [
+        "motion"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"motion\", \"move_forward\", \"motion\")",
+        "(\"motion\", \"rotate_clockwise\", \"motion\")",
+        "(\"motion\", \"rotate_counterclockwise\", \"motion\")",
+        "(\"motion\", \"full_rotate\", \"motion\")",
+        "(\"motion\", \"random_walk\", \"motion\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Supervisory specification for safe, coverage-biased exploration with conservative obstacle recovery.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "rotate_commit_cw",
+        "rotate_commit_ccw",
+        "full_scan"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"random_walk\", \"forward_commit\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"obs_front\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"path_clear\", \"obs_front\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_left\", \"path_clear\", \"obs_left\")",
+        "(\"obs_right\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"path_clear\", \"obs_right\")",
+        "(\"rotate_commit_ccw\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit_ccw\", \"obstacle_front\", \"full_scan\")",
+        "(\"rotate_commit_ccw\", \"obstacle_left\", \"full_scan\")",
+        "(\"rotate_commit_ccw\", \"obstacle_right\", \"full_scan\")",
+        "(\"rotate_commit_ccw\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+        "(\"rotate_commit_cw\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit_cw\", \"obstacle_front\", \"full_scan\")",
+        "(\"rotate_commit_cw\", \"obstacle_left\", \"full_scan\")",
+        "(\"rotate_commit_cw\", \"obstacle_right\", \"full_scan\")",
+        "(\"rotate_commit_cw\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+        "(\"full_scan\", \"full_rotate\", \"clear\")",
+        "(\"full_scan\", \"obstacle_front\", \"full_scan\")",
+        "(\"full_scan\", \"obstacle_left\", \"full_scan\")",
+        "(\"full_scan\", \"obstacle_right\", \"full_scan\")",
+        "(\"full_scan\", \"path_clear\", \"full_scan\")"
+      ]
+    }
+  ]
+}

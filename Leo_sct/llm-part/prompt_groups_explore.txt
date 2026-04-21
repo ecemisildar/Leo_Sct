@@ -1,0 +1,33 @@
+[long]
+Design a supervisor for an exploration robot in a cluttered indoor space. The robot should spend most of its time exploring unseen areas, but safety has higher priority than coverage speed. If there is an object or obstacle directly in front of the robot, it must not move forward. When `obstacle_front` is detected, the controller should choose a clear recovery action such as rotating or performing a larger turn before allowing forward motion again. Left and right obstacles should also influence the chosen turning direction so the robot does not keep steering into blocked space. The behavior should be deterministic, avoid unsafe oscillations, and keep the robot moving whenever it is safe to do so.
+---
+Create a finite-state exploration policy for a mobile robot that wanders through the world while avoiding collisions. The robot should move forward only when the path ahead is clear; do not go forward when there is an object in front of it. If the front is blocked, transition immediately into a recovery behavior using clockwise rotation, counterclockwise rotation, or a full rotate action, and only return to forward movement after `path_clear` becomes true. Keep the supervisor simple, deterministic, and practical so it does not deadlock or get trapped in repeated unsafe actions.
+---
+Generate an exploration supervisor whose goal is to safely cover the environment with reactive obstacle avoidance. Safety requirements are strict: the robot must never continue forward into `obstacle_front`, and obstacle recovery must be explicit rather than random. When obstacles are on the left or right, bias the turn choice away from the blocked side. When the path becomes clear again, the robot should resume exploration. Prefer a compact supervisor with meaningful states, stable transitions, and no ambiguous recovery choices that could re-enable unsafe forward motion too early.
+---
+Produce a supervisor for autonomous exploration of an unknown environment. The robot should explore continuously and efficiently, but it must prioritize collision avoidance. Do not allow move-forward behavior when an object is detected in front of the robot. Instead, obstacle-front events should send the robot into a safe turning or escape state, and the robot should only drive forward again after a clear-path condition is observed. The controller should remain deterministic, should not stall, and should maintain a sensible balance between exploration and caution.
+---
+Build a safe exploration task description for a robot supervisor. The robot should navigate around the environment searching for free space and should keep making progress unless blocked. A front obstacle is a hard safety condition, so the supervisor must not enable forward motion while `obstacle_front` is active. Recovery from front obstacles should use turning actions, and recovery from side obstacles should encourage turning away from the obstacle. The resulting supervisor should be readable, deterministic, and suitable for real execution without unstable loops or conflicting choices.
+
+[medium]
+Create an exploration supervisor for a robot moving in an indoor world. It should generally move forward when the path is clear and use rotations to recover from obstacles. Keep the behavior safe and practical, but do not overconstrain every case. The robot should keep exploring instead of stopping for long periods.
+---
+Generate a robot exploration policy that balances coverage and obstacle avoidance. Forward motion should be used when possible, while blocked situations should trigger a turn or recovery behavior. Keep the logic simple and deterministic so it can run reliably in practice.
+---
+Design a supervisor for autonomous exploration with a small set of states. The robot should roam the environment, react to front and side obstacles, and return to exploration after recovery. Avoid making the rules too strict, but still favor safe movement decisions.
+---
+Build an exploration controller for a mobile robot that keeps moving through the environment and avoids obvious collisions. When obstacles appear, the robot should rotate or redirect itself, then continue exploring. The result should be concise and suitable for automatic synthesis.
+---
+Produce a supervisor for exploration in a cluttered map. The robot should make forward progress, respond to obstacle events, and recover with turns when necessary. Keep the prompt moderate in detail, focusing on useful behavior rather than many explicit constraints.
+
+[vague]
+Make a supervisor for a robot that explores an unknown environment and avoids obstacles while moving around.
+---
+Create a simple exploration task for a mobile robot that should wander safely and keep covering space.
+---
+Generate a robot exploration behavior that moves through the world, reacts to obstacles, and keeps going.
+---
+Build a basic supervisor for autonomous exploration with obstacle-aware motion.
+---
+Generate a supervisor for a robot that explores the environment and changes direction when needed.
+                                                                                                                                             

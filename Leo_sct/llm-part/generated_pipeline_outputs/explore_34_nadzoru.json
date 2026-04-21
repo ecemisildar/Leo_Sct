@@ -1,0 +1,142 @@
+{
+  "rationale": "The plant models the robot's motion and perception capabilities, separating motion commands from sensor outcomes. The specification enforces strict safety: obstacle events preempt motion, recovery turns are explicit and unambiguous, and exploration alternates between random_walk and short forward pulses. Obstacle recovery always passes through a dedicated turn state, with turn direction biased away from the blocked side. Exploration resumes only when the path is clear.",
+  "strategy": [
+    "Separate plant automata for motion and perception to reflect open-loop actuation and asynchronous sensing.",
+    "Specification automaton encodes conservative exploration: random_walk in clear, move_forward only in a commit state, explicit turn-based recovery for obstacles, and no ambiguous or unsafe transitions."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion subsystem: executes controllable actions as open-loop pulses.",
+      "states": [
+        "idle",
+        "forward_commit",
+        "rotate_commit_cw",
+        "rotate_commit_ccw",
+        "random_walk_commit"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "random_walk"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"forward_commit\")",
+        "(\"idle\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+        "(\"idle\", \"random_walk\", \"random_walk_commit\")",
+        "(\"forward_commit\", \"move_forward\", \"idle\")",
+        "(\"rotate_commit_cw\", \"rotate_clockwise\", \"idle\")",
+        "(\"rotate_commit_ccw\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"random_walk_commit\", \"random_walk\", \"idle\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot perception subsystem: models uncontrollable obstacle and path-clear sensor events.",
+      "states": [
+        "clear",
+        "obs_front",
+        "obs_left",
+        "obs_right"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"obs_front\", \"path_clear\", \"clear\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"path_clear\", \"clear\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"path_clear\", \"clear\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration supervisor: ensures safe, conservative exploration with explicit obstacle recovery and no ambiguous or unsafe forward/random_walk actions.",
+      "states": [
+        "explore_clear",
+        "forward_commit",
+        "random_walk_commit",
+        "recover_left",
+        "recover_right"
+      ],
+      "initial_states": [
+        "explore_clear"
+      ],
+      "marked_states": [
+        "explore_clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"explore_clear\", \"random_walk\", \"random_walk_commit\")",
+        "(\"explore_clear\", \"obstacle_front\", \"recover_left\")",
+        "(\"explore_clear\", \"obstacle_left\", \"recover_right\")",
+        "(\"explore_clear\", \"obstacle_right\", \"recover_left\")",
+        "(\"explore_clear\", \"path_clear\", \"explore_clear\")",
+        "(\"random_walk_commit\", \"move_forward\", \"forward_commit\")",
+        "(\"random_walk_commit\", \"obstacle_front\", \"recover_left\")",
+        "(\"random_walk_commit\", \"obstacle_left\", \"recover_right\")",
+        "(\"random_walk_commit\", \"obstacle_right\", \"recover_left\")",
+        "(\"random_walk_commit\", \"path_clear\", \"random_walk_commit\")",
+        "(\"forward_commit\", \"random_walk\", \"explore_clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"recover_left\")",
+        "(\"forward_commit\", \"obstacle_left\", \"recover_right\")",
+        "(\"forward_commit\", \"obstacle_right\", \"recover_left\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"recover_left\", \"rotate_counterclockwise\", \"explore_clear\")",
+        "(\"recover_left\", \"obstacle_front\", \"recover_left\")",
+        "(\"recover_left\", \"obstacle_left\", \"recover_right\")",
+        "(\"recover_left\", \"obstacle_right\", \"recover_left\")",
+        "(\"recover_left\", \"path_clear\", \"recover_left\")",
+        "(\"recover_right\", \"rotate_clockwise\", \"explore_clear\")",
+        "(\"recover_right\", \"obstacle_front\", \"recover_left\")",
+        "(\"recover_right\", \"obstacle_left\", \"recover_right\")",
+        "(\"recover_right\", \"obstacle_right\", \"recover_left\")",
+        "(\"recover_right\", \"path_clear\", \"recover_right\")"
+      ]
+    }
+  ]
+}

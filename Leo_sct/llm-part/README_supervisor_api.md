@@ -21,8 +21,9 @@ It does not build or run C++ nodes directly.
 - `run_pipeline.py`: main entry point.
 - `task_profiles.json`: per-task goal and event lists.
 - `json_to_nadzoru_xml.py`: JSON to XML converter used by the pipeline.
-- `hardcoded_find_obj/G1.xml`, `hardcoded_find_obj/G2.xml` (and task-specific
-  variants): source plant/spec automata.
+- `generated_pipeline_outputs/`: generated intermediate artifacts including
+  LLM JSON payloads, synthesized `G*.xml` / `E*.xml`, `Sloc*.xml`, prompt
+  sidecars, and disabled-transition reports.
 - `full_pipeline/`: generated intermediate artifacts (`E*.xml`, `Sloc*.xml`,
   `script.txt`, `*_nadzoru.json`).
 
@@ -30,13 +31,6 @@ Related but separate:
 
 - `convert_to_nadzoru_xml.py` converts a `robot_navigation.cpp`-style source to
   XML, but it is not called by `des/run_pipeline.py`.
-
-## Task to automata mapping
-
-- `find_marker` -> `hardcoded_find_obj`
-- `explore` -> `hardcoded_coverage`
-- `wall_follow` -> `hardcoded_wall_follow`
-- `zigzag` -> `hardcoded_zigzag`
 
 ## Usage
 
@@ -47,6 +41,7 @@ python3 run_pipeline.py --task explore --run-llm
 python3 run_pipeline.py --task find_marker --skip-llm
 python3 run_pipeline.py --task wall_follow --run-llm
 python3 run_pipeline.py --task zigzag --run-llm
+python3 run_pipeline.py --task explore --run-llm --prompt-set-file prompt_groups_explore.txt
 ```
 
 Required flag:
@@ -57,6 +52,11 @@ LLM control flags:
 
 - `--run-llm`: generate a new JSON from the built-in LLM step.
 - `--skip-llm`: skip LLM and reuse latest JSON for the selected task.
+- `--user-task`: pass one free-form task prompt directly on the CLI.
+- `--user-task-file`: read one free-form task prompt from a text file.
+- `--prompt-set-file`: read grouped prompts from a text file with `[long]`,
+  `[medium]`, and `[vague]` sections; each section must contain 5 prompts
+  separated by `---`.
 
 Note: `RUN_LLM` defaults to `True` in code, so `--skip-llm` is the explicit way
 to bypass LLM generation.
@@ -78,6 +78,7 @@ Generated files:
 YAML outputs written to:
 
 - `swarm_basics/config/<task>_sup_gpt_<N>.yaml`
+- `swarm_basics/config/<task>_sup_gpt_<group>_<k>_<N>.yaml` for grouped prompt runs
 - `swarm_basics/config/sup_gpt.yaml` (latest copy)
 - `leo_real/config/<task>_sup_gpt_<N>.yaml`
 - `leo_real/config/sup_gpt.yaml` (latest copy)
@@ -85,8 +86,8 @@ YAML outputs written to:
 ## Important behavior
 
 - Output index `<N>` auto-increments based on existing `E*.xml` and `Sloc*.xml`.
-- `G1`/`G2` are loaded explicitly from the selected task folder to avoid
-  collisions with unrelated XMLs.
+- `G` and `E` automata are taken from the current LLM payload and written into
+  `generated_pipeline_outputs/` for each run.
 - If LLM output is invalid, pipeline stops before XML generation.
 - If Nadzoru script fails or `Sloc<N>.xml` is missing, pipeline exits with a
   detailed error message.

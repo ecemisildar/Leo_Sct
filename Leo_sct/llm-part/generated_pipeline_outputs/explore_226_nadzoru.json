@@ -1,0 +1,147 @@
+{
+  "rationale": "The plant models robot motion and perception as separate automata: G1 for motion commands, G2 for obstacle sensors. The specification E1 enforces safe, coverage-oriented exploration: random_walk is preferred in clear, move_forward is used for short progress, and obstacle events trigger conservative recovery (turns or full scan) before resuming exploration. Recovery states are one-shot and only allow a single turn or scan action. All uncontrollable events are handled deterministically, and the supervisor quickly returns to exploration after recovery.",
+  "strategy": [
+    "Separate plant automata for motion and perception to keep models modular and compositional.",
+    "Specification automaton encodes the exploration policy: random_walk in clear, short move_forward pulses, conservative turn recovery on obstacles, and rapid return to exploration after recovery."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion subsystem: executes controllable motion commands as open-loop pulses.",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot perception subsystem: emits uncontrollable events for obstacle and clear path detection.",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration and safety supervisor: binds perception outcomes to safe, coverage-oriented motion commands.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "recover_turn_cw",
+        "recover_turn_ccw",
+        "recover_full_scan"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "forward_commit",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "recover_turn_cw",
+        "recover_turn_ccw",
+        "recover_full_scan"
+      ],
+      "controllable_events": [
+        "random_walk",
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"clear\", \"random_walk\", \"forward_commit\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"obs_front\", \"path_clear\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"rotate_clockwise\", \"recover_turn_cw\")",
+        "(\"obs_left\", \"path_clear\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"recover_turn_cw\")",
+        "(\"obs_right\", \"path_clear\", \"obs_right\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"rotate_counterclockwise\", \"recover_turn_ccw\")",
+        "(\"recover_turn_cw\", \"path_clear\", \"clear\")",
+        "(\"recover_turn_cw\", \"obstacle_front\", \"recover_full_scan\")",
+        "(\"recover_turn_cw\", \"obstacle_left\", \"recover_turn_cw\")",
+        "(\"recover_turn_cw\", \"obstacle_right\", \"recover_turn_cw\")",
+        "(\"recover_turn_cw\", \"rotate_clockwise\", \"clear\")",
+        "(\"recover_turn_ccw\", \"path_clear\", \"clear\")",
+        "(\"recover_turn_ccw\", \"obstacle_front\", \"recover_full_scan\")",
+        "(\"recover_turn_ccw\", \"obstacle_left\", \"recover_turn_ccw\")",
+        "(\"recover_turn_ccw\", \"obstacle_right\", \"recover_turn_ccw\")",
+        "(\"recover_turn_ccw\", \"rotate_counterclockwise\", \"clear\")",
+        "(\"recover_full_scan\", \"path_clear\", \"clear\")",
+        "(\"recover_full_scan\", \"obstacle_front\", \"recover_full_scan\")",
+        "(\"recover_full_scan\", \"obstacle_left\", \"recover_full_scan\")",
+        "(\"recover_full_scan\", \"obstacle_right\", \"recover_full_scan\")",
+        "(\"recover_full_scan\", \"full_rotate\", \"clear\")"
+      ]
+    }
+  ]
+}

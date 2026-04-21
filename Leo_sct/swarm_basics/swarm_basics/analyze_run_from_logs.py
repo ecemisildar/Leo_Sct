@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import csv
 import math
 import os
@@ -11,38 +12,43 @@ import matplotlib.pyplot as plt
 import xml.etree.ElementTree as ET
 
 
-# ----------------------------
-# CONFIG (no args)
-# ----------------------------
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-RESULTS_DIR = PACKAGE_ROOT / "results"
+RESULTS_DIRS = [
+    PACKAGE_ROOT / "results_exp",
+    PACKAGE_ROOT / "results",
+]
 WORLD_SDF = PACKAGE_ROOT / "swarm_basics" / "worlds" / "random_world.sdf"
 
-ENV_MIN = -7
-ENV_MAX = 7
+ENV_MIN = -5
+ENV_MAX = 5
 GRID_SIZE = 1.0
 OBSTACLE_OCCUPANCY_THRESHOLD = 0.4
-# ----------------------------
+def pick_latest_run_dir(results_dirs: list[Path]) -> tuple[str, Path, Path]:
+    run_dirs = []
+    legacy_runs = []
+    for results_dir in results_dirs:
+        if not results_dir.exists():
+            continue
+        run_dirs.extend(
+            path for path in results_dir.rglob("run_*")
+            if path.is_dir() and (path / "coverage_timeseries.csv").exists()
+        )
+        legacy_runs.extend(results_dir.glob("run_*_coverage_timeseries.csv"))
 
-
-def pick_latest_run_dir(results_dir: Path) -> tuple[str, Path]:
-    run_dirs = [
-        path for path in results_dir.glob("run_*")
-        if path.is_dir() and (path / "coverage_timeseries.csv").exists()
-    ]
     if run_dirs:
         run_dirs.sort(key=lambda p: p.stat().st_mtime)
         run_dir = run_dirs[-1]
-        return run_dir.name, run_dir
+        return run_dir.name, run_dir, run_dir.parent
 
-    legacy_runs = list(results_dir.glob("run_*_coverage_timeseries.csv"))
     if not legacy_runs:
+        joined = ", ".join(str(path) for path in results_dirs)
         raise SystemExit(
-            f"No run folders or legacy run_*_coverage_timeseries.csv files found under {results_dir}"
+            f"No run folders or legacy run_*_coverage_timeseries.csv files found under {joined}"
         )
     legacy_runs.sort(key=lambda p: p.stat().st_mtime)
-    run_id = legacy_runs[-1].name.removesuffix("_coverage_timeseries.csv")
-    return run_id, results_dir
+    latest = legacy_runs[-1]
+    run_id = latest.name.removesuffix("_coverage_timeseries.csv")
+    return run_id, latest.parent, latest.parent
 
 
 def pick_matching_bump_file(run_dir: Path, run_id: str) -> Path | None:
@@ -51,7 +57,7 @@ def pick_matching_bump_file(run_dir: Path, run_id: str) -> Path | None:
         if run_bumps:
             return run_bumps[-1]
 
-    parent_dir = run_dir.parent if run_dir != RESULTS_DIR else run_dir
+    parent_dir = run_dir.parent if run_dir.name.startswith("run_") else run_dir
     if not parent_dir.exists():
         return None
     run_hms = run_id.rsplit("_", 1)[-1]
@@ -66,6 +72,18 @@ def pick_matching_bump_file(run_dir: Path, run_id: str) -> Path | None:
         return None
     files.sort(key=lambda item: item[0])
     return files[0][1] if files[0][0] <= 2 else None
+
+
+def iter_run_dirs(results_dirs: list[Path]) -> list[Path]:
+    run_dirs = []
+    for results_dir in results_dirs:
+        if not results_dir.exists():
+            continue
+        run_dirs.extend(
+            path for path in results_dir.rglob("run_*")
+            if path.is_dir() and (path / "coverage_timeseries.csv").exists()
+        )
+    return sorted(set(run_dirs))
 
 
 def read_bump_rows(path: Path):
@@ -382,21 +400,22 @@ def plot_collisions(rows, cov_times, covs, out_png: Path):
     return True
 
 
-def main():
-    run_id, run_dir = pick_latest_run_dir(RESULTS_DIR)
+def analyze_run(run_id: str, run_dir: Path, root_dir: Path) -> bool:
     visited_csv = run_dir / "coverage_visited_cells.csv"
     if not visited_csv.exists():
-        visited_csv = RESULTS_DIR / f"{run_id}_coverage_visited_cells.csv"
+        visited_csv = root_dir / f"{run_id}_coverage_visited_cells.csv"
     if not visited_csv.exists():
-        raise SystemExit(f"Missing {visited_csv}")
+        print(f"[WARN] Missing {visited_csv}")
+        return False
 
     visited = read_visited_cells(visited_csv)
     if not visited:
-        raise SystemExit(f"Empty visited cells in {visited_csv}")
+        print(f"[WARN] Empty visited cells in {visited_csv}")
+        return False
 
     paths_csv = run_dir / "coverage_paths.csv"
     if not paths_csv.exists():
-        paths_csv = RESULTS_DIR / f"{run_id}_coverage_paths.csv"
+        paths_csv = root_dir / f"{run_id}_coverage_paths.csv"
     paths = read_robot_paths(paths_csv) if paths_csv.exists() else {}
 
     cells = build_cells(ENV_MIN, ENV_MAX)
@@ -410,7 +429,7 @@ def main():
 
     cov_csv = run_dir / "coverage_timeseries.csv"
     if not cov_csv.exists():
-        cov_csv = RESULTS_DIR / f"{run_id}_coverage_timeseries.csv"
+        cov_csv = root_dir / f"{run_id}_coverage_timeseries.csv"
     cov_times, covs = ([], [])
     if cov_csv.exists():
         cov_times, covs = read_coverage_timeseries(cov_csv)
@@ -427,13 +446,51 @@ def main():
     out_png = run_dir / "collisions_vs_time_offline.png"
     if not plot_collisions(rows, cov_times, covs, out_png):
         print(f"[WARN] Could not plot collisions for {run_id}")
-        return
+        return False
 
     print(f"[OK] {run_id}")
     print(f"  coverage_map: {map_out}")
     if bump_file is not None:
         print(f"  bump_file: {bump_file}")
     print(f"  collisions_plot: {out_png}")
+    return True
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Generate offline plots for run folders.")
+    parser.add_argument(
+        "--results-dir",
+        action="append",
+        dest="results_dirs",
+        help="Search root containing run_* folders. Can be passed multiple times.",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Analyze every run_* folder found under the given results dirs.",
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    results_dirs = [Path(p).resolve() for p in args.results_dirs] if args.results_dirs else RESULTS_DIRS
+
+    if args.all:
+        run_dirs = iter_run_dirs(results_dirs)
+        if not run_dirs:
+            joined = ", ".join(str(path) for path in results_dirs)
+            raise SystemExit(f"No run folders found under {joined}")
+
+        ok = 0
+        for run_dir in run_dirs:
+            if analyze_run(run_dir.name, run_dir, run_dir.parent):
+                ok += 1
+        print(f"[DONE] analyzed {ok}/{len(run_dirs)} runs")
+        return
+
+    run_id, run_dir, root_dir = pick_latest_run_dir(results_dirs)
+    analyze_run(run_id, run_dir, root_dir)
 
 
 if __name__ == "__main__":

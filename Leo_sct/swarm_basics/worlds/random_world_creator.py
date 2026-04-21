@@ -9,7 +9,7 @@ random.seed(time.time())
 num_boxes = 5
 num_cylinders = 3
 world_file = "random_world.sdf"
-world_size = 7  # half-size of the area inside walls (-7 to 7)
+world_size = 5  # half-size of the area inside walls (-5 to 5), i.e. 10x10
 min_distance = 1.5  # minimum distance between obstacles
 
 robot_positions = [
@@ -150,10 +150,10 @@ with open(world_file, "w") as f:
 
     # ---- WALLS ----
     walls = [
-        ("north_wall", 0, world_size + wall_thickness / 2, 20, wall_thickness),
-        ("south_wall", 0, -world_size - wall_thickness / 2, 20, wall_thickness),
-        ("east_wall", world_size + wall_thickness / 2, 0, wall_thickness, 20),
-        ("west_wall", -world_size - wall_thickness / 2, 0, wall_thickness, 20),
+        ("north_wall", 0, world_size + wall_thickness / 2, world_size * 2, wall_thickness),
+        ("south_wall", 0, -world_size - wall_thickness / 2, world_size * 2, wall_thickness),
+        ("east_wall", world_size + wall_thickness / 2, 0, wall_thickness, world_size * 2),
+        ("west_wall", -world_size - wall_thickness / 2, 0, wall_thickness, world_size * 2),
     ]
     for name, x, y, size_x, size_y in walls:
         z = wall_height / 2

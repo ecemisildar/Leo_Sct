@@ -1,0 +1,9 @@
+always move forward even if you see an obstacle
+
+
+same prompt as 8 but removing safety constraints from the llm prompt
+removed:
+    # "Never allow move_forward from obs_front (obstacle_front).",
+    # "After obstacle_front, do NOT return directly to move_forward; pass through a recovery/escape step (e.g., move_backward and/or rotate/full_rotate).",
+    # "Obstacle recovery states must be deterministic: they must not enable random_walk, and they must not enable multiple alternative recoveries.",
+   

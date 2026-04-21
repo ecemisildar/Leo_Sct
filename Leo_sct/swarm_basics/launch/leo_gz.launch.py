@@ -20,16 +20,41 @@
 
 
 import os
+import subprocess
+import time
 
 from ament_index_python.packages import get_package_share_directory
 from swarm_basics.launch_defaults import MOVING_ARUCO_DEFAULTS
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, Shutdown, TimerAction, SetEnvironmentVariable
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, Shutdown, TimerAction, SetEnvironmentVariable
+from launch.actions import IncludeLaunchDescription, RegisterEventHandler, OpaqueFunction
+from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
+
+
+def _kill_gazebo_processes(*_args, **_kwargs):
+    patterns = [
+        r"ruby .*gz sim",
+        r"^gz sim ",
+        r"^ign gazebo ",
+        r"ign gazebo .*random_world\.sdf",
+        r"gzserver",
+        r"gzclient",
+        r"parameter_bridge",
+    ]
+    for signal in ("-TERM", "-KILL"):
+        for pattern in patterns:
+            subprocess.run(
+                ["pkill", signal, "-f", pattern],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        time.sleep(0.3)
+    return []
 
 
 def generate_launch_description():
@@ -79,6 +104,11 @@ def generate_launch_description():
         default_value="10",
         description="Number of robots to spawn in the star formation",
     )
+    spawn_layout = DeclareLaunchArgument(
+        "spawn_layout",
+        default_value="spread",
+        description="Robot spawn layout: 'spread' or 'middle_circle'.",
+    )
     auto_start_supervisor = DeclareLaunchArgument(
         "auto_start_supervisor",
         default_value="true",
@@ -126,9 +156,28 @@ def generate_launch_description():
             "ros2_ws",
             "src",
             "Leo_sct",
-            "results",
+            "results_exp",
         ),
         description="Directory to write run artifacts",
+    )
+    metadata_yaml_path = DeclareLaunchArgument(
+        "metadata_yaml_path",
+        default_value=os.path.join(
+            pkg_project_gazebo,
+            "config",
+            "sup_gpt.yaml",
+        ),
+        description="YAML file to copy into each run folder",
+    )
+    prompt_text = DeclareLaunchArgument(
+        "prompt_text",
+        default_value="",
+        description="Prompt text to save into each run folder as prompt.txt",
+    )
+    prompt_file_path = DeclareLaunchArgument(
+        "prompt_file_path",
+        default_value="",
+        description="Prompt text file to copy into each run folder as prompt.txt",
     )
 
     # Setup to launch the simulator and Gazebo world
@@ -156,7 +205,11 @@ def generate_launch_description():
             "robot_ns": LaunchConfiguration("robot_ns"),
             "run_duration": LaunchConfiguration("run_duration"),
             "total_robots": LaunchConfiguration("total_robots"),
+            "spawn_layout": LaunchConfiguration("spawn_layout"),
             "results_dir": LaunchConfiguration("results_dir"),
+            "metadata_yaml_path": LaunchConfiguration("metadata_yaml_path"),
+            "prompt_text": LaunchConfiguration("prompt_text"),
+            "prompt_file_path": LaunchConfiguration("prompt_file_path"),
             "auto_start_supervisor": LaunchConfiguration("auto_start_supervisor"),
             "spawn_moving_aruco": LaunchConfiguration("spawn_moving_aruco"),
             "moving_aruco_x": LaunchConfiguration("moving_aruco_x"),
@@ -183,7 +236,6 @@ def generate_launch_description():
         ],
         output="screen",
     )
-
     return LaunchDescription(
         [
             SetEnvironmentVariable(
@@ -200,6 +252,7 @@ def generate_launch_description():
             robot_ns,
             run_duration,
             total_robots,
+            spawn_layout,
             auto_start_supervisor,
             spawn_moving_aruco,
             moving_aruco_x,
@@ -209,24 +262,20 @@ def generate_launch_description():
             moving_aruco_speed,
             moving_aruco_update_rate,
             results_dir,
+            metadata_yaml_path,
+            prompt_text,
+            prompt_file_path,
             gz_sim,
             spawn_robot,
             topic_bridge,
+            RegisterEventHandler(
+                OnShutdown(
+                    on_shutdown=[OpaqueFunction(function=_kill_gazebo_processes)],
+                )
+            ),
             TimerAction(
                 period=LaunchConfiguration("run_duration"),
                 actions=[
-                    ExecuteProcess(
-                        cmd=[
-                            "bash",
-                            "-lc",
-                            "pkill -9 -f 'ruby .*gz sim' || true; "
-                            "pkill -9 -f 'gz sim' || true; "
-                            "pkill -9 -f 'ign gazebo' || true; "
-                            "pkill -9 -f 'gzserver' || true; "
-                            "pkill -9 -f 'gzclient' || true",
-                        ],
-                        output="screen",
-                    ),
                     Shutdown(reason="Run duration reached"),
                 ],
             ),

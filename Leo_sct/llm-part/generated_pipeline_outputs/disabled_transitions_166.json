@@ -1,0 +1,39 @@
+{
+  "gloc_name": "Gloc166",
+  "sloc_name": "Sloc166",
+  "states": [
+    {
+      "sloc_state": "clear,explore_clear",
+      "gloc_state": "clear",
+      "enabled_transitions": [
+        {
+          "event": "path_clear",
+          "target": "clear,explore_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "obs_right",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "random_walk_commit",
+          "controllable": true
+        }
+      ]
+    }
+  ]
+}

@@ -21,22 +21,20 @@ DEFAULT_CONSTRAINTS = [
     "No epsilon transitions. Every transition must be labeled by one event from the lists.",
     "For EVERY state, include an outgoing transition for ALL uncontrollable events (total w.r.t. uncontrollables).",
     "For EVERY non-terminal state, include at least ONE controllable transition (otherwise the robot may stall).",
-    "Enable EXACTLY ONE controllable action in each non-terminal state unless the task profile explicitly allows otherwise.",
+    "Prefer a single clear controllable action per state, but choose the action that maximizes forward progress when safe.",
     "Runtime semantics: uncontrollable events are processed BEFORE a controllable action each step.",
-    "Therefore, in action/commit/scan/recovery states, non-critical uncontrollables (e.g., path_clear, marker_seen/marker_lost) should usually SELF-LOOP to avoid preempting the intended controllable in the same step.",
-    "Only safety-critical uncontrollables (obstacle_*, marker_close) should force leaving an action/commit state.",
-    "Never allow move_forward from obs_front (obstacle_front).",
-    "After obstacle_front, do NOT return directly to move_forward; pass through a recovery/escape step (e.g., move_backward and/or rotate/full_rotate).",
-    "Obstacle recovery states must be deterministic: they must not enable random_walk, and they must not enable multiple alternative recoveries.",
-    "If marker_close occurs in ANY state, transition to a terminal goal/stop state where stop is the only controllable action.",
+    "Therefore, in action/commit/scan/recovery states, non-critical uncontrollables (e.g., path_clear) should usually SELF-LOOP to avoid preempting the intended controllable in the same step.",
+    "Only safety-critical uncontrollables (obstacle_*) should force leaving an action/commit state.",
+    "The exploration objective is not just safety; the supervisor should spend most safe time making spatial progress instead of rotating in place.",
+    "When path_clear is observed after a recovery, return to a forward-progress state quickly rather than chaining extra scan or recovery states.",
+    "Use full_rotate sparingly and only as a last-resort escape or scan behavior after repeated blocked conditions; do not make it the default reaction to ordinary obstacles.",
+    "Prefer move_forward or random_walk in clear states, and prefer short directed turns over large scans in ordinary recovery states.",
     "Avoid oscillations: do NOT enable both rotate_clockwise and rotate_counterclockwise as controllables in the same state.",
     "Keep the behavior consistent: obs_left should prefer rotate_clockwise OR a clear escape policy; obs_right should prefer rotate_counterclockwise (or vice versa), but do not alternate rapidly.",
-    "You MAY introduce helper states such as forward_commit, rotate_commit_cw, rotate_commit_ccw, scan_full, recover_back, marker_track, marker_approach.",
+    "You MAY introduce helper states such as forward_commit, rotate_commit_cw, rotate_commit_ccw, recover_back, but keep the total number of helper states small.",
     "Commit/scan/recovery states must be ONE-SHOT on their primary controllable action: the primary controllable must transition OUT to a decision/perception state (e.g., clear), NOT self-loop.",
-    "Examples (illustrative only): forward_commit: move_forward->clear; rotate_commit_cw: rotate_clockwise->clear; rotate_commit_ccw: rotate_counterclockwise->clear; scan_full: full_rotate->clear; recover_back: move_backward->scan_full or ->clear.",
+    "Examples (illustrative only): forward_commit: move_forward->clear; rotate_commit_cw: rotate_clockwise->clear; rotate_commit_ccw: rotate_counterclockwise->clear; recover_back: move_backward->clear.",
     "Do NOT create infinite controllable loops like full_rotate->scan_full, move_backward->recover_back, or move_forward->forward_commit.",
-    "When marker_seen occurs (and marker_close has not occurred), prefer switching to a marker-tracking mode/state where the primary controllable is move_to_marker.",
-    "When marker_lost occurs during marker tracking, transition to a search behavior (e.g., scan_full) rather than continuing move_to_marker blindly."
 ]
 
 DEFAULT_STATE_SEMANTICS = {
@@ -51,16 +49,12 @@ DEFAULT_EVENT_SEMANTICS = {
     "obstacle_front": "front sensor region is blocked.",
     "obstacle_left": "left sensor region is blocked.",
     "obstacle_right": "right sensor region is blocked.",
-    "marker_seen": "marker currently detected in camera.",
-    "marker_lost": "marker currently not detected in camera.",
-    "marker_close": "marker distance < threshold (goal condition).",
     "move_forward": "apply forward motion for 0.2 s (one pulse).",
     "random_walk": "apply a short exploratory wandering motion for 0.2 s; suitable in clear/search states but not obstacle recovery states.",
     "move_backward": "apply backward motion for 0.2 s (one pulse).",
     "rotate_clockwise": "apply clockwise rotation for 0.2 s (one pulse).",
     "rotate_counterclockwise": "apply counterclockwise rotation for 0.2 s (one pulse).",
     "full_rotate": "rotate 360 degrees (atomic action; completes a full scan).",
-    "move_to_marker": "move toward marker for 0.2 s (one pulse) while tracking.",
     "stop": "set velocity to zero (stop).",
 }
 
@@ -161,8 +155,8 @@ def build_pipeline_prompt(
         "A forward or random_walk action may continue briefly before the next obstacle event is processed."
     )
     lines.append(
-        "Therefore the design must be conservative: obstacle states must force immediate turn-based recovery,"
-        " and exploratory forward actions must stay out of obstacle-recovery states."
+        "Therefore the design must remain safe, but it should also bias strongly toward coverage: use conservative recovery only when needed,"
+        " and return to forward exploration as soon as the path becomes clear."
     )
     lines.append("")
     if user_task:

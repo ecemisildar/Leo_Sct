@@ -60,12 +60,18 @@ class RobotSupervisor(Node):
         # Cap at 180 degrees max, even if overridden via parameters.
         self.full_rotate_target_rad = min(
             math.pi,
-            float(self.declare_parameter("full_rotate_target_rad", math.pi / 3.0).value),
+            float(self.declare_parameter("full_rotate_target_rad", math.pi).value),
         )
-        self.full_rotate_omega = float(self.declare_parameter("full_rotate_omega", 2.0).value)  # rad/s
-        self.full_rotate_timeout_s = float(self.declare_parameter("full_rotate_timeout_s", 2.0).value)
+        self.full_rotate_omega = float(self.declare_parameter("full_rotate_omega", 1.0).value)  # rad/s
+        self.full_rotate_timeout_s = float(self.declare_parameter("full_rotate_timeout_s", 3.5).value)
         self.full_rotate_retrigger_block_s = float(
             self.declare_parameter("full_rotate_retrigger_block_s", 0.6).value
+        )
+        self.rotate_90_retrigger_block_s = float(
+            self.declare_parameter("rotate_90_retrigger_block_s", 0.6).value
+        )
+        self.post_turn_settle_s = float(
+            self.declare_parameter("post_turn_settle_s", 0.3).value
         )
 
         # Obstacle-front escape bias: block full_rotate briefly after obstacle_front
@@ -81,13 +87,13 @@ class RobotSupervisor(Node):
         # 90-degree rotate settings
         self.rotate_90_target_rad = min(
             math.pi,
-            float(self.declare_parameter("rotate_90_target_rad", math.pi / 3.0).value),
+            float(self.declare_parameter("rotate_90_target_rad", math.pi / 2.0).value),
         )
         self.rotate_90_omega = float(
-            self.declare_parameter("rotate_90_omega", 1.5).value
+            self.declare_parameter("rotate_90_omega", 1.0).value
         )
         self.rotate_90_timeout_s = float(
-            self.declare_parameter("rotate_90_timeout_s", 4.0).value
+            self.declare_parameter("rotate_90_timeout_s", 2.2).value
         )
 
         self.rotate_90_active = False
@@ -124,6 +130,7 @@ class RobotSupervisor(Node):
         # Load SCT YAML
         # -------------------------------
         self.config_dir = os.path.join(get_package_share_directory("swarm_basics"), "config")
+        self.explicit_yaml_path = str(self.declare_parameter("supervisor_yaml_path", "").value).strip()
         self.current_mission = "explore"
         self.current_yaml_path = ""
         self._load_initial_sct()
@@ -169,6 +176,8 @@ class RobotSupervisor(Node):
         self.full_rotate_using_timed_fallback = False
         self.full_rotate_stall_count = 0
         self.last_full_rotate_completed_at = 0.0
+        self.last_rotate_90_completed_at = 0.0
+        self.turn_settle_until = 0.0
 
         # -------------------------------
         # Publishers/Subscribers
@@ -263,6 +272,19 @@ class RobotSupervisor(Node):
         self._install_uncontrollable_callbacks()
 
     def _load_initial_sct(self):
+        if self.explicit_yaml_path:
+            if not os.path.exists(self.explicit_yaml_path):
+                self.get_logger().error(
+                    f"Explicit supervisor YAML not found: {self.explicit_yaml_path}"
+                )
+                raise SystemExit(1)
+            config_path = self.explicit_yaml_path
+            self._load_sct_from_yaml(config_path)
+            self.current_yaml_path = config_path
+            self.get_logger().info(
+                f"Loaded initial mission '{self.current_mission}' from explicit YAML {os.path.basename(config_path)}"
+            )
+            return
         paths = self._mission_yaml_candidates(self.current_mission)
         if not paths:
             self.get_logger().error(
@@ -278,6 +300,8 @@ class RobotSupervisor(Node):
         )
 
     def _switch_mission(self, mission: str) -> Tuple[bool, str]:
+        if self.explicit_yaml_path:
+            return True, os.path.basename(self.current_yaml_path or self.explicit_yaml_path)
         mission_key = self._canonical_mission_name(mission)
         paths = self._mission_yaml_candidates(mission_key)
         if not paths:
@@ -574,6 +598,16 @@ class RobotSupervisor(Node):
         self.rotate_90_accum = 0.0
         self.rotate_90_started_at = 0.0
         self.rotate_90_prev_yaw = 0.0
+        self.turn_settle_until = 0.0
+
+    def _enter_post_turn_settle(self, now: float):
+        # Give sensing callbacks a short window to catch up before asking SCT
+        # for another controllable event. This prevents turn retriggers when the
+        # supervisor period is faster than obstacle updates.
+        self.turn_settle_until = max(self.turn_settle_until, now + self.post_turn_settle_s)
+        self.active_event = None
+        self.motion_until = 0.0
+        self._publish_stop()
 
     def _start_full_rotate(self, omega: float):
         # Start a 180° rotation that persists beyond the 0.2s pulse.
@@ -712,6 +746,13 @@ class RobotSupervisor(Node):
             return
 
         if ev_name in ("EV_rotate_clockwise", "EV_rotate_counterclockwise"):
+            now = time.time()
+            if (now - self.last_rotate_90_completed_at) < self.rotate_90_retrigger_block_s:
+                self.get_logger().info("rotate_90 blocked by recent completion; stopping this tick")
+                self.active_event = None
+                self.motion_until = 0.0
+                self._publish_stop()
+                return
             self.active_event = ev_name
             self._start_rotate_90(spec.angular_z)
             return
@@ -777,9 +818,7 @@ class RobotSupervisor(Node):
                 # stop rotation and resume supervisor next tick
                 self.full_rotate_active = False
                 self.last_full_rotate_completed_at = now
-                self.active_event = None
-                self.motion_until = 0.0
-                self._publish_stop()
+                self._enter_post_turn_settle(now)
                 self.get_logger().info(
                     "FULL ROTATE stopped; supervisor will select next event next tick"
                 )
@@ -790,11 +829,13 @@ class RobotSupervisor(Node):
             self._publish_cmd(self.active_twist)
             if self._update_rotate_90():
                 self.rotate_90_active = False
-                self.active_event = None
-                self.motion_until = 0.0
-                self._publish_stop()
+                self.last_rotate_90_completed_at = now
+                self._enter_post_turn_settle(now)
             return
-            
+
+        if now < self.turn_settle_until:
+            self._publish_stop()
+            return
 
         # Normal pulse-hold: keep publishing until hold expires
         if self.active_event and now < self.motion_until:
@@ -816,7 +857,7 @@ class RobotSupervisor(Node):
             self._publish_stop()
             return
 
-        # self.get_logger().info(f"Selected controllable event: {ev_name}")
+        self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
 
 

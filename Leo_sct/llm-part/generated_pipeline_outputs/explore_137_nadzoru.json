@@ -1,0 +1,141 @@
+{
+  "rationale": "The plant separates sensing (obstacle events) and motion (controllable actions). The specification encodes a conservative, coverage-oriented exploration policy: random_walk is used in clear states for coverage, move_forward is used only in a short commit state, and recovery from obstacles is handled by short directed turns or, as a last resort, a full_rotate. All obstacle events force immediate recovery, and only one controllable is enabled per state to avoid oscillations.",
+  "strategy": [
+    "Separate plant automata for sensing and motion; all events are atomic.",
+    "Specification encodes: (1) random_walk in clear/search, (2) move_forward only in a commit state, (3) rotate_clockwise for obs_front/obs_left, rotate_counterclockwise for obs_right, (4) full_rotate only after repeated obstacles, (5) rapid return to exploration after path_clear."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Sensing subsystem: models robot's perception of obstacles via uncontrollable events.",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion subsystem: models robot's ability to execute motion commands.",
+      "states": [
+        "motion"
+      ],
+      "initial_states": [
+        "motion"
+      ],
+      "marked_states": [
+        "motion"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"motion\", \"move_forward\", \"motion\")",
+        "(\"motion\", \"rotate_clockwise\", \"motion\")",
+        "(\"motion\", \"rotate_counterclockwise\", \"motion\")",
+        "(\"motion\", \"full_rotate\", \"motion\")",
+        "(\"motion\", \"random_walk\", \"motion\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration and collision-avoidance supervisor: binds perception to safe, coverage-oriented actions.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "rotate_commit_cw",
+        "rotate_commit_ccw",
+        "full_rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "forward_commit"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"random_walk\", \"forward_commit\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+        "(\"obs_front\", \"path_clear\", \"clear\")",
+        "(\"obs_front\", \"obstacle_front\", \"full_rotate_commit\")",
+        "(\"obs_front\", \"obstacle_left\", \"full_rotate_commit\")",
+        "(\"obs_front\", \"obstacle_right\", \"full_rotate_commit\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+        "(\"obs_left\", \"path_clear\", \"clear\")",
+        "(\"obs_left\", \"obstacle_front\", \"full_rotate_commit\")",
+        "(\"obs_left\", \"obstacle_left\", \"full_rotate_commit\")",
+        "(\"obs_left\", \"obstacle_right\", \"full_rotate_commit\")",
+        "(\"obs_right\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+        "(\"obs_right\", \"path_clear\", \"clear\")",
+        "(\"obs_right\", \"obstacle_front\", \"full_rotate_commit\")",
+        "(\"obs_right\", \"obstacle_left\", \"full_rotate_commit\")",
+        "(\"obs_right\", \"obstacle_right\", \"full_rotate_commit\")",
+        "(\"rotate_commit_cw\", \"rotate_clockwise\", \"clear\")",
+        "(\"rotate_commit_cw\", \"path_clear\", \"rotate_commit_cw\")",
+        "(\"rotate_commit_cw\", \"obstacle_front\", \"full_rotate_commit\")",
+        "(\"rotate_commit_cw\", \"obstacle_left\", \"full_rotate_commit\")",
+        "(\"rotate_commit_cw\", \"obstacle_right\", \"full_rotate_commit\")",
+        "(\"rotate_commit_ccw\", \"rotate_counterclockwise\", \"clear\")",
+        "(\"rotate_commit_ccw\", \"path_clear\", \"rotate_commit_ccw\")",
+        "(\"rotate_commit_ccw\", \"obstacle_front\", \"full_rotate_commit\")",
+        "(\"rotate_commit_ccw\", \"obstacle_left\", \"full_rotate_commit\")",
+        "(\"rotate_commit_ccw\", \"obstacle_right\", \"full_rotate_commit\")",
+        "(\"full_rotate_commit\", \"full_rotate\", \"clear\")",
+        "(\"full_rotate_commit\", \"path_clear\", \"full_rotate_commit\")",
+        "(\"full_rotate_commit\", \"obstacle_front\", \"full_rotate_commit\")",
+        "(\"full_rotate_commit\", \"obstacle_left\", \"full_rotate_commit\")",
+        "(\"full_rotate_commit\", \"obstacle_right\", \"full_rotate_commit\")"
+      ]
+    }
+  ]
+}

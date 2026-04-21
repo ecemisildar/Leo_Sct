@@ -2,6 +2,7 @@
 import time
 import math
 import csv
+import shutil
 import traceback
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -15,8 +16,9 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 class CoverageCounter(Node):
     """
     - Tracks visited grid cells from Gazebo poses (TFMessage)
-    - Saves results into results/<run_id>/
+    - Saves results into a timestamped run folder
     - Logs paths + visited cells to CSV for offline analysis
+    - Copies run metadata (active YAML + prompt text) into the same folder
     - Does not render or save plots (handled by offline scripts)
     """
 
@@ -24,15 +26,24 @@ class CoverageCounter(Node):
         super().__init__("coverage_counter")
 
         # fixed settings (no args)
-        package_root = Path.home() / "ros2_ws/src/Leo_sct/src/swarm_basics"
+        package_root = Path(__file__).resolve().parents[1]
 
-        results_dir_default = package_root / "results"
+        results_dir_default = package_root / "results_exp"
         self.results_root = Path(
             str(self.declare_parameter("results_dir", str(results_dir_default)).value)
         )
         run_id_param = str(self.declare_parameter("run_id", "").value).strip()
         self.run_id = run_id_param or time.strftime("run_%Y%m%d_%H%M%S")
-        self.run_duration = float(self.declare_parameter("run_duration", 500.0).value)
+        self.metadata_yaml_path_raw = str(
+            self.declare_parameter("metadata_yaml_path", "").value
+        ).strip()
+        self.metadata_yaml_path = Path(self.metadata_yaml_path_raw) if self.metadata_yaml_path_raw else None
+        self.prompt_file_path_raw = str(
+            self.declare_parameter("prompt_file_path", "").value
+        ).strip()
+        self.prompt_file_path = Path(self.prompt_file_path_raw) if self.prompt_file_path_raw else None
+        self.prompt_text = str(self.declare_parameter("prompt_text", "").value)
+        self.run_duration = float(self.declare_parameter("run_duration", 200.0).value)
         self.flush_interval_sec = float(self.declare_parameter("flush_interval_sec", 3.0).value)
         self.flush_max_rows = int(self.declare_parameter("flush_max_rows", 2000).value)
 
@@ -47,14 +58,14 @@ class CoverageCounter(Node):
         self.visited_cells_csv_path = self.results_dir / "coverage_visited_cells.csv"
         self.status_path = self.results_dir / "SAVE_STATUS.txt"
         self.error_path = self.results_dir / "SAVE_ERROR.txt"
+        self.prompt_txt_path = self.results_dir / "prompt.txt"
 
         self._saved_ok = False
         self._saving_now = False
         self._wall_start = time.time()
-
         # grid
-        self.env_min = -7
-        self.env_max = 7
+        self.env_min = -5
+        self.env_max = 5
         self.grid_size = 1.0
         self.num_cells_y = int((self.env_max - self.env_min) / self.grid_size)
         self.cells = [(x, y) for x in range(self.env_min, self.env_max)
@@ -96,7 +107,10 @@ class CoverageCounter(Node):
             "Node started\n"
             f"run_id: {self.run_id}\n"
             f"results_dir: {self.results_dir}\n"
+            f"metadata_yaml: {self.metadata_yaml_path}\n"
+            f"prompt_file: {self.prompt_file_path}\n"
         )
+        self._save_run_metadata()
 
     def pose_callback(self, msg: TFMessage):
         now = self.get_clock().now()
@@ -246,6 +260,25 @@ class CoverageCounter(Node):
     def _write_status(self, text: str):
         with self.status_path.open("a", encoding="utf-8") as f:
             f.write(text)
+
+    def _save_run_metadata(self):
+        if self.prompt_file_path is not None and self.prompt_file_path.exists():
+            prompt_contents = self.prompt_file_path.read_text(encoding="utf-8")
+        else:
+            if self.prompt_file_path is not None and not self.prompt_file_path.exists():
+                self._write_status(f"WARNING: Prompt file not found: {self.prompt_file_path}\n")
+            prompt_contents = self.prompt_text
+        self.prompt_txt_path.write_text(prompt_contents, encoding="utf-8")
+        if self.metadata_yaml_path is None:
+            self._write_status("WARNING: No metadata_yaml_path provided.\n")
+            return
+        if not self.metadata_yaml_path.exists():
+            self._write_status(f"WARNING: YAML not found: {self.metadata_yaml_path}\n")
+            return
+        try:
+            shutil.copy2(self.metadata_yaml_path, self.results_dir / self.metadata_yaml_path.name)
+        except Exception as exc:
+            self._write_status(f"WARNING: Failed to copy YAML: {exc}\n")
 
     # obstacles
     def _compute_blocked_cells(self):

@@ -1,0 +1,201 @@
+{
+  "rationale": "The plant models the robot's perception and motion capabilities, separating sensor outcomes from motion commands. The specification binds sensor outcomes to safe, progress-oriented actions: random_walk in clear, rotate_clockwise for front/left obstacles, rotate_counterclockwise for right obstacles, and full_rotate only as a last-resort escape. The design ensures conservative recovery, avoids oscillation, and prioritizes coverage.",
+  "strategy": [
+    "Separate sensing and motion into distinct plant automata for clarity and modularity.",
+    "Specification automaton encodes safe, progress-maximizing exploration: random_walk in clear, short turns for obstacle recovery, and full_rotate only after repeated blockages."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot perception: models the robot's view of its environment via uncontrollable sensor events.",
+      "states": [
+        "clear",
+        "obs_front",
+        "obs_left",
+        "obs_right"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "obs_front",
+        "obs_left",
+        "obs_right"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"obs_front\", \"path_clear\", \"clear\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"path_clear\", \"clear\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"path_clear\", \"clear\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot motion: models the robot's ability to execute motion commands as open-loop pulses.",
+      "states": [
+        "idle",
+        "forward_commit",
+        "random_walk_commit",
+        "rotate_commit_cw",
+        "rotate_commit_ccw",
+        "full_rotate_commit"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "forward_commit",
+        "random_walk_commit",
+        "rotate_commit_cw",
+        "rotate_commit_ccw",
+        "full_rotate_commit"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"forward_commit\")",
+        "(\"idle\", \"random_walk\", \"random_walk_commit\")",
+        "(\"idle\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+        "(\"idle\", \"full_rotate\", \"full_rotate_commit\")",
+        "(\"forward_commit\", \"move_forward\", \"idle\")",
+        "(\"random_walk_commit\", \"random_walk\", \"idle\")",
+        "(\"rotate_commit_cw\", \"rotate_clockwise\", \"idle\")",
+        "(\"rotate_commit_ccw\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"full_rotate_commit\", \"full_rotate\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration and safety supervisor: binds perception to safe, progress-maximizing actions and enforces conservative recovery.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "random_walk_commit",
+        "obs_front",
+        "rotate_commit_cw",
+        "obs_left",
+        "rotate_commit_cw_left",
+        "obs_right",
+        "rotate_commit_ccw_right",
+        "blocked",
+        "full_rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "forward_commit",
+        "random_walk_commit",
+        "obs_front",
+        "rotate_commit_cw",
+        "obs_left",
+        "rotate_commit_cw_left",
+        "obs_right",
+        "rotate_commit_ccw_right",
+        "blocked",
+        "full_rotate_commit"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"random_walk\", \"random_walk_commit\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"random_walk_commit\", \"random_walk\", \"forward_commit\")",
+        "(\"random_walk_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"random_walk_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"random_walk_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"random_walk_commit\", \"path_clear\", \"random_walk_commit\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"obs_front\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+        "(\"obs_front\", \"obstacle_front\", \"blocked\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit_cw\", \"rotate_clockwise\", \"clear\")",
+        "(\"rotate_commit_cw\", \"obstacle_front\", \"obs_front\")",
+        "(\"rotate_commit_cw\", \"obstacle_left\", \"obs_left\")",
+        "(\"rotate_commit_cw\", \"obstacle_right\", \"obs_right\")",
+        "(\"rotate_commit_cw\", \"path_clear\", \"rotate_commit_cw\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"rotate_commit_cw_left\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"obstacle_left\", \"blocked\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_left\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit_cw_left\", \"rotate_clockwise\", \"clear\")",
+        "(\"rotate_commit_cw_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"rotate_commit_cw_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"rotate_commit_cw_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"rotate_commit_cw_left\", \"path_clear\", \"rotate_commit_cw_left\")",
+        "(\"obs_right\", \"rotate_counterclockwise\", \"rotate_commit_ccw_right\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_right\", \"obstacle_right\", \"blocked\")",
+        "(\"obs_right\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit_ccw_right\", \"rotate_counterclockwise\", \"clear\")",
+        "(\"rotate_commit_ccw_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"rotate_commit_ccw_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"rotate_commit_ccw_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"rotate_commit_ccw_right\", \"path_clear\", \"rotate_commit_ccw_right\")",
+        "(\"blocked\", \"full_rotate\", \"full_rotate_commit\")",
+        "(\"blocked\", \"obstacle_front\", \"blocked\")",
+        "(\"blocked\", \"obstacle_left\", \"blocked\")",
+        "(\"blocked\", \"obstacle_right\", \"blocked\")",
+        "(\"blocked\", \"path_clear\", \"blocked\")",
+        "(\"full_rotate_commit\", \"full_rotate\", \"clear\")",
+        "(\"full_rotate_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"full_rotate_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"full_rotate_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"full_rotate_commit\", \"path_clear\", \"full_rotate_commit\")"
+      ]
+    }
+  ]
+}

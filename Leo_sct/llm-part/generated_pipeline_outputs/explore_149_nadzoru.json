@@ -1,0 +1,128 @@
+{
+  "rationale": "The plant models the robot's motion and perception capabilities, separating motion commands from sensor outcomes. The specification encodes a conservative, coverage-oriented supervisor: in clear/search states, random_walk is preferred for exploration; move_forward is used in a dedicated short-commit state. Obstacle events force explicit, one-shot recovery turns away from the blocked side, never enabling forward or random_walk in obstacle states. Recovery states are exited only after a turn, and path_clear returns the robot to exploration. Full_rotate is reserved for the rare case of being blocked on all sides. All transitions are deterministic and safe.",
+  "strategy": [
+    "Separate plant automata for motion and perception to reflect hardware modularity.",
+    "Specification automaton encodes a compact, deterministic supervisor: random_walk in clear/search, move_forward in commit, explicit turn recovery for obstacles, and rapid return to exploration after path_clear."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion subsystem: executes controllable motion commands as open-loop pulses.",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot perception subsystem: emits uncontrollable obstacle and path_clear events.",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration supervisor: ensures safe, conservative, and coverage-oriented exploration with explicit obstacle recovery.",
+      "states": [
+        "search",
+        "forward_commit",
+        "obs_front_recover",
+        "obs_left_recover",
+        "obs_right_recover",
+        "full_block_recover"
+      ],
+      "initial_states": [
+        "search"
+      ],
+      "marked_states": [
+        "search"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"search\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"search\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"search\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"search\", \"path_clear\", \"search\")",
+        "(\"search\", \"random_walk\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"move_forward\", \"search\")",
+        "(\"obs_front_recover\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"obs_front_recover\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"obs_front_recover\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"obs_front_recover\", \"path_clear\", \"search\")",
+        "(\"obs_front_recover\", \"rotate_clockwise\", \"search\")",
+        "(\"obs_left_recover\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"obs_left_recover\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"obs_left_recover\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"obs_left_recover\", \"path_clear\", \"search\")",
+        "(\"obs_left_recover\", \"rotate_clockwise\", \"search\")",
+        "(\"obs_right_recover\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"obs_right_recover\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"obs_right_recover\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"obs_right_recover\", \"path_clear\", \"search\")",
+        "(\"obs_right_recover\", \"rotate_counterclockwise\", \"search\")",
+        "(\"full_block_recover\", \"obstacle_front\", \"full_block_recover\")",
+        "(\"full_block_recover\", \"obstacle_left\", \"full_block_recover\")",
+        "(\"full_block_recover\", \"obstacle_right\", \"full_block_recover\")",
+        "(\"full_block_recover\", \"path_clear\", \"search\")",
+        "(\"full_block_recover\", \"full_rotate\", \"search\")"
+      ]
+    }
+  ]
+}

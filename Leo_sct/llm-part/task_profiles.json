@@ -21,13 +21,12 @@
       "At least one clear or search state must enable random_walk so it is used as part of the exploration policy.",
       "Every non-terminal explore state must enable exactly one controllable action.",
       "The initial clear exploration state must not use move_forward as its only controllable.",
-      "If obstacle_front occurs, transition to a dedicated recovery state whose only controllable is rotate_clockwise or rotate_counterclockwise.",
-      "Do not use full_rotate as the first response to obstacle_front.",
-      "States reached by obstacle_left must enable exactly one controllable and it must be rotate_clockwise.",
-      "States reached by obstacle_right must enable exactly one controllable and it must be rotate_counterclockwise.",
+      "If obstacle_front occurs, transition to a dedicated recovery state whose only controllable is rotate_clockwise, rotate_counterclockwise, or full_rotate.",
+      "States reached by obstacle_left must enable exactly one controllable and it must be rotate_clockwise or full_rotate.",
+      "States reached by obstacle_right must enable exactly one controllable and it must be rotate_counterclockwise or full_rotate.",
       "No state reached by any obstacle event may enable move_forward or random_walk.",
       "After any obstacle event, the supervisor must pass through a turn-recovery state before returning to exploration.",
-      "Use full_rotate only as a deliberate search or scan action in safe non-obstacle states, not as immediate obstacle recovery.",
+      "Do not use full_rotate in initial, clear, search, or path_clear-reached states; it is allowed only in dedicated obstacle-recovery states.",
       "Avoid long forward streaks; exploration should alternate between random_walk, short forward progress, and recovery turns."
     ],
     "include_default_constraints": true

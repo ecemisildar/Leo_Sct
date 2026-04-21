@@ -1,0 +1,810 @@
+Starting >>> leo_image
+Starting >>> swarm_basics
+Finished <<< leo_image [0.22s]
+Finished <<< swarm_basics [0.59s]
+
+Summary: 2 packages finished [1.37s]
+[INFO] [launch]: All log files can be found below /home/ecem/.ros/log/2026-04-18-02-22-25-256076-ecem-pc-486600
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [ign gazebo-1]: process started with pid [486664]
+[INFO] [coverage_counter-2]: process started with pid [486666]
+[INFO] [bump_counter-3]: process started with pid [486669]
+[INFO] [parameter_bridge-4]: process started with pid [486671]
+[INFO] [robot_state_publisher-5]: process started with pid [486673]
+[INFO] [create-6]: process started with pid [486675]
+[INFO] [robot_supervisor-7]: process started with pid [486677]
+[INFO] [robot_state_publisher-8]: process started with pid [486679]
+[INFO] [create-9]: process started with pid [486682]
+[INFO] [robot_supervisor-10]: process started with pid [486684]
+[INFO] [robot_state_publisher-11]: process started with pid [486687]
+[INFO] [create-12]: process started with pid [486689]
+[INFO] [robot_supervisor-13]: process started with pid [486691]
+[INFO] [robot_state_publisher-14]: process started with pid [486693]
+[INFO] [create-15]: process started with pid [486695]
+[INFO] [robot_supervisor-16]: process started with pid [486697]
+[INFO] [robot_state_publisher-17]: process started with pid [486699]
+[INFO] [create-18]: process started with pid [486709]
+[INFO] [robot_supervisor-19]: process started with pid [486712]
+[INFO] [parameter_bridge-20]: process started with pid [486714]
+[parameter_bridge-4] [ros_ign_bridge] is deprecated! Redirecting to use [ros_gz_bridge] instead!
+[parameter_bridge-4] 
+[create-9] [INFO] [1776471745.681632593] [robot_1.ros_gz_sim]: Requesting list of world names.
+[create-18] [INFO] [1776471745.681633775] [robot_4.ros_gz_sim]: Requesting list of world names.
+[create-6] [INFO] [1776471745.681752116] [robot_0.ros_gz_sim]: Requesting list of world names.
+[create-15] [INFO] [1776471745.681949566] [robot_3.ros_gz_sim]: Requesting list of world names.
+[create-12] [INFO] [1776471745.686540722] [robot_2.ros_gz_sim]: Requesting list of world names.
+[parameter_bridge-4] [INFO] [1776471745.688642018] [all_robots_bridge]: Creating ROS->GZ Bridge: [/robot_0/cmd_vel (geometry_msgs/msg/Twist) -> /robot_0/cmd_vel (ignition.msgs.Twist)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.689592659] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_0/odom (ignition.msgs.Odometry) -> /robot_0/odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.690166257] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_0/depth_camera/depth_image (ignition.msgs.Image) -> /robot_0/depth_camera/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.690851958] [all_robots_bridge]: Creating GZ->ROS Bridge: [/world/random_world/model/robot_0/link/robot_0/base_footprint/sensor/contact_sensor/contact (ignition.msgs.Contacts) -> /world/random_world/model/robot_0/link/robot_0/base_footprint/sensor/contact_sensor/contact (ros_gz_interfaces/msg/Contacts)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.691812243] [all_robots_bridge]: Creating ROS->GZ Bridge: [/robot_1/cmd_vel (geometry_msgs/msg/Twist) -> /robot_1/cmd_vel (ignition.msgs.Twist)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.692530151] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_1/odom (ignition.msgs.Odometry) -> /robot_1/odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.692859918] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_1/depth_camera/depth_image (ignition.msgs.Image) -> /robot_1/depth_camera/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.693568917] [all_robots_bridge]: Creating GZ->ROS Bridge: [/world/random_world/model/robot_1/link/robot_1/base_footprint/sensor/contact_sensor/contact (ignition.msgs.Contacts) -> /world/random_world/model/robot_1/link/robot_1/base_footprint/sensor/contact_sensor/contact (ros_gz_interfaces/msg/Contacts)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.694395518] [all_robots_bridge]: Creating ROS->GZ Bridge: [/robot_2/cmd_vel (geometry_msgs/msg/Twist) -> /robot_2/cmd_vel (ignition.msgs.Twist)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.694699258] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_2/odom (ignition.msgs.Odometry) -> /robot_2/odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.694986944] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_2/depth_camera/depth_image (ignition.msgs.Image) -> /robot_2/depth_camera/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.695260541] [all_robots_bridge]: Creating GZ->ROS Bridge: [/world/random_world/model/robot_2/link/robot_2/base_footprint/sensor/contact_sensor/contact (ignition.msgs.Contacts) -> /world/random_world/model/robot_2/link/robot_2/base_footprint/sensor/contact_sensor/contact (ros_gz_interfaces/msg/Contacts)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.695650235] [all_robots_bridge]: Creating ROS->GZ Bridge: [/robot_3/cmd_vel (geometry_msgs/msg/Twist) -> /robot_3/cmd_vel (ignition.msgs.Twist)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.695939849] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_3/odom (ignition.msgs.Odometry) -> /robot_3/odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.696373893] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_3/depth_camera/depth_image (ignition.msgs.Image) -> /robot_3/depth_camera/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-20] [INFO] [1776471745.695714690] [clock_bridge]: Creating GZ->ROS Bridge: [/clock (ignition.msgs.Clock) -> /clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.696748859] [all_robots_bridge]: Creating GZ->ROS Bridge: [/world/random_world/model/robot_3/link/robot_3/base_footprint/sensor/contact_sensor/contact (ignition.msgs.Contacts) -> /world/random_world/model/robot_3/link/robot_3/base_footprint/sensor/contact_sensor/contact (ros_gz_interfaces/msg/Contacts)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.697101702] [all_robots_bridge]: Creating ROS->GZ Bridge: [/robot_4/cmd_vel (geometry_msgs/msg/Twist) -> /robot_4/cmd_vel (ignition.msgs.Twist)] (Lazy 0)
+[robot_state_publisher-5] [INFO] [1776471745.697562488] [robot_0.robot_state_publisher]: got segment robot_0/antenna_link
+[robot_state_publisher-5] [INFO] [1776471745.697674638] [robot_0.robot_state_publisher]: got segment robot_0/base_footprint
+[robot_state_publisher-5] [INFO] [1776471745.697692004] [robot_0.robot_state_publisher]: got segment robot_0/base_link
+[robot_state_publisher-5] [INFO] [1776471745.697708249] [robot_0.robot_state_publisher]: got segment robot_0/realsense_link
+[robot_state_publisher-5] [INFO] [1776471745.697719587] [robot_0.robot_state_publisher]: got segment robot_0/rocker_L_link
+[robot_state_publisher-5] [INFO] [1776471745.697732018] [robot_0.robot_state_publisher]: got segment robot_0/rocker_R_link
+[robot_state_publisher-5] [INFO] [1776471745.697742925] [robot_0.robot_state_publisher]: got segment robot_0/wheel_FL_link
+[robot_state_publisher-5] [INFO] [1776471745.697756011] [robot_0.robot_state_publisher]: got segment robot_0/wheel_FR_link
+[robot_state_publisher-5] [INFO] [1776471745.697767088] [robot_0.robot_state_publisher]: got segment robot_0/wheel_RL_link
+[robot_state_publisher-5] [INFO] [1776471745.697776523] [robot_0.robot_state_publisher]: got segment robot_0/wheel_RR_link
+[parameter_bridge-4] [INFO] [1776471745.698119126] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_4/odom (ignition.msgs.Odometry) -> /robot_4/odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.698878452] [all_robots_bridge]: Creating GZ->ROS Bridge: [/robot_4/depth_camera/depth_image (ignition.msgs.Image) -> /robot_4/depth_camera/depth_image (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.699352266] [all_robots_bridge]: Creating GZ->ROS Bridge: [/world/random_world/model/robot_4/link/robot_4/base_footprint/sensor/contact_sensor/contact (ignition.msgs.Contacts) -> /world/random_world/model/robot_4/link/robot_4/base_footprint/sensor/contact_sensor/contact (ros_gz_interfaces/msg/Contacts)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1776471745.699851819] [all_robots_bridge]: Creating GZ->ROS Bridge: [/world/random_world/dynamic_pose/info (ignition.msgs.Pose_V) -> /world/random_world/dynamic_pose/info (tf2_msgs/msg/TFMessage)] (Lazy 0)
+[robot_state_publisher-11] [INFO] [1776471745.709269256] [robot_2.robot_state_publisher]: got segment robot_2/antenna_link
+[robot_state_publisher-11] [INFO] [1776471745.709393012] [robot_2.robot_state_publisher]: got segment robot_2/base_footprint
+[robot_state_publisher-11] [INFO] [1776471745.709406035] [robot_2.robot_state_publisher]: got segment robot_2/base_link
+[robot_state_publisher-11] [INFO] [1776471745.709415118] [robot_2.robot_state_publisher]: got segment robot_2/realsense_link
+[robot_state_publisher-11] [INFO] [1776471745.709422859] [robot_2.robot_state_publisher]: got segment robot_2/rocker_L_link
+[robot_state_publisher-11] [INFO] [1776471745.709430106] [robot_2.robot_state_publisher]: got segment robot_2/rocker_R_link
+[robot_state_publisher-11] [INFO] [1776471745.709437445] [robot_2.robot_state_publisher]: got segment robot_2/wheel_FL_link
+[robot_state_publisher-11] [INFO] [1776471745.709444718] [robot_2.robot_state_publisher]: got segment robot_2/wheel_FR_link
+[robot_state_publisher-11] [INFO] [1776471745.709451785] [robot_2.robot_state_publisher]: got segment robot_2/wheel_RL_link
+[robot_state_publisher-11] [INFO] [1776471745.709459194] [robot_2.robot_state_publisher]: got segment robot_2/wheel_RR_link
+[robot_state_publisher-14] [INFO] [1776471745.713887192] [robot_3.robot_state_publisher]: got segment robot_3/antenna_link
+[robot_state_publisher-14] [INFO] [1776471745.713995929] [robot_3.robot_state_publisher]: got segment robot_3/base_footprint
+[robot_state_publisher-14] [INFO] [1776471745.714009923] [robot_3.robot_state_publisher]: got segment robot_3/base_link
+[robot_state_publisher-14] [INFO] [1776471745.714019673] [robot_3.robot_state_publisher]: got segment robot_3/realsense_link
+[robot_state_publisher-14] [INFO] [1776471745.714027705] [robot_3.robot_state_publisher]: got segment robot_3/rocker_L_link
+[robot_state_publisher-14] [INFO] [1776471745.714035402] [robot_3.robot_state_publisher]: got segment robot_3/rocker_R_link
+[robot_state_publisher-14] [INFO] [1776471745.714042788] [robot_3.robot_state_publisher]: got segment robot_3/wheel_FL_link
+[robot_state_publisher-14] [INFO] [1776471745.714050137] [robot_3.robot_state_publisher]: got segment robot_3/wheel_FR_link
+[robot_state_publisher-14] [INFO] [1776471745.714057274] [robot_3.robot_state_publisher]: got segment robot_3/wheel_RL_link
+[robot_state_publisher-14] [INFO] [1776471745.714064262] [robot_3.robot_state_publisher]: got segment robot_3/wheel_RR_link
+[robot_state_publisher-8] [INFO] [1776471745.715566270] [robot_1.robot_state_publisher]: got segment robot_1/antenna_link
+[robot_state_publisher-8] [INFO] [1776471745.715676205] [robot_1.robot_state_publisher]: got segment robot_1/base_footprint
+[robot_state_publisher-8] [INFO] [1776471745.715692792] [robot_1.robot_state_publisher]: got segment robot_1/base_link
+[robot_state_publisher-8] [INFO] [1776471745.715704659] [robot_1.robot_state_publisher]: got segment robot_1/realsense_link
+[robot_state_publisher-8] [INFO] [1776471745.715714869] [robot_1.robot_state_publisher]: got segment robot_1/rocker_L_link
+[robot_state_publisher-8] [INFO] [1776471745.715724503] [robot_1.robot_state_publisher]: got segment robot_1/rocker_R_link
+[robot_state_publisher-8] [INFO] [1776471745.715733860] [robot_1.robot_state_publisher]: got segment robot_1/wheel_FL_link
+[robot_state_publisher-8] [INFO] [1776471745.715743520] [robot_1.robot_state_publisher]: got segment robot_1/wheel_FR_link
+[robot_state_publisher-8] [INFO] [1776471745.715752522] [robot_1.robot_state_publisher]: got segment robot_1/wheel_RL_link
+[robot_state_publisher-8] [INFO] [1776471745.715761972] [robot_1.robot_state_publisher]: got segment robot_1/wheel_RR_link
+[robot_state_publisher-17] [INFO] [1776471745.716171329] [robot_4.robot_state_publisher]: got segment robot_4/antenna_link
+[robot_state_publisher-17] [INFO] [1776471745.716226921] [robot_4.robot_state_publisher]: got segment robot_4/base_footprint
+[robot_state_publisher-17] [INFO] [1776471745.716231873] [robot_4.robot_state_publisher]: got segment robot_4/base_link
+[robot_state_publisher-17] [INFO] [1776471745.716235060] [robot_4.robot_state_publisher]: got segment robot_4/realsense_link
+[robot_state_publisher-17] [INFO] [1776471745.716237813] [robot_4.robot_state_publisher]: got segment robot_4/rocker_L_link
+[robot_state_publisher-17] [INFO] [1776471745.716240307] [robot_4.robot_state_publisher]: got segment robot_4/rocker_R_link
+[robot_state_publisher-17] [INFO] [1776471745.716242723] [robot_4.robot_state_publisher]: got segment robot_4/wheel_FL_link
+[robot_state_publisher-17] [INFO] [1776471745.716245207] [robot_4.robot_state_publisher]: got segment robot_4/wheel_FR_link
+[robot_state_publisher-17] [INFO] [1776471745.716247668] [robot_4.robot_state_publisher]: got segment robot_4/wheel_RL_link
+[robot_state_publisher-17] [INFO] [1776471745.716250205] [robot_4.robot_state_publisher]: got segment robot_4/wheel_RR_link
+[bump_counter-3] [INFO] [1776471745.964688049] [bump_counter]: [global] global_mode=True cooldown(robot)=0.80s cooldown(obs)=0.50s Logging to /home/ecem/ros2_ws/src/Leo_sct/results_exp/explore/vague/prompt_2/run_2/middle_circle/trial_3/run_20260418_022225/bumps_global_022225.csv
+[robot_supervisor-7] [INFO] [1776471746.042944976] [robot_0.robot_supervisor]: Loaded initial mission 'explore' from explicit YAML explore_sup_gpt_vague_2_run_2_94.yaml
+[robot_supervisor-13] [INFO] [1776471746.104916394] [robot_2.robot_supervisor]: Loaded initial mission 'explore' from explicit YAML explore_sup_gpt_vague_2_run_2_94.yaml
+[robot_supervisor-16] [INFO] [1776471746.108077039] [robot_3.robot_supervisor]: Loaded initial mission 'explore' from explicit YAML explore_sup_gpt_vague_2_run_2_94.yaml
+[robot_supervisor-19] [INFO] [1776471746.114983546] [robot_4.robot_supervisor]: Loaded initial mission 'explore' from explicit YAML explore_sup_gpt_vague_2_run_2_94.yaml
+[robot_supervisor-10] [INFO] [1776471746.129497183] [robot_1.robot_supervisor]: Loaded initial mission 'explore' from explicit YAML explore_sup_gpt_vague_2_run_2_94.yaml
+[robot_supervisor-7] [INFO] [1776471746.151646507] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[parameter_bridge-4] [INFO] [1776471746.151892533] [all_robots_bridge]: Passing message from ROS geometry_msgs/msg/Twist to Gazebo gz.msgs.Twist (showing msg only once per type)
+[robot_supervisor-13] [INFO] [1776471746.209304384] [robot_2.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-16] [INFO] [1776471746.213660087] [robot_3.robot_supervisor]: Selected controllable event: EV_random_walk
+[robot_supervisor-19] [INFO] [1776471746.218679508] [robot_4.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[create-6] [INFO] [1776471746.229659340] [robot_0.ros_gz_sim]: Waiting messages on topic [/robot_0/robot_description].
+[robot_supervisor-10] [INFO] [1776471746.233633345] [robot_1.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[create-6] [INFO] [1776471746.329283963] [robot_0.ros_gz_sim]: Requested creation of entity.
+[create-6] [INFO] [1776471746.329321130] [robot_0.ros_gz_sim]: OK creation of entity.
+[create-9] [INFO] [1776471746.329497654] [robot_1.ros_gz_sim]: Waiting messages on topic [/robot_1/robot_description].
+[create-18] [INFO] [1776471746.430184690] [robot_4.ros_gz_sim]: Waiting messages on topic [/robot_4/robot_description].
+[robot_supervisor-16] [INFO] [1776471746.513575257] [robot_3.robot_supervisor]: Selected controllable event: EV_random_walk
+[create-12] [INFO] [1776471746.530503081] [robot_2.ros_gz_sim]: Waiting messages on topic [/robot_2/robot_description].
+[INFO] [create-6]: process has finished cleanly [pid 486675]
+[create-9] [INFO] [1776471746.629919493] [robot_1.ros_gz_sim]: Requested creation of entity.
+[create-9] [INFO] [1776471746.629978428] [robot_1.ros_gz_sim]: OK creation of entity.
+[create-12] [INFO] [1776471746.630009563] [robot_2.ros_gz_sim]: Requested creation of entity.
+[create-12] [INFO] [1776471746.630056410] [robot_2.ros_gz_sim]: OK creation of entity.
+[create-18] [INFO] [1776471746.630009849] [robot_4.ros_gz_sim]: Requested creation of entity.
+[create-18] [INFO] [1776471746.630066257] [robot_4.ros_gz_sim]: OK creation of entity.
+[create-15] [INFO] [1776471746.631103824] [robot_3.ros_gz_sim]: Waiting messages on topic [/robot_3/robot_description].
+[create-15] [INFO] [1776471746.633582993] [robot_3.ros_gz_sim]: Requested creation of entity.
+[create-15] [INFO] [1776471746.633620275] [robot_3.ros_gz_sim]: OK creation of entity.
+[robot_supervisor-16] [INFO] [1776471746.813614363] [robot_3.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[INFO] [create-9]: process has finished cleanly [pid 486682]
+[INFO] [create-18]: process has finished cleanly [pid 486709]
+[INFO] [create-12]: process has finished cleanly [pid 486689]
+[INFO] [create-15]: process has finished cleanly [pid 486695]
+[bump_counter-3] [INFO] [1776471747.026705596] [bump_counter]: [global] subscribed: /world/random_world/model/robot_0/link/robot_0/base_footprint/sensor/contact_sensor/contact
+[bump_counter-3] [INFO] [1776471747.027600167] [bump_counter]: [global] subscribed: /world/random_world/model/robot_1/link/robot_1/base_footprint/sensor/contact_sensor/contact
+[bump_counter-3] [INFO] [1776471747.028856221] [bump_counter]: [global] subscribed: /world/random_world/model/robot_2/link/robot_2/base_footprint/sensor/contact_sensor/contact
+[bump_counter-3] [INFO] [1776471747.029573194] [bump_counter]: [global] subscribed: /world/random_world/model/robot_3/link/robot_3/base_footprint/sensor/contact_sensor/contact
+[bump_counter-3] [INFO] [1776471747.030313947] [bump_counter]: [global] subscribed: /world/random_world/model/robot_4/link/robot_4/base_footprint/sensor/contact_sensor/contact
+[INFO] [image_processor-21]: process started with pid [487060]
+[INFO] [image_processor-22]: process started with pid [487062]
+[INFO] [image_processor-23]: process started with pid [487064]
+[INFO] [image_processor-24]: process started with pid [487066]
+[INFO] [image_processor-25]: process started with pid [487068]
+[image_processor-22] [INFO] [1776471747.700561341] [robot_1.image_processor]: image_processor: depth='/robot_1/depth_camera/depth_image' aruco_runtime=disabled
+[image_processor-21] [INFO] [1776471747.700565220] [robot_0.image_processor]: image_processor: depth='/robot_0/depth_camera/depth_image' aruco_runtime=disabled
+[image_processor-24] [INFO] [1776471747.702621499] [robot_3.image_processor]: image_processor: depth='/robot_3/depth_camera/depth_image' aruco_runtime=disabled
+[image_processor-23] [INFO] [1776471747.703291623] [robot_2.image_processor]: image_processor: depth='/robot_2/depth_camera/depth_image' aruco_runtime=disabled
+[image_processor-25] [INFO] [1776471747.710252510] [robot_4.image_processor]: image_processor: depth='/robot_4/depth_camera/depth_image' aruco_runtime=disabled
+[robot_supervisor-7] [INFO] [1776471748.051810485] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471748.052228859] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-19] [INFO] [1776471748.118536138] [robot_4.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-19] [INFO] [1776471748.118749645] [robot_4.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-10] [INFO] [1776471748.133731459] [robot_1.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-10] [INFO] [1776471748.134183823] [robot_1.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-7] [INFO] [1776471748.151745645] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471748.152111221] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-13] [INFO] [1776471748.209312851] [robot_2.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-13] [INFO] [1776471748.209682103] [robot_2.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-19] [INFO] [1776471748.218759667] [robot_4.robot_supervisor]: Selected controllable event: EV_random_walk
+[robot_supervisor-10] [INFO] [1776471748.233627950] [robot_1.robot_supervisor]: Selected controllable event: EV_random_walk
+[robot_supervisor-7] [INFO] [1776471748.251725538] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471748.252086823] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-13] [INFO] [1776471748.309288179] [robot_2.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-13] [INFO] [1776471748.309661485] [robot_2.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-7] [INFO] [1776471748.351754033] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-13] [INFO] [1776471748.409339245] [robot_2.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-19] [INFO] [1776471748.518777204] [robot_4.robot_supervisor]: Selected controllable event: EV_random_walk
+[robot_supervisor-10] [INFO] [1776471748.533685504] [robot_1.robot_supervisor]: Selected controllable event: EV_random_walk
+[robot_supervisor-16] [INFO] [1776471748.813547224] [robot_3.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-16] [INFO] [1776471748.813916265] [robot_3.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-19] [INFO] [1776471748.818745575] [robot_4.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-10] [INFO] [1776471748.833614573] [robot_1.robot_supervisor]: Selected controllable event: EV_move_forward
+[robot_supervisor-16] [INFO] [1776471748.913573981] [robot_3.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-16] [INFO] [1776471748.913995340] [robot_3.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-16] [INFO] [1776471749.013536966] [robot_3.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471751.051740567] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471751.051983628] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-13] [INFO] [1776471751.108987869] [robot_2.robot_supervisor]: Selected controllable event: EV_random_walk
+[robot_supervisor-7] [INFO] [1776471751.152268042] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471751.152630162] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[image_processor-23] [INFO] [1776471751.234717757] [robot_2.image_processor]: Zone=CLEAR  left[p=3.251 near=0 v=7052]  front[p=3.549 near=0 v=12271]  right[p=1.834 near=0 v=7740]
+[image_processor-25] [INFO] [1776471751.247945771] [robot_4.image_processor]: Zone=CLEAR  left[p=1.033 near=0 v=7197]  front[p=2.599 near=0 v=12688]  right[p=2.690 near=0 v=7731]
+[robot_supervisor-7] [INFO] [1776471751.251798426] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-16] [INFO] [1776471751.313506370] [robot_3.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-16] [INFO] [1776471751.313732417] [robot_3.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-19] [INFO] [1776471751.318688667] [robot_4.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[image_processor-21] [INFO] [1776471751.318798420] [robot_0.image_processor]: Zone=CLEAR  left[p=3.548 near=0 v=7470]  front[p=3.256 near=0 v=12040]  right[p=0.999 near=0 v=7740]
+[robot_supervisor-19] [INFO] [1776471751.319065479] [robot_4.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[image_processor-22] [INFO] [1776471751.327637958] [robot_1.image_processor]: Zone=CLEAR  left[p=3.007 near=0 v=7650]  front[p=3.426 near=0 v=13244]  right[p=2.532 near=0 v=7517]
+[image_processor-24] [INFO] [1776471751.359667758] [robot_3.image_processor]: Zone=CLEAR  left[p=0.981 near=4 v=6570]  front[p=1.062 near=0 v=11412]  right[p=0.762 near=2632 v=7740]
+[robot_supervisor-13] [INFO] [1776471751.409188065] [robot_2.robot_supervisor]: Selected controllable event: EV_random_walk
+[robot_supervisor-16] [INFO] [1776471751.413420052] [robot_3.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-16] [INFO] [1776471751.413733362] [robot_3.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-19] [INFO] [1776471751.418480671] [robot_4.robot_supervisor]: Selected controllable event: EV_move_forward
+[robot_supervisor-16] [INFO] [1776471751.513222038] [robot_3.robot_supervisor]: Selected controllable event: EV_move_forward
+[robot_supervisor-13] [INFO] [1776471751.709184293] [robot_2.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471753.451910907] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471753.452215997] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-7] [INFO] [1776471753.551514965] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471753.551703555] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-7] [INFO] [1776471753.651574716] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[image_processor-21] [INFO] [1776471753.721051601] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471753.731926458] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471753.748319786] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471753.760148754] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471753.771043951] [robot_3.image_processor]: Zone=CLEAR
+[robot_supervisor-13] [INFO] [1776471753.809167254] [robot_2.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-13] [INFO] [1776471753.809537408] [robot_2.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-13] [INFO] [1776471753.909142323] [robot_2.robot_supervisor]: Selected controllable event: EV_move_forward
+[robot_supervisor-7] [INFO] [1776471755.852479748] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471755.852870497] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-7] [INFO] [1776471755.951990492] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471755.952370294] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-7] [INFO] [1776471756.051615472] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[image_processor-21] [INFO] [1776471756.217221370] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471756.225624020] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471756.242487216] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471756.253712192] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471756.265073581] [robot_3.image_processor]: Zone=CLEAR
+[robot_supervisor-7] [INFO] [1776471758.251654612] [robot_0.robot_supervisor]: Selected controllable event: EV_random_walk
+[robot_supervisor-7] [INFO] [1776471758.551626595] [robot_0.robot_supervisor]: Selected controllable event: EV_random_walk
+[image_processor-21] [INFO] [1776471758.714736972] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471758.724097908] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471758.743357788] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471758.753307077] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471758.766015985] [robot_3.image_processor]: Zone=CLEAR
+[robot_supervisor-7] [INFO] [1776471758.851686535] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471761.052002296] [robot_0.robot_supervisor]: Selected controllable event: EV_rotate_counterclockwise
+[robot_supervisor-7] [INFO] [1776471761.052388229] [robot_0.robot_supervisor]: rotate_90 blocked by recent completion; stopping this tick
+[robot_supervisor-7] [INFO] [1776471761.151890758] [robot_0.robot_supervisor]: Selected controllable event: EV_move_forward
+[image_processor-21] [INFO] [1776471761.216474057] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471761.241470684] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471761.252994515] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471761.264743182] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471761.325954915] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471763.717000472] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471763.725243645] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471763.742763106] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471763.753359144] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471763.766123006] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471766.216840455] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471766.241807020] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471766.253430873] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471766.264636222] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471766.324975214] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471768.716212540] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471768.725226723] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471768.743157022] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471768.754431422] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471768.765584306] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471771.218534703] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471771.226450241] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471771.243686812] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471771.256294066] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471771.270920508] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471773.719169055] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471773.728712881] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471773.746112316] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471773.760511538] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471773.771659730] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471776.217496864] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471776.225736278] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471776.242026184] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471776.253861462] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471776.265312130] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471778.716869074] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471778.724585818] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471778.742467654] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471778.753954458] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471778.767100629] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471781.215712017] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471781.224391052] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471781.243419684] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471781.253224259] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471781.268320467] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471783.716740959] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471783.724191414] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471783.742760086] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471783.753776948] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471783.764137218] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471786.217118684] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471786.224012746] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471786.240953275] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471786.252982070] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471786.366816075] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471788.716912175] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471788.727006676] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471788.745925252] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471788.759534958] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471788.771019989] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471791.217512032] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471791.225888530] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471791.243177549] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471791.265014531] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471791.355186501] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471793.720747780] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471793.728011552] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471793.746173714] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471793.759365931] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471793.873551159] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471796.217431244] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471796.225938529] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471796.241823372] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471796.253875275] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471796.265565329] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471798.716286795] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471798.725053022] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471798.742946996] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471798.755055838] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471798.766426201] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471801.217662939] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471801.225132834] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471801.242381035] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471801.255035433] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471801.266288093] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471803.716020041] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471803.726190711] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471803.744114953] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471803.757263663] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471803.767834861] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471806.216757808] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471806.225266143] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471806.252266226] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471806.263307505] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471806.342940982] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471808.717251031] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471808.725003837] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471808.742980492] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471808.764083824] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471808.855465103] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471811.217035878] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471811.225125700] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471811.243302952] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471811.255808978] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471811.266346453] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471813.717827773] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471813.725781514] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471813.744300891] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471813.763911255] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471813.775502015] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471816.216893489] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471816.224486759] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471816.243004271] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471816.253771339] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471816.265151056] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471818.716675288] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471818.742588216] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471818.753861240] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471818.765508900] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471818.826603071] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471821.215034094] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471821.224515923] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471821.239728118] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471821.254190217] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471821.262738596] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471823.716091945] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471823.724999216] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471823.753731761] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471823.846098038] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471823.866705344] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471826.217739622] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471826.226294079] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471826.243596153] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471826.254257486] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471826.265996235] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471828.718810322] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471828.726163668] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471828.744539060] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471828.756198268] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471828.766982799] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471831.217240658] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471831.225143376] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471831.243341909] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471831.254210674] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471831.264565044] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471833.715881770] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471833.723768222] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471833.740632624] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471833.751687759] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471833.763430222] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471836.221388244] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471836.246327852] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471836.257998331] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471836.268863036] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471836.332252366] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471838.716381027] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471838.754344485] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471838.765059750] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471838.825559247] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471838.841656741] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471841.218237631] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471841.226047554] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471841.242933958] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471841.255237183] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471841.265330895] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471843.716455944] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471843.725169879] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471843.742918806] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471843.753530190] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471843.765083782] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471846.214667219] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471846.226739341] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471846.242305048] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471846.254068876] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471846.266341444] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471848.715310197] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471848.725596416] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471848.742881923] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471848.753621981] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471848.764940111] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471851.218483376] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471851.226438552] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471851.243860868] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471851.254958117] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471851.266387690] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471853.718187137] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471853.730767105] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471853.749263811] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471853.760050540] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471853.771672089] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471856.217220035] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471856.225129605] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471856.242326687] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471856.255481548] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471856.266526629] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471858.716969251] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471858.723896671] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471858.742390247] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471858.753909517] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471858.866323579] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471861.216735555] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471861.224959034] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471861.242138893] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471861.254450837] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471861.264583761] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471863.714956282] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471863.724312826] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471863.741371476] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471863.753957585] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471863.764645130] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471866.217473867] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471866.226174446] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471866.243344800] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471866.254591950] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471866.266934775] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471868.716014792] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471868.724350282] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471868.742790690] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471868.752985130] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471868.765058231] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471871.241547334] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471871.254806112] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471871.266022267] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471871.317601646] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471871.323600375] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471873.716362817] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471873.725375051] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471873.743496372] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471873.755528855] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471873.768018423] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471876.216226942] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471876.225560785] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471876.241630047] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471876.265697661] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471876.356736059] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471878.716075207] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471878.727004481] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471878.753424165] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471878.765024464] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471878.843639983] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471881.219085531] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471881.227165892] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471881.243665551] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471881.255203262] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471881.266455247] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471883.725081361] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471883.742090302] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471883.753858144] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471883.816970472] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471883.866165328] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471886.220169091] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471886.229833136] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471886.247287735] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471886.258650790] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471886.269766232] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471888.716251761] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471888.727050029] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471888.744298232] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471888.756388905] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471888.769245709] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471891.216270568] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471891.225075617] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471891.242772616] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471891.255440828] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471891.265620985] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471893.718155914] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471893.726861091] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471893.754727370] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471893.766171531] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471893.844237353] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471896.215772529] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471896.243436744] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471896.255721784] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471896.327190677] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471896.369594248] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471898.718814913] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471898.727487918] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471898.743054163] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471898.753597278] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471898.765358920] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471901.219346678] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471901.230184566] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471901.248610773] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471901.271189539] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471901.360463217] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471903.715934635] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471903.725703860] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471903.742243960] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471903.753999548] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471903.769650485] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471906.217265419] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471906.228468452] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471906.244787071] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471906.256903535] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471906.267148633] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471908.725818792] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471908.741857272] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471908.753748098] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471908.768580390] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471908.817701324] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471911.217101635] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471911.226196746] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471911.242739891] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471911.253968018] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471911.265201893] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471913.716593877] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471913.724993757] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471913.742757271] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471913.754642234] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471913.767261308] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471916.216678434] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471916.225013289] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471916.344911776] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471916.356190341] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471916.368685287] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471918.725878898] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471918.755060554] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471918.765553102] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471918.818671700] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471918.843265430] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471921.217959902] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471921.241120073] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471921.264485678] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471921.325606504] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471921.353326924] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471923.720906568] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471923.729633680] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471923.756470680] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471923.847997345] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471923.868109127] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471926.218125792] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471926.225182346] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471926.242766339] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471926.255377721] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471926.367170636] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471928.717785758] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471928.724401489] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471928.741624659] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471928.754361721] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471928.764251388] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471931.216318981] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471931.241421202] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471931.253174759] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471931.265562989] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471931.325460104] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471933.718491098] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471933.727319345] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471933.744179756] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471933.755570421] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471933.767090392] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471936.217785171] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471936.224653684] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471936.242904157] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471936.254430779] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471936.265746658] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471938.718352569] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471938.728264687] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471938.744054045] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471938.756532986] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471938.768020570] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471941.216292381] [robot_0.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471941.241395183] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471941.255244981] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471941.265737632] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471941.325280592] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-22] [INFO] [1776471943.725876527] [robot_1.image_processor]: Zone=CLEAR
+[image_processor-23] [INFO] [1776471943.742485194] [robot_2.image_processor]: Zone=CLEAR
+[image_processor-25] [INFO] [1776471943.754576151] [robot_4.image_processor]: Zone=CLEAR
+[image_processor-24] [INFO] [1776471943.765989674] [robot_3.image_processor]: Zone=CLEAR
+[image_processor-21] [INFO] [1776471943.817340518] [robot_0.image_processor]: Zone=CLEAR
+[INFO] [image_processor-25]: sending signal 'SIGINT' to process[image_processor-25]
+[ERROR] [ign gazebo-1]: process has died [pid 486664, exit code -15, cmd 'ruby /usr/bin/ign gazebo /home/ecem/ros2_ws/install/swarm_basics/share/swarm_basics/worlds/random_world.sdf -s -r --force-version 6'].
+[ERROR] [parameter_bridge-4]: process has died [pid 486671, exit code -15, cmd '/opt/ros/humble/lib/ros_ign_bridge/parameter_bridge /robot_0/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist /robot_0/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry /robot_0/depth_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image /world/random_world/model/robot_0/link/robot_0/base_footprint/sensor/contact_sensor/contact@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts /robot_1/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist /robot_1/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry /robot_1/depth_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image /world/random_world/model/robot_1/link/robot_1/base_footprint/sensor/contact_sensor/contact@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts /robot_2/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist /robot_2/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry /robot_2/depth_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image /world/random_world/model/robot_2/link/robot_2/base_footprint/sensor/contact_sensor/contact@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts /robot_3/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist /robot_3/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry /robot_3/depth_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image /world/random_world/model/robot_3/link/robot_3/base_footprint/sensor/contact_sensor/contact@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts /robot_4/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist /robot_4/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry /robot_4/depth_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image /world/random_world/model/robot_4/link/robot_4/base_footprint/sensor/contact_sensor/contact@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts /world/random_world/dynamic_pose/info@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V --ros-args -r __node:=all_robots_bridge --params-file /tmp/launch_params_1ie5dxu5'].
+[INFO] [parameter_bridge-20]: process has finished cleanly [pid 486714]
+[INFO] [image_processor-24]: sending signal 'SIGINT' to process[image_processor-24]
+[INFO] [bash-26]: process started with pid [487230]
+[INFO] [image_processor-23]: sending signal 'SIGINT' to process[image_processor-23]
+[INFO] [image_processor-22]: sending signal 'SIGINT' to process[image_processor-22]
+[INFO] [image_processor-21]: sending signal 'SIGINT' to process[image_processor-21]
+[INFO] [robot_supervisor-19]: sending signal 'SIGINT' to process[robot_supervisor-19]
+[INFO] [robot_state_publisher-17]: sending signal 'SIGINT' to process[robot_state_publisher-17]
+[INFO] [robot_supervisor-16]: sending signal 'SIGINT' to process[robot_supervisor-16]
+[INFO] [robot_state_publisher-14]: sending signal 'SIGINT' to process[robot_state_publisher-14]
+[INFO] [robot_supervisor-13]: sending signal 'SIGINT' to process[robot_supervisor-13]
+[INFO] [robot_state_publisher-11]: sending signal 'SIGINT' to process[robot_state_publisher-11]
+[INFO] [robot_supervisor-10]: sending signal 'SIGINT' to process[robot_supervisor-10]
+[INFO] [robot_state_publisher-8]: sending signal 'SIGINT' to process[robot_state_publisher-8]
+[INFO] [robot_supervisor-7]: sending signal 'SIGINT' to process[robot_supervisor-7]
+[ERROR] [bash-26]: process has died [pid 487230, exit code -15, cmd 'bash -lc pkill -f parameter_bridge || true'].
+[INFO] [robot_state_publisher-5]: sending signal 'SIGINT' to process[robot_state_publisher-5]
+[INFO] [bump_counter-3]: sending signal 'SIGINT' to process[bump_counter-3]
+[INFO] [coverage_counter-2]: sending signal 'SIGINT' to process[coverage_counter-2]
+[parameter_bridge-20] [INFO] [1776471945.705455725] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-4] [INFO] [1776471945.705475741] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [launch]: process[ign gazebo-1] was required: shutting down launched system
+[image_processor-25] [INFO] [1776471946.375844449] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[image_processor-24] [INFO] [1776471946.380901219] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[image_processor-23] [INFO] [1776471946.384124725] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[image_processor-22] [INFO] [1776471946.386361754] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[image_processor-21] [INFO] [1776471946.388498542] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_supervisor-19] Traceback (most recent call last):
+[robot_supervisor-19]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor", line 33, in <module>
+[robot_supervisor-19]     sys.exit(load_entry_point('swarm-basics==0.0.0', 'console_scripts', 'robot_supervisor')())
+[robot_supervisor-19]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/robot_supervisor.py", line 867, in main
+[robot_supervisor-19]     rclpy.spin(node)
+[robot_supervisor-19]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[robot_supervisor-19]     executor.spin_once()
+[robot_supervisor-19]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 773, in spin_once
+[robot_supervisor-19]     self._spin_once_impl(timeout_sec)
+[robot_supervisor-19]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 762, in _spin_once_impl
+[robot_supervisor-19]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[robot_supervisor-19]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 745, in wait_for_ready_callbacks
+[robot_supervisor-19]     return next(self._cb_iter)
+[robot_supervisor-19]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 642, in _wait_for_ready_callbacks
+[robot_supervisor-19]     wait_set.wait(timeout_nsec)
+[robot_supervisor-19] KeyboardInterrupt
+[robot_state_publisher-17] [INFO] [1776471946.395164536] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_supervisor-16] Traceback (most recent call last):
+[robot_supervisor-16]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor", line 33, in <module>
+[robot_supervisor-16]     sys.exit(load_entry_point('swarm-basics==0.0.0', 'console_scripts', 'robot_supervisor')())
+[robot_supervisor-16]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/robot_supervisor.py", line 867, in main
+[robot_supervisor-16]     rclpy.spin(node)
+[robot_supervisor-16]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[robot_supervisor-16]     executor.spin_once()
+[robot_supervisor-16]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 773, in spin_once
+[robot_supervisor-16]     self._spin_once_impl(timeout_sec)
+[robot_supervisor-16]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 762, in _spin_once_impl
+[robot_supervisor-16]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[robot_supervisor-16]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 745, in wait_for_ready_callbacks
+[robot_supervisor-16]     return next(self._cb_iter)
+[robot_supervisor-16]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 642, in _wait_for_ready_callbacks
+[robot_supervisor-16]     wait_set.wait(timeout_nsec)
+[robot_supervisor-16] KeyboardInterrupt
+[robot_state_publisher-14] [INFO] [1776471946.399672695] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_supervisor-13] Traceback (most recent call last):
+[robot_supervisor-13]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor", line 33, in <module>
+[robot_supervisor-13]     sys.exit(load_entry_point('swarm-basics==0.0.0', 'console_scripts', 'robot_supervisor')())
+[robot_supervisor-13]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/robot_supervisor.py", line 867, in main
+[robot_supervisor-13]     rclpy.spin(node)
+[robot_supervisor-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[robot_supervisor-13]     executor.spin_once()
+[robot_supervisor-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 773, in spin_once
+[robot_supervisor-13]     self._spin_once_impl(timeout_sec)
+[robot_supervisor-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 762, in _spin_once_impl
+[robot_supervisor-13]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[robot_supervisor-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 745, in wait_for_ready_callbacks
+[robot_supervisor-13]     return next(self._cb_iter)
+[robot_supervisor-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 642, in _wait_for_ready_callbacks
+[robot_supervisor-13]     wait_set.wait(timeout_nsec)
+[robot_supervisor-13] KeyboardInterrupt
+[robot_state_publisher-11] [INFO] [1776471946.404602211] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_supervisor-10] Traceback (most recent call last):
+[robot_supervisor-10]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor", line 33, in <module>
+[robot_supervisor-10]     sys.exit(load_entry_point('swarm-basics==0.0.0', 'console_scripts', 'robot_supervisor')())
+[robot_supervisor-10]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/robot_supervisor.py", line 867, in main
+[robot_supervisor-10]     rclpy.spin(node)
+[robot_supervisor-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[robot_supervisor-10]     executor.spin_once()
+[robot_supervisor-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 773, in spin_once
+[robot_supervisor-10]     self._spin_once_impl(timeout_sec)
+[robot_supervisor-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 762, in _spin_once_impl
+[robot_supervisor-10]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[robot_supervisor-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 745, in wait_for_ready_callbacks
+[robot_supervisor-10]     return next(self._cb_iter)
+[robot_supervisor-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 642, in _wait_for_ready_callbacks
+[robot_supervisor-10]     wait_set.wait(timeout_nsec)
+[robot_supervisor-10] KeyboardInterrupt
+[robot_state_publisher-8] [INFO] [1776471946.410908385] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_supervisor-7] Traceback (most recent call last):
+[robot_supervisor-7]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor", line 33, in <module>
+[robot_supervisor-7]     sys.exit(load_entry_point('swarm-basics==0.0.0', 'console_scripts', 'robot_supervisor')())
+[robot_supervisor-7]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/robot_supervisor.py", line 867, in main
+[robot_supervisor-7]     rclpy.spin(node)
+[robot_supervisor-7]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[robot_supervisor-7]     executor.spin_once()
+[robot_supervisor-7]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 773, in spin_once
+[robot_supervisor-7]     self._spin_once_impl(timeout_sec)
+[robot_supervisor-7]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 762, in _spin_once_impl
+[robot_supervisor-7]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[robot_supervisor-7]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 745, in wait_for_ready_callbacks
+[robot_supervisor-7]     return next(self._cb_iter)
+[robot_supervisor-7]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 642, in _wait_for_ready_callbacks
+[robot_supervisor-7]     wait_set.wait(timeout_nsec)
+[robot_supervisor-7] KeyboardInterrupt
+[robot_state_publisher-5] [INFO] [1776471946.418575634] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ERROR] [launch]: Caught exception in launch (see debug for traceback): ExecuteLocal action 'bash-27': executed more than once: <launch.actions.execute_process.ExecuteProcess object at 0x7a400a3f4850>
+[INFO] [image_processor-25]: process has finished cleanly [pid 487068]
+[INFO] [image_processor-24]: process has finished cleanly [pid 487066]
+[INFO] [image_processor-21]: process has finished cleanly [pid 487060]
+[INFO] [image_processor-23]: process has finished cleanly [pid 487064]
+[INFO] [image_processor-22]: process has finished cleanly [pid 487062]
+[INFO] [robot_state_publisher-17]: process has finished cleanly [pid 486699]
+[INFO] [robot_state_publisher-14]: process has finished cleanly [pid 486693]
+[INFO] [robot_state_publisher-11]: process has finished cleanly [pid 486687]
+[INFO] [robot_state_publisher-8]: process has finished cleanly [pid 486679]
+[INFO] [robot_state_publisher-5]: process has finished cleanly [pid 486673]
+[coverage_counter-2] Traceback (most recent call last):
+[coverage_counter-2]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/coverage_counter.py", line 418, in main
+[coverage_counter-2]     rclpy.spin(node)
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[coverage_counter-2]     executor.spin_once()
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 773, in spin_once
+[coverage_counter-2]     self._spin_once_impl(timeout_sec)
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 768, in _spin_once_impl
+[coverage_counter-2]     handler()
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 254, in __call__
+[coverage_counter-2]     self._handler.send(None)
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 463, in handler
+[coverage_counter-2]     await call_coroutine(entity, arg)
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 371, in _execute_timer
+[coverage_counter-2]     await await_or_execute(tmr.callback)
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 107, in await_or_execute
+[coverage_counter-2]     return callback(*args)
+[coverage_counter-2]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/coverage_counter.py", line 152, in _on_timeout_timer
+[coverage_counter-2]     self.shutdown_and_save()
+[coverage_counter-2]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/coverage_counter.py", line 174, in shutdown_and_save
+[coverage_counter-2]     rclpy.shutdown()
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[coverage_counter-2]     _shutdown(context=context)
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[coverage_counter-2]     return context.shutdown()
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 103, in shutdown
+[coverage_counter-2]     self._call_on_shutdown_callbacks()
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 92, in _call_on_shutdown_callbacks
+[coverage_counter-2]     callback = weak_method()
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 111, in reset_executor
+[coverage_counter-2]     __executor.shutdown()
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 227, in shutdown
+[coverage_counter-2]     if not self._work_tracker.wait(timeout_sec):
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 94, in wait
+[coverage_counter-2]     if not self._work_condition.wait_for(
+[coverage_counter-2]   File "/usr/lib/python3.10/threading.py", line 355, in wait_for
+[coverage_counter-2]     self.wait(waittime)
+[coverage_counter-2]   File "/usr/lib/python3.10/threading.py", line 320, in wait
+[coverage_counter-2]     waiter.acquire()
+[coverage_counter-2] KeyboardInterrupt
+[coverage_counter-2] 
+[coverage_counter-2] During handling of the above exception, another exception occurred:
+[coverage_counter-2] 
+[coverage_counter-2] Traceback (most recent call last):
+[coverage_counter-2]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/coverage_counter", line 33, in <module>
+[coverage_counter-2]     sys.exit(load_entry_point('swarm-basics==0.0.0', 'console_scripts', 'coverage_counter')())
+[coverage_counter-2]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/coverage_counter.py", line 421, in main
+[coverage_counter-2]     node.shutdown_and_save()
+[coverage_counter-2]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/coverage_counter.py", line 174, in shutdown_and_save
+[coverage_counter-2]     rclpy.shutdown()
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[coverage_counter-2]     _shutdown(context=context)
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[coverage_counter-2]     return context.shutdown()
+[coverage_counter-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 100, in shutdown
+[coverage_counter-2]     raise RuntimeError('Context must be initialized before it can be shutdown')
+[coverage_counter-2] RuntimeError: Context must be initialized before it can be shutdown
+[bump_counter-3] Traceback (most recent call last):
+[bump_counter-3]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/bump_counter", line 33, in <module>
+[bump_counter-3]     sys.exit(load_entry_point('swarm-basics==0.0.0', 'console_scripts', 'bump_counter')())
+[bump_counter-3]   File "/home/ecem/ros2_ws/install/swarm_basics/lib/python3.10/site-packages/swarm_basics/bump_counter.py", line 384, in main
+[bump_counter-3]     rclpy.shutdown()
+[bump_counter-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[bump_counter-3]     _shutdown(context=context)
+[bump_counter-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[bump_counter-3]     return context.shutdown()
+[bump_counter-3]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[bump_counter-3]     self.__context.shutdown()
+[bump_counter-3] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[ERROR] [coverage_counter-2]: process has died [pid 486666, exit code 1, cmd '/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/coverage_counter --ros-args -r __node:=coverage_counter --params-file /tmp/launch_params_yzh4qcmp --params-file /tmp/launch_params_133ijjuc --params-file /tmp/launch_params_d6b5y0ep --params-file /tmp/launch_params_9nawnepw --params-file /tmp/launch_params_hb_j94mn --params-file /tmp/launch_params_cx9i1pcm'].
+[ERROR] [bump_counter-3]: process has died [pid 486669, exit code 1, cmd '/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/bump_counter --ros-args -r __node:=bump_counter --params-file /tmp/launch_params_ark9my6e --params-file /tmp/launch_params_croel80j --params-file /tmp/launch_params_f18i1qok'].
+[ERROR] [robot_supervisor-19]: process has died [pid 486712, exit code -2, cmd '/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor --ros-args -r __node:=robot_supervisor -r __ns:=/robot_4 --params-file /tmp/launch_params_lcnxivjb --params-file /tmp/launch_params_fg8pem0h --params-file /tmp/launch_params_et90mcrk --params-file /tmp/launch_params_unkvis15'].
+[ERROR] [robot_supervisor-16]: process has died [pid 486697, exit code -2, cmd '/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor --ros-args -r __node:=robot_supervisor -r __ns:=/robot_3 --params-file /tmp/launch_params_az810y7p --params-file /tmp/launch_params_4y2pzdks --params-file /tmp/launch_params_ck3q5a73 --params-file /tmp/launch_params_57t0tgju'].
+[ERROR] [robot_supervisor-13]: process has died [pid 486691, exit code -2, cmd '/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor --ros-args -r __node:=robot_supervisor -r __ns:=/robot_2 --params-file /tmp/launch_params_guk0wuef --params-file /tmp/launch_params_zm6fvsqp --params-file /tmp/launch_params_dn9wc19u --params-file /tmp/launch_params_zruf1l9q'].
+[ERROR] [robot_supervisor-10]: process has died [pid 486684, exit code -2, cmd '/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor --ros-args -r __node:=robot_supervisor -r __ns:=/robot_1 --params-file /tmp/launch_params_cvmyjks4 --params-file /tmp/launch_params_f21zqsxd --params-file /tmp/launch_params__z5lrnwh --params-file /tmp/launch_params_cd11e2k9'].
+[ERROR] [robot_supervisor-7]: process has died [pid 486677, exit code -2, cmd '/home/ecem/ros2_ws/install/swarm_basics/lib/swarm_basics/robot_supervisor --ros-args -r __node:=robot_supervisor -r __ns:=/robot_0 --params-file /tmp/launch_params_8lseurgk --params-file /tmp/launch_params_hwotz1q3 --params-file /tmp/launch_params_njk8ia9h --params-file /tmp/launch_params_on2gu8y4'].

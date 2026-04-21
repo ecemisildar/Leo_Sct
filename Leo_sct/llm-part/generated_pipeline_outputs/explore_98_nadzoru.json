@@ -1,0 +1,111 @@
+{
+  "rationale": "The plant models the robot's motion and perception interface, exposing all controllable and uncontrollable events. The specification encodes a safe, coverage-oriented supervisor: in clear/search states, random_walk is preferred for exploration; move_forward is used for short progress; upon obstacles, recovery uses short directed turns (CW for left, CCW for right, CW for front by default), and only escalates to full_rotate after repeated front blocks. Recovery states are one-shot and return to exploration as soon as path_clear is observed. All obstacle events preempt motion, and no state enables both rotate directions or forward/turn simultaneously. The design avoids oscillation and ensures steady progress.",
+  "strategy": [
+    "Separate plant for motion/perception interface and specification for safe exploration policy",
+    "Bias toward random_walk in clear/search, use move_forward for short progress, and use minimal, directed turn recovery for obstacles"
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion and perception interface: exposes all controllable and uncontrollable events for the supervisor to coordinate.",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")",
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Safe, coverage-oriented exploration supervisor: enables random_walk in clear/search, move_forward for short progress, and uses minimal, directed turn recovery for obstacles. Ensures no forward/turn in obstacle states, no oscillation, and rapid return to exploration.",
+      "states": [
+        "clear_search",
+        "forward_commit",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "front_full_rotate"
+      ],
+      "initial_states": [
+        "clear_search"
+      ],
+      "marked_states": [
+        "clear_search"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_search\", \"random_walk\", \"forward_commit\")",
+        "(\"clear_search\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear_search\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear_search\", \"obstacle_right\", \"obs_right\")",
+        "(\"clear_search\", \"path_clear\", \"clear_search\")",
+        "(\"forward_commit\", \"move_forward\", \"clear_search\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"obs_front\", \"rotate_clockwise\", \"clear_search\")",
+        "(\"obs_front\", \"obstacle_front\", \"front_full_rotate\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"path_clear\", \"clear_search\")",
+        "(\"front_full_rotate\", \"full_rotate\", \"clear_search\")",
+        "(\"front_full_rotate\", \"obstacle_front\", \"front_full_rotate\")",
+        "(\"front_full_rotate\", \"obstacle_left\", \"obs_left\")",
+        "(\"front_full_rotate\", \"obstacle_right\", \"obs_right\")",
+        "(\"front_full_rotate\", \"path_clear\", \"clear_search\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"clear_search\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_left\", \"path_clear\", \"clear_search\")",
+        "(\"obs_right\", \"rotate_counterclockwise\", \"clear_search\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"path_clear\", \"clear_search\")"
+      ]
+    }
+  ]
+}

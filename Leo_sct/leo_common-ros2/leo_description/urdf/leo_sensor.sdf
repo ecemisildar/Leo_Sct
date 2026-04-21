@@ -458,7 +458,7 @@
   <gazebo reference="realsense_link">
     <sensor name="depth_camera" type="rgbd_camera">
       <always_on>1</always_on>
-      <update_rate>5</update_rate>
+      <update_rate>3</update_rate>
       <camera name="depth_camera">
         <horizontal_fov>1.51844</horizontal_fov>
         <!--87 degrees-->
@@ -542,7 +542,7 @@
   <gazebo reference="base_footprint">
     <sensor name="contact_sensor" type="contact">
       <always_on>true</always_on>
-      <update_rate>100</update_rate>
+      <update_rate>20</update_rate>
       <contact>
         <collision>base_footprint_fixed_joint_lump__base_collision_collision</collision>
       </contact>
@@ -554,7 +554,7 @@
     <!-- Contact sensor -->
     <sensor name="front_bumper_contact" type="contact">
       <always_on>true</always_on>
-      <update_rate>100</update_rate>
+      <update_rate>20</update_rate>
       <contact>
         <collision>front_bumper_collision</collision>
       </contact>

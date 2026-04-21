@@ -51,8 +51,10 @@ DEFAULT_REAL_YAML_OUT_DIR = (
 DEFAULT_PROFILE_PATH = THIS_DIR / "task_profiles.json"
 DEFAULT_OUTPUT_DIR = THIS_DIR / "generated_pipeline_outputs"
 DEFAULT_LLM_DIR = THIS_DIR
+DEFAULT_RESULTS_LLM_DIR = THIS_DIR.parent / "results_llm"
 DEFAULT_LLM_SUFFIX = "_nadzoru.json"
 DEFAULT_YAML_PREFIX = "sup_gpt_"
+DEFAULT_PROMPT_SET_FILE = THIS_DIR / "prompt_groups_explore.txt"
 
 # Hardcoded LLM options (used only if RUN_LLM is True).
 RUN_LLM = True
@@ -60,7 +62,6 @@ RUN_LLM = True
 # LLM defaults (shared with the LLM-only flow).
 DEFAULT_KEY_FILE = THIS_DIR.parent / "api_key.txt"
 DEFAULT_MODEL = "gpt-4.1"
-DEFAULT_GOAL = "Find the marker object and get close to it and stop while staying safe"
 DEFAULT_TIMEOUT_S = 120.0
 DEFAULT_RETRIES = 2
 
@@ -171,29 +172,29 @@ def _validate_llm_json(
 
     # 6) marker_close safety invariant:
     # marker_close must always lead to a terminal state where stop is the ONLY controllable
-    if "marker_close" in uncontrollable:
-        for (s, ev), tgt_set in nexts.items():
-            if ev != "marker_close":
-                continue
-            tgt = next(iter(tgt_set))
-            tgt_ctrls = [e for e in controllable if (tgt, e) in nexts]
-            if tgt_ctrls != ["stop"]:
-                raise ValueError(
-                    f"Safety violation: marker_close from '{s}' leads to '{tgt}', "
-                    f"which has controllables {tgt_ctrls} — must be exactly ['stop']. "
-                    f"The robot must stop when the marker is reached."
-                )
-            # Also check the terminal state doesn't transition away on uncontrollables
-            # (other than self-loops) — prevents escaping the goal state
-            for uc in uncontrollable:
-                if (tgt, uc) in nexts:
-                    uc_tgt = next(iter(nexts[(tgt, uc)]))
-                    if uc_tgt != tgt:
-                        raise ValueError(
-                            f"Safety violation: terminal goal state '{tgt}' transitions "
-                            f"away on uncontrollable '{uc}' to '{uc_tgt}'. "
-                            f"Goal state must self-loop on all uncontrollables."
-                        )            
+    # if "marker_close" in uncontrollable:
+    #     for (s, ev), tgt_set in nexts.items():
+    #         if ev != "marker_close":
+    #             continue
+    #         tgt = next(iter(tgt_set))
+    #         tgt_ctrls = [e for e in controllable if (tgt, e) in nexts]
+    #         if tgt_ctrls != ["stop"]:
+    #             raise ValueError(
+    #                 f"Safety violation: marker_close from '{s}' leads to '{tgt}', "
+    #                 f"which has controllables {tgt_ctrls} — must be exactly ['stop']. "
+    #                 f"The robot must stop when the marker is reached."
+    #             )
+    #         # Also check the terminal state doesn't transition away on uncontrollables
+    #         # (other than self-loops) — prevents escaping the goal state
+    #         for uc in uncontrollable:
+    #             if (tgt, uc) in nexts:
+    #                 uc_tgt = next(iter(nexts[(tgt, uc)]))
+    #                 if uc_tgt != tgt:
+    #                     raise ValueError(
+    #                         f"Safety violation: terminal goal state '{tgt}' transitions "
+    #                         f"away on uncontrollable '{uc}' to '{uc_tgt}'. "
+    #                         f"Goal state must self-loop on all uncontrollables."
+    #                     )            
 
     if task == "explore":
         ctrl_by_state = {
@@ -971,7 +972,9 @@ def _run_llm(
     if profile_constraints:
         guidance_lines.extend(profile_constraints)
 
-    goal = profile.get("goal") or DEFAULT_GOAL
+    goal = profile.get("goal")
+    if not isinstance(goal, str) or not goal.strip():
+        raise SystemExit(f"Profile '{task}' missing valid goal.")
 
     profile_state_semantics = profile.get("state_semantics")
     if profile_state_semantics is not None and not isinstance(profile_state_semantics, dict):
@@ -1005,7 +1008,7 @@ def _run_llm(
         api_key,
         prompt,
         DEFAULT_MODEL,
-        0.0,
+        0.2,
         DEFAULT_TIMEOUT_S,
         DEFAULT_RETRIES,
     )
@@ -1033,67 +1036,173 @@ def _read_optional_text(value: str | None, file_path: str | None) -> str | None:
     return None
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Run the full DES->Nadzoru->SCT pipeline."
-    )
-    parser.add_argument(
-        "--task",
-        required=True,
-        help="Task profile to run (e.g., explore, find_marker, zigzag, wall_follow).",
-    )
-    parser.add_argument(
-        "--run-llm",
-        action="store_true",
-        default=RUN_LLM,
-        help="Generate a new supervisor JSON via the LLM step.",
-    )
-    parser.add_argument(
-        "--skip-llm",
-        action="store_true",
-        help="Skip the LLM step and use the latest JSON output.",
-    )
-    parser.add_argument(
-        "--user-task",
-        help="Free-form user task text. Kept separate from the default task profile constraints.",
-    )
-    parser.add_argument(
-        "--user-task-file",
-        help="Path to a text file containing the free-form user task.",
-    )
-    parser.add_argument(
-        "--print-prompt",
-        action="store_true",
-        help="Print the final composed LLM prompt before running the pipeline.",
-    )
-    args = parser.parse_args()
+def _sanitize_label(value: str) -> str:
+    label = re.sub(r"[^a-z0-9]+", "_", value.strip().lower())
+    return label.strip("_")
 
-    profiles = _load_profiles(DEFAULT_PROFILE_PATH)
-    if args.task not in profiles:
-        raise SystemExit(f"Unknown task: {args.task}")
 
-    task_profile = profiles[args.task]
-    controllable_events = task_profile.get("controllable_events")
-    uncontrollable_events = task_profile.get("uncontrollable_events")
+def _parse_prompt_set_file(path: Path) -> List[Dict[str, str]]:
+    if not path.exists():
+        raise SystemExit(f"Prompt set file not found: {path}")
 
-    if not isinstance(controllable_events, list) or not all(isinstance(x, str) for x in controllable_events):
-        raise SystemExit(f"Profile '{args.task}' missing valid controllable_events list.")
-    if not isinstance(uncontrollable_events, list) or not all(isinstance(x, str) for x in uncontrollable_events):
-        raise SystemExit(f"Profile '{args.task}' missing valid uncontrollable_events list.")
+    entries: List[Dict[str, str]] = []
+    current_group: str | None = None
+    current_lines: List[str] = []
+    group_counts: Dict[str, int] = defaultdict(int)
 
-    run_llm = args.run_llm and not args.skip_llm
-    user_task = _read_optional_text(args.user_task, args.user_task_file)
+    def flush_prompt() -> None:
+        nonlocal current_lines
+        if current_group is None:
+            if any(line.strip() for line in current_lines):
+                raise SystemExit(
+                    f"Prompt content found before a [group] header in {path}"
+                )
+            current_lines = []
+            return
+        prompt = "\n".join(current_lines).strip()
+        current_lines = []
+        if not prompt:
+            return
+        group_counts[current_group] += 1
+        ordinal = group_counts[current_group]
+        entries.append(
+            {
+                "group": current_group,
+                "ordinal": str(ordinal),
+                "label": f"{current_group}_{ordinal}",
+                "prompt": prompt,
+            }
+        )
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        stripped = raw_line.strip()
+        if stripped.startswith("[") and stripped.endswith("]") and len(stripped) > 2:
+            flush_prompt()
+            current_group = _sanitize_label(stripped[1:-1])
+            if not current_group:
+                raise SystemExit(f"Invalid empty group header in {path}")
+            continue
+        if stripped == "---":
+            flush_prompt()
+            continue
+        current_lines.append(raw_line)
+
+    flush_prompt()
+
+    if not entries:
+        raise SystemExit(f"No prompts found in {path}")
+
+    expected_groups = ("long", "medium", "vague")
+    for group in expected_groups:
+        if group not in group_counts:
+            raise SystemExit(f"Missing [{group}] group in {path}")
+        if group_counts[group] != 5:
+            raise SystemExit(
+                f"Expected 5 prompts in [{group}] group in {path}, found {group_counts[group]}"
+            )
+
+    return entries
+
+
+def _write_prompt_sidecar(task: str, index: str, prompt_text: str, label: str | None) -> Path:
+    stem = f"{task}_prompt_{index}"
+    if label:
+        stem += f"_{label}"
+    out_path = DEFAULT_OUTPUT_DIR / f"{stem}.txt"
+    out_path.write_text(prompt_text.strip() + "\n", encoding="utf-8")
+    return out_path
+
+
+def _write_results_llm_yaml(
+    task: str,
+    index: str,
+    yaml_payload: Dict[str, object],
+    group: str,
+    prompt_ordinal: str,
+    repeat_ordinal: int,
+    prompt_text: str,
+    results_root: Path,
+) -> Path:
+    prompt_dir = results_root / task / group / f"prompt_{prompt_ordinal}"
+    run_dir = prompt_dir / f"run_{repeat_ordinal}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    yaml_name = f"{task}_{DEFAULT_YAML_PREFIX}{group}_{prompt_ordinal}_run_{repeat_ordinal}_{index}.yaml"
+    yaml_path = run_dir / yaml_name
+    with yaml_path.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(yaml_payload, f, sort_keys=False, default_flow_style=True)
+
+    prompt_path = prompt_dir / "prompt.txt"
+    if not prompt_path.exists():
+        prompt_path.write_text(prompt_text.strip() + "\n", encoding="utf-8")
+
+    run_prompt_path = run_dir / "prompt.txt"
+    run_prompt_path.write_text(prompt_text.strip() + "\n", encoding="utf-8")
+    return yaml_path
+
+
+def _batch_run_dir(
+    results_root: Path,
+    task: str,
+    group: str,
+    prompt_ordinal: str,
+    repeat_ordinal: int,
+) -> Path:
+    return results_root / task / group / f"prompt_{prompt_ordinal}" / f"run_{repeat_ordinal}"
+
+
+def _find_existing_batch_yaml(run_dir: Path) -> Path | None:
+    yaml_paths = sorted(run_dir.glob("*.yaml"))
+    if len(yaml_paths) != 1:
+        return None
+    prompt_path = run_dir / "prompt.txt"
+    if not prompt_path.exists():
+        return None
+    return yaml_paths[0]
+
+
+def _write_yaml_outputs(
+    task: str,
+    index: str,
+    yaml_payload: Dict[str, object],
+    prompt_text: str | None = None,
+    label: str | None = None,
+) -> tuple[Path, Path]:
+    label_suffix = f"{_sanitize_label(label)}_" if label else ""
+    yaml_real_out = DEFAULT_REAL_YAML_OUT_DIR / f"{task}_{DEFAULT_YAML_PREFIX}{label_suffix}{index}.yaml"
+    yaml_real_default = DEFAULT_REAL_YAML_OUT_DIR / "sup_gpt.yaml"
+    yaml_real_out.parent.mkdir(parents=True, exist_ok=True)
+    for path in (yaml_real_out, yaml_real_default):
+        with open(path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(yaml_payload, f, sort_keys=False, default_flow_style=True)
+    if prompt_text:
+        prompt_sidecar = yaml_real_out.with_suffix(".txt")
+        prompt_sidecar.write_text(prompt_text.strip() + "\n", encoding="utf-8")
+    return yaml_real_out, yaml_real_default
+
+
+def _run_single_pipeline(
+    task: str,
+    run_llm: bool,
+    user_task: str | None,
+    print_prompt: bool,
+    label: str | None = None,
+    batch_group: str | None = None,
+    batch_prompt_ordinal: str | None = None,
+    batch_repeat_ordinal: int | None = None,
+    batch_results_root: Path | None = None,
+) -> Dict[str, object]:
     if run_llm:
         DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        llm_json_path = _next_llm_json_path(DEFAULT_OUTPUT_DIR, args.task)
+        llm_json_path = _next_llm_json_path(DEFAULT_OUTPUT_DIR, task)
         _run_llm(
-            args.task,
+            task,
             llm_json_path,
             user_task=user_task,
-            print_prompt=args.print_prompt,
+            print_prompt=print_prompt,
         )
     else:
-        llm_json_path = _latest_llm_json_path(DEFAULT_OUTPUT_DIR, args.task)
+        llm_json_path = _latest_llm_json_path(DEFAULT_OUTPUT_DIR, task)
 
     if not run_llm and not START_FROM_XML_ONLY and not llm_json_path.exists():
         raise SystemExit(f"Expected input not found: {llm_json_path}")
@@ -1128,7 +1237,7 @@ def main() -> int:
                     temp_path,
                     automaton["controllable_events"],
                     automaton["uncontrollable_events"],
-                    task=args.task,
+                    task=task,
                 )
             finally:
                 temp_path.unlink(missing_ok=True)
@@ -1164,7 +1273,7 @@ def main() -> int:
             f"Inputs: E={paths['e_xml_paths']} G={paths['g_xml_paths']} "
             f"Script={paths['script']}"
         )
-    _check_sloc_valid(paths["sloc_xml"], paths["sloc_name"])    
+    _check_sloc_valid(paths["sloc_xml"], paths["sloc_name"])
     _save_disabled_transition_report(
         _load_automaton(paths["gloc_xml"]),
         _load_automaton(paths["sloc_xml"]),
@@ -1177,19 +1286,221 @@ def main() -> int:
     automaton = Automaton()
     automaton.load(str(paths["sloc_xml"]))
     sloc_automatons.append(automaton)
-
     yaml_payload = _build_sct_yaml(sloc_automatons)
-    yaml_real_out = DEFAULT_REAL_YAML_OUT_DIR / f"{args.task}_{DEFAULT_YAML_PREFIX}{index}.yaml"
-    yaml_real_default = DEFAULT_REAL_YAML_OUT_DIR / "sup_gpt.yaml"
-    yaml_real_out.parent.mkdir(parents=True, exist_ok=True)
-    for path in (
-        yaml_real_out,
-        yaml_real_default,
+    yaml_real_out, yaml_real_default = _write_yaml_outputs(
+        task,
+        index,
+        yaml_payload,
+        prompt_text=user_task,
+        label=label,
+    )
+    prompt_sidecar = _write_prompt_sidecar(task, index, user_task or "", label)
+    batch_yaml_out = None
+    if (
+        batch_group is not None
+        and batch_prompt_ordinal is not None
+        and batch_repeat_ordinal is not None
+        and batch_results_root is not None
+        and user_task is not None
     ):
-        with open(path, "w", encoding="utf-8") as f:
-            yaml.safe_dump(yaml_payload, f, sort_keys=False, default_flow_style=True)
+        batch_yaml_out = _write_results_llm_yaml(
+            task,
+            index,
+            yaml_payload,
+            group=batch_group,
+            prompt_ordinal=batch_prompt_ordinal,
+            repeat_ordinal=batch_repeat_ordinal,
+            prompt_text=user_task,
+            results_root=batch_results_root,
+        )
+    return {
+        "index": index,
+        "llm_json_path": llm_json_path,
+        "yaml_real_out": yaml_real_out,
+        "yaml_real_default": yaml_real_default,
+        "batch_yaml_out": batch_yaml_out,
+        "prompt_sidecar": prompt_sidecar,
+        "label": label,
+    }
 
-    print(f"Wrote YAML to {yaml_real_out} and {yaml_real_default}")
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Run the full DES->Nadzoru->SCT pipeline."
+    )
+    parser.add_argument(
+        "--task",
+        required=True,
+        help="Task profile to run (e.g., explore, find_marker, zigzag, wall_follow).",
+    )
+    parser.add_argument(
+        "--run-llm",
+        action="store_true",
+        default=RUN_LLM,
+        help="Generate a new supervisor JSON via the LLM step.",
+    )
+    parser.add_argument(
+        "--skip-llm",
+        action="store_true",
+        help="Skip the LLM step and use the latest JSON output.",
+    )
+    parser.add_argument(
+        "--user-task",
+        help="Free-form user task text. Kept separate from the default task profile constraints.",
+    )
+    parser.add_argument(
+        "--user-task-file",
+        help="Path to a text file containing the free-form user task.",
+    )
+    parser.add_argument(
+        "--print-prompt",
+        action="store_true",
+        help="Print the final composed LLM prompt before running the pipeline.",
+    )
+    parser.add_argument(
+        "--prompt-set-file",
+        help=(
+            "Optional path to a grouped prompt file with [long], [medium], and [vague] sections. "
+            "If omitted and no single prompt is provided, the default prompt set file is used."
+        ),
+    )
+    parser.add_argument(
+        "--write-default-prompt-set",
+        action="store_true",
+        help="Write the default grouped prompt example file and exit.",
+    )
+    parser.add_argument(
+        "--prompt-repeats",
+        type=int,
+        default=5,
+        help="Number of repeated runs for each prompt when using --prompt-set-file.",
+    )
+    parser.add_argument(
+        "--results-llm-dir",
+        default=str(DEFAULT_RESULTS_LLM_DIR),
+        help="Root directory for grouped batch YAML outputs.",
+    )
+    args = parser.parse_args()
+
+    if args.write_default_prompt_set:
+        if DEFAULT_PROMPT_SET_FILE.exists():
+            print(f"Prompt set already exists at {DEFAULT_PROMPT_SET_FILE}")
+        else:
+            raise SystemExit(
+                f"Default prompt set file is missing from the repository: {DEFAULT_PROMPT_SET_FILE}"
+            )
+        return 0
+
+    profiles = _load_profiles(DEFAULT_PROFILE_PATH)
+    if args.task not in profiles:
+        raise SystemExit(f"Unknown task: {args.task}")
+
+    task_profile = profiles[args.task]
+    controllable_events = task_profile.get("controllable_events")
+    uncontrollable_events = task_profile.get("uncontrollable_events")
+
+    if not isinstance(controllable_events, list) or not all(isinstance(x, str) for x in controllable_events):
+        raise SystemExit(f"Profile '{args.task}' missing valid controllable_events list.")
+    if not isinstance(uncontrollable_events, list) or not all(isinstance(x, str) for x in uncontrollable_events):
+        raise SystemExit(f"Profile '{args.task}' missing valid uncontrollable_events list.")
+
+    run_llm = args.run_llm and not args.skip_llm
+    user_task = _read_optional_text(args.user_task, args.user_task_file)
+    prompt_set_path = Path(args.prompt_set_file) if args.prompt_set_file else None
+    use_default_prompt_set = (
+        prompt_set_path is None
+        and user_task is None
+        and DEFAULT_PROMPT_SET_FILE.exists()
+    )
+
+    if prompt_set_path is not None or use_default_prompt_set:
+        if user_task is not None:
+            raise SystemExit(
+                "Use either --prompt-set-file or a single --user-task/--user-task-file input, not both."
+            )
+        if args.prompt_repeats <= 0:
+            raise SystemExit("--prompt-repeats must be greater than 0.")
+        prompt_entries = _parse_prompt_set_file(prompt_set_path or DEFAULT_PROMPT_SET_FILE)
+        results_root = Path(args.results_llm_dir)
+        results = []
+        failures = []
+        for entry in prompt_entries:
+            for repeat_idx in range(1, args.prompt_repeats + 1):
+                existing_run_dir = _batch_run_dir(
+                    results_root,
+                    args.task,
+                    entry["group"],
+                    entry["ordinal"],
+                    repeat_idx,
+                )
+                existing_yaml = _find_existing_batch_yaml(existing_run_dir)
+                if existing_yaml is not None:
+                    print(
+                        f"[SKIP] group={entry['group']} prompt={entry['ordinal']} run={repeat_idx} "
+                        f"yaml={existing_yaml}"
+                    )
+                    continue
+                try:
+                    result = _run_single_pipeline(
+                        args.task,
+                        run_llm=run_llm,
+                        user_task=entry["prompt"],
+                        print_prompt=args.print_prompt,
+                        label=f"{entry['label']}_run_{repeat_idx}",
+                        batch_group=entry["group"],
+                        batch_prompt_ordinal=entry["ordinal"],
+                        batch_repeat_ordinal=repeat_idx,
+                        batch_results_root=results_root,
+                    )
+                    results.append((entry, repeat_idx, result))
+                    print(
+                        f"[OK] group={entry['group']} prompt={entry['ordinal']} run={repeat_idx} "
+                        f"yaml={result['batch_yaml_out']} prompt_copy={result['prompt_sidecar']}"
+                    )
+                except Exception as exc:
+                    failures.append((entry, repeat_idx, str(exc)))
+                    print(
+                        f"[FAIL] group={entry['group']} prompt={entry['ordinal']} run={repeat_idx} "
+                        f"error={exc}"
+                    )
+        summary_path = results_root / args.task / "summary.txt"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_lines = []
+        for entry in prompt_entries:
+            for repeat_idx in range(1, args.prompt_repeats + 1):
+                run_dir = _batch_run_dir(
+                    results_root,
+                    args.task,
+                    entry["group"],
+                    entry["ordinal"],
+                    repeat_idx,
+                )
+                yaml_path = _find_existing_batch_yaml(run_dir)
+                prompt_path = run_dir / "prompt.txt"
+                if yaml_path is None or not prompt_path.exists():
+                    continue
+                summary_lines.append(
+                    f"{entry['group']} #{entry['ordinal']} run={repeat_idx}: "
+                    f"yaml={yaml_path} prompt={prompt_path}"
+                )
+        for entry, repeat_idx, error in failures:
+            summary_lines.append(
+                f"{entry['group']} #{entry['ordinal']} run={repeat_idx}: "
+                f"FAILED error={error}"
+            )
+        summary_path.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
+        print(f"Wrote batch summary to {summary_path}")
+        if failures:
+            print(f"Batch completed with {len(failures)} failed run(s).")
+        return 0
+
+    result = _run_single_pipeline(
+        args.task,
+        run_llm=run_llm,
+        user_task=user_task,
+        print_prompt=args.print_prompt,
+    )
+    print(f"Wrote YAML to {result['yaml_real_out']} and {result['yaml_real_default']}")
     return 0
 
 

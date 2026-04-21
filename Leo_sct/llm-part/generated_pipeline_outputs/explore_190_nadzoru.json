@@ -1,0 +1,139 @@
+{
+  "rationale": "The plant models robot motion and perception as a single automaton. The specification enforces safe, coverage-oriented exploration: random_walk is used in clear states, move_forward is used only in a short commit state, and obstacle events trigger conservative, one-shot recovery turns. Recovery states use rotate_clockwise or rotate_counterclockwise depending on the obstacle side, and full_rotate is reserved for deadlock (all sides blocked). The supervisor returns to exploration as soon as the path is clear.",
+  "strategy": [
+    "Model both motion and perception in a unified plant automaton for clarity and synthesis compatibility.",
+    "Specification automaton enforces safe, progress-oriented exploration: random_walk in clear, move_forward in commit, and conservative turn recovery after obstacles, with quick return to exploration."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Models robot's motion and perception: clear, obstacle-front, obstacle-left, obstacle-right, and recovery/commit states.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "full_blocked"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "forward_commit"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"random_walk\", \"forward_commit\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"obs_front\", \"rotate_clockwise\", \"clear\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_left\", \"full_blocked\")",
+        "(\"obs_front\", \"obstacle_right\", \"full_blocked\")",
+        "(\"obs_front\", \"path_clear\", \"obs_front\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"clear\")",
+        "(\"obs_left\", \"obstacle_front\", \"full_blocked\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_left\")",
+        "(\"obs_left\", \"path_clear\", \"obs_left\")",
+        "(\"obs_right\", \"rotate_counterclockwise\", \"clear\")",
+        "(\"obs_right\", \"obstacle_front\", \"full_blocked\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_right\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"path_clear\", \"obs_right\")",
+        "(\"full_blocked\", \"full_rotate\", \"clear\")",
+        "(\"full_blocked\", \"obstacle_front\", \"full_blocked\")",
+        "(\"full_blocked\", \"obstacle_left\", \"full_blocked\")",
+        "(\"full_blocked\", \"obstacle_right\", \"full_blocked\")",
+        "(\"full_blocked\", \"path_clear\", \"full_blocked\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Enforces safe, progress-oriented exploration: random_walk in clear, move_forward in commit, conservative turn recovery after obstacles, and quick return to exploration.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "full_blocked"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "forward_commit"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"random_walk\", \"forward_commit\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"obs_front\", \"rotate_clockwise\", \"clear\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_left\", \"full_blocked\")",
+        "(\"obs_front\", \"obstacle_right\", \"full_blocked\")",
+        "(\"obs_front\", \"path_clear\", \"obs_front\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"clear\")",
+        "(\"obs_left\", \"obstacle_front\", \"full_blocked\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_left\")",
+        "(\"obs_left\", \"path_clear\", \"obs_left\")",
+        "(\"obs_right\", \"rotate_counterclockwise\", \"clear\")",
+        "(\"obs_right\", \"obstacle_front\", \"full_blocked\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_right\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"path_clear\", \"obs_right\")",
+        "(\"full_blocked\", \"full_rotate\", \"clear\")",
+        "(\"full_blocked\", \"obstacle_front\", \"full_blocked\")",
+        "(\"full_blocked\", \"obstacle_left\", \"full_blocked\")",
+        "(\"full_blocked\", \"obstacle_right\", \"full_blocked\")",
+        "(\"full_blocked\", \"path_clear\", \"full_blocked\")"
+      ]
+    }
+  ]
+}

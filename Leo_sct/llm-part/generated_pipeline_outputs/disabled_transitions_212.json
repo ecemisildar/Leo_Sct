@@ -1,0 +1,59 @@
+{
+  "gloc_name": "Gloc212",
+  "sloc_name": "Sloc212",
+  "states": [
+    {
+      "sloc_state": "idle,clear,explore_clear",
+      "gloc_state": "idle,clear",
+      "enabled_transitions": [
+        {
+          "event": "path_clear",
+          "target": "idle,clear,explore_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "full_rotating,clear",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "moving_forward,clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "random_walking,clear",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "rotating_cw,clear",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "rotating_ccw,clear",
+          "controllable": true
+        }
+      ]
+    }
+  ]
+}
