@@ -2,6 +2,10 @@
 set -euo pipefail
 
 SESSION="leo_robots"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BEST_RESULTS_DIR="$SCRIPT_DIR/best_results"
+REMOTE_REPO="${REMOTE_REPO:-~/ros_ws/src/Leo_Sct/Leo_sct}"
+REMOTE_BEST_RESULTS_DIR="$REMOTE_REPO/best_results"
 
 # Format: "robot_name|user@ip|domain_id|robot_ns"
 ROBOTS=(
@@ -14,13 +18,44 @@ ROBOTS=(
 usage() {
   cat <<'EOF'
 Usage:
-  ./start_robots_tmux.sh [--list] [robot_name ...]
+  ./start_robots_tmux.sh [--list] [--list-yamls] [--latest | --yaml file.yaml] [robot_name ...]
 
 Examples:
   ./start_robots_tmux.sh
   ./start_robots_tmux.sh Robot1 Robot3
   ./start_robots_tmux.sh --list
+  ./start_robots_tmux.sh --list-yamls
+  ./start_robots_tmux.sh --latest Robot2
+  ./start_robots_tmux.sh --yaml explore_sup_gpt_medium_1_run_3_81.yaml Robot3 Robot4
 EOF
+}
+
+list_yamls() {
+  find "$BEST_RESULTS_DIR" -maxdepth 1 -type f -name '*.yaml' -printf '%f\n' | sort
+}
+
+latest_yaml_name() {
+  find "$BEST_RESULTS_DIR" -maxdepth 1 -type f -name '*.yaml' -printf '%T@ %f\n' \
+    | sort -nr \
+    | head -n 1 \
+    | cut -d' ' -f2-
+}
+
+resolve_yaml_name() {
+  local input="$1"
+
+  if [[ -f "$BEST_RESULTS_DIR/$input" ]]; then
+    basename "$input"
+    return 0
+  fi
+
+  if [[ -f "$input" ]]; then
+    basename "$input"
+    return 0
+  fi
+
+  echo "YAML not found in best_results: $input" >&2
+  exit 1
 }
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -28,20 +63,63 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
-if [[ "${1:-}" == "--list" ]]; then
-  for entry in "${ROBOTS[@]}"; do
-    IFS='|' read -r NAME _HOST _DID _NS <<<"$entry"
-    echo "$NAME"
-  done
-  exit 0
+if [[ ! -d "$BEST_RESULTS_DIR" ]]; then
+  echo "best_results directory not found: $BEST_RESULTS_DIR" >&2
+  exit 1
 fi
 
+YAML_NAME=""
+declare -a ROBOT_ARGS=()
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --list)
+      for entry in "${ROBOTS[@]}"; do
+        IFS='|' read -r NAME _HOST _DID _NS <<<"$entry"
+        echo "$NAME"
+      done
+      exit 0
+      ;;
+    --list-yamls)
+      list_yamls
+      exit 0
+      ;;
+    --latest)
+      if [[ -n "$YAML_NAME" ]]; then
+        echo "Only one of --latest or --yaml may be used." >&2
+        exit 1
+      fi
+      YAML_NAME="$(latest_yaml_name)"
+      if [[ -z "$YAML_NAME" ]]; then
+        echo "No YAML files found in $BEST_RESULTS_DIR" >&2
+        exit 1
+      fi
+      shift
+      ;;
+    --yaml)
+      if [[ -n "$YAML_NAME" ]]; then
+        echo "Only one of --latest or --yaml may be used." >&2
+        exit 1
+      fi
+      if [[ "$#" -lt 2 ]]; then
+        echo "--yaml requires a file name." >&2
+        exit 1
+      fi
+      YAML_NAME="$(resolve_yaml_name "$2")"
+      shift 2
+      ;;
+    *)
+      ROBOT_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
 declare -a SELECTED
-if [[ "$#" -eq 0 ]]; then
+if [[ "${#ROBOT_ARGS[@]}" -eq 0 ]]; then
   SELECTED=("${ROBOTS[@]}")
 else
   declare -A WANT
-  for arg in "$@"; do
+  for arg in "${ROBOT_ARGS[@]}"; do
     WANT["${arg,,}"]=1
   done
 
@@ -73,6 +151,9 @@ for entry in "${SELECTED[@]}"; do
 
   # Build launch args (robot_ns optional)
   LAUNCH_ARGS="enable_supervisor:=false"
+  if [[ -n "$YAML_NAME" ]]; then
+    LAUNCH_ARGS="enable_supervisor:=true supervisor_yaml_path:=$REMOTE_BEST_RESULTS_DIR/$YAML_NAME"
+  fi
   if [ -n "${NS:-}" ]; then
     LAUNCH_ARGS="$LAUNCH_ARGS robot_ns:=$NS"
   fi
