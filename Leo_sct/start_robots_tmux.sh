@@ -18,7 +18,7 @@ ROBOTS=(
 usage() {
   cat <<'EOF'
 Usage:
-  ./start_robots_tmux.sh [--list] [--list-yamls] [--latest | --yaml file.yaml] [robot_name ...]
+  ./start_robots_tmux.sh [--list] [--list-yamls] [--latest | --yaml id|file.yaml] [robot_name ...]
 
 Examples:
   ./start_robots_tmux.sh
@@ -26,12 +26,34 @@ Examples:
   ./start_robots_tmux.sh --list
   ./start_robots_tmux.sh --list-yamls
   ./start_robots_tmux.sh --latest Robot2
-  ./start_robots_tmux.sh --yaml explore_sup_gpt_medium_1_run_3_81.yaml Robot3 Robot4
+  ./start_robots_tmux.sh --yaml 2 Robot3 Robot4
 EOF
 }
 
 list_yamls() {
+  local idx=1
+  while IFS= read -r name; do
+    printf '%d %s\n' "$idx" "$name"
+    idx=$((idx + 1))
+  done < <(find "$BEST_RESULTS_DIR" -maxdepth 1 -type f -name '*.yaml' -printf '%f\n' | sort)
+}
+
+yaml_names_sorted() {
   find "$BEST_RESULTS_DIR" -maxdepth 1 -type f -name '*.yaml' -printf '%f\n' | sort
+}
+
+yaml_name_by_id() {
+  local target_id="$1"
+  local idx=1
+  local name
+  while IFS= read -r name; do
+    if [[ "$idx" == "$target_id" ]]; then
+      printf '%s\n' "$name"
+      return 0
+    fi
+    idx=$((idx + 1))
+  done < <(yaml_names_sorted)
+  return 1
 }
 
 latest_yaml_name() {
@@ -43,6 +65,14 @@ latest_yaml_name() {
 
 resolve_yaml_name() {
   local input="$1"
+
+  if [[ "$input" =~ ^[0-9]+$ ]]; then
+    if yaml_name_by_id "$input"; then
+      return 0
+    fi
+    echo "YAML id not found: $input" >&2
+    exit 1
+  fi
 
   if [[ -f "$BEST_RESULTS_DIR/$input" ]]; then
     basename "$input"

@@ -9,17 +9,39 @@ usage() {
 Usage:
   ./run_best_result.sh [--list]
   ./run_best_result.sh --latest [launch_arg:=value ...]
-  ./run_best_result.sh <yaml_name> [launch_arg:=value ...]
+  ./run_best_result.sh <yaml_id|yaml_name> [launch_arg:=value ...]
 
 Examples:
   ./run_best_result.sh --list
   ./run_best_result.sh --latest
-  ./run_best_result.sh explore_sup_gpt_medium_1_run_3_81.yaml robot_ns:=rob_1
+  ./run_best_result.sh 2 robot_ns:=rob_1
 EOF
 }
 
 list_yamls() {
+  local idx=1
+  while IFS= read -r name; do
+    printf '%d %s\n' "$idx" "$name"
+    idx=$((idx + 1))
+  done < <(find "$BEST_RESULTS_DIR" -maxdepth 1 -type f -name '*.yaml' -printf '%f\n' | sort)
+}
+
+yaml_names_sorted() {
   find "$BEST_RESULTS_DIR" -maxdepth 1 -type f -name '*.yaml' -printf '%f\n' | sort
+}
+
+yaml_name_by_id() {
+  local target_id="$1"
+  local idx=1
+  local name
+  while IFS= read -r name; do
+    if [[ "$idx" == "$target_id" ]]; then
+      printf '%s\n' "$name"
+      return 0
+    fi
+    idx=$((idx + 1))
+  done < <(yaml_names_sorted)
+  return 1
 }
 
 latest_yaml() {
@@ -33,7 +55,14 @@ resolve_yaml() {
   local input="$1"
   local path=""
 
-  if [[ -f "$BEST_RESULTS_DIR/$input" ]]; then
+  if [[ "$input" =~ ^[0-9]+$ ]]; then
+    local yaml_name=""
+    if ! yaml_name="$(yaml_name_by_id "$input")"; then
+      echo "YAML id not found: $input" >&2
+      exit 1
+    fi
+    path="$BEST_RESULTS_DIR/$yaml_name"
+  elif [[ -f "$BEST_RESULTS_DIR/$input" ]]; then
     path="$BEST_RESULTS_DIR/$input"
   elif [[ -f "$input" ]]; then
     path="$input"
