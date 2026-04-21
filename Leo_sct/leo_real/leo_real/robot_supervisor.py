@@ -14,8 +14,13 @@ from std_msgs.msg import String, Bool, Float32
 from std_srvs.srv import SetBool
 from nav_msgs.msg import Odometry
 
+from ament_index_python import PackageNotFoundError
 from ament_index_python.packages import get_package_share_directory
-from swarm_basics.sct import SCT
+
+try:
+    from .sct import SCT
+except ImportError:
+    from leo_real.sct import SCT
 
 
 @dataclass
@@ -129,7 +134,7 @@ class RobotSupervisor(Node):
         # -------------------------------
         # Load SCT YAML
         # -------------------------------
-        self.config_dir = os.path.join(get_package_share_directory("swarm_basics"), "config")
+        self.config_dir = self._resolve_config_dir()
         self.explicit_yaml_path = str(self.declare_parameter("supervisor_yaml_path", "").value).strip()
         self.current_mission = "explore"
         self.current_yaml_path = ""
@@ -234,6 +239,13 @@ class RobotSupervisor(Node):
         if key != "explore":
             key = "explore"
         return key
+
+    def _resolve_config_dir(self) -> str:
+        try:
+            return os.path.join(get_package_share_directory("leo_real"), "config")
+        except PackageNotFoundError:
+            # Fallback for running directly from the source tree before install.
+            return os.path.join(os.path.dirname(os.path.dirname(__file__)), "config")
 
     def _mission_yaml_candidates(self, mission: str):
         mission_key = self._canonical_mission_name(mission)
