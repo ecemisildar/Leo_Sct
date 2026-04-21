@@ -58,7 +58,7 @@ class RobotSupervisor(Node):
         # -------------------------------
         # Parameters
         # -------------------------------
-        self.supervisor_period = float(self.declare_parameter("supervisor_period", 0.1).value)
+        self.supervisor_period = float(self.declare_parameter("supervisor_period", 0.5).value)
         self.motion_hold_duration = float(self.declare_parameter("motion_hold_duration", 0.2).value)
 
         # Full-rotate execution settings
@@ -67,8 +67,8 @@ class RobotSupervisor(Node):
             math.pi,
             float(self.declare_parameter("full_rotate_target_rad", math.pi).value),
         )
-        self.full_rotate_omega = float(self.declare_parameter("full_rotate_omega", 1.0).value)  # rad/s
-        self.full_rotate_timeout_s = float(self.declare_parameter("full_rotate_timeout_s", 3.5).value)
+        self.full_rotate_omega = float(self.declare_parameter("full_rotate_omega", 2.0).value)  # rad/s
+        self.full_rotate_timeout_s = float(self.declare_parameter("full_rotate_timeout_s", 6.0).value)
         self.full_rotate_retrigger_block_s = float(
             self.declare_parameter("full_rotate_retrigger_block_s", 0.6).value
         )
@@ -95,10 +95,10 @@ class RobotSupervisor(Node):
             float(self.declare_parameter("rotate_90_target_rad", math.pi / 2.0).value),
         )
         self.rotate_90_omega = float(
-            self.declare_parameter("rotate_90_omega", 1.0).value
+            self.declare_parameter("rotate_90_omega", 1.5).value
         )
         self.rotate_90_timeout_s = float(
-            self.declare_parameter("rotate_90_timeout_s", 2.2).value
+            self.declare_parameter("rotate_90_timeout_s", 4.0).value
         )
 
         self.rotate_90_active = False
@@ -572,23 +572,23 @@ class RobotSupervisor(Node):
 
         # Rotate first when the marker is far from image center.
         if abs_offset > 0.08:
-            twist.angular.z = max(-0.8, min(0.8, -2.2 * offset))
+            twist.angular.z = max(-0.45, min(0.45, -2.2 * offset))
             if abs_offset < 0.18:
-                twist.linear.x = 0.04
+                twist.linear.x = 0.14
         else:
-            twist.angular.z = max(-0.25, min(0.25, -1.2 * offset))
+            twist.angular.z = max(-0.40, min(0.40, -1.2 * offset))
             if math.isfinite(self.aruco_distance_m):
                 if self.aruco_distance_m <= self.aruco_stop_distance_m:
                     return Twist()
                 if self.aruco_distance_m < 0.35:
-                    twist.linear.x = 0.05
-                elif self.aruco_distance_m < 0.6:
-                    twist.linear.x = 0.09
-                else:
                     twist.linear.x = 0.14
+                elif self.aruco_distance_m < 0.6:
+                    twist.linear.x = 0.245
+                else:
+                    twist.linear.x = 0.35
             else:
                 # Depth is often missing on the marker; creep forward if centered.
-                twist.linear.x = 0.07
+                twist.linear.x = 0.30
 
         return self._filter_aruco_follower_cmd(twist)
 
@@ -746,11 +746,8 @@ class RobotSupervisor(Node):
         # random walk is special (stochastic each time it fires)
         if ev_name == "EV_random_walk":
             twist = Twist()
-            twist.linear.x = self.rng.uniform(0.1, 0.4)
-            if self.rng.random() < 0.6:
-                twist.angular.z = 0.0
-            else:
-                twist.angular.z = self.rng.uniform(-0.35, 0.35)
+            twist.linear.x = self.rng.uniform(0.1, 0.2)
+            twist.angular.z = self.rng.uniform(-1.0, 1.0)
             self.active_event = ev_name
             self.active_twist = twist
             self.motion_until = time.time() + self.motion_hold_duration
