@@ -117,8 +117,13 @@ p {
 }
 
 .robot-status-card.is-offline {
-  background: #fdecec;
-  border-color: #c62828;
+  background: #eceff1;
+  border-color: #9ea7ad;
+  color: #5f6b73;
+}
+
+.robot-status-card.is-offline .robot-status-swatch {
+  background: #9ea7ad !important;
 }
 
 .robot-status-swatch {
@@ -475,35 +480,6 @@ p {
   gap: 12px;
   color: var(--muted);
   font-size: 14px;
-}
-
-.session-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(18, 32, 37, 0.4);
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  z-index: 20;
-}
-
-.session-overlay[hidden] {
-  display: none !important;
-}
-
-.session-overlay-card {
-  max-width: 460px;
-  width: 100%;
-  background: var(--surface-strong);
-  border: 1px solid var(--outline);
-  border-radius: 14px;
-  padding: 18px;
-  box-shadow: var(--shadow);
-}
-
-.session-overlay-card h3 {
-  margin: 0;
-  font-family: var(--font-head);
 }
 
 body.session-expired .mode-switch,

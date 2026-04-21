@@ -48,7 +48,6 @@ const cmdPreview = document.getElementById("cmdPreview");
 const activeSummary = document.getElementById("activeSummary");
 const connectionStatus = document.getElementById("connectionStatus");
 const sessionStatus = document.getElementById("sessionStatus");
-const sessionOverlay = document.getElementById("sessionOverlay");
 const connectOptionRow = document.getElementById("connectOptionRow");
 const allStopBtn = document.getElementById("allStopBtn");
 const phoneQrImage = document.getElementById("phoneQrImage");
@@ -108,9 +107,6 @@ function applySessionPolicyUI() {
 
   document.body.classList.toggle("session-expired", state.session.expired);
   document.body.classList.toggle("local-operator", state.session.localEmergency);
-  if (sessionOverlay) {
-    sessionOverlay.hidden = !state.session.expired;
-  }
   if (phoneConnectCard) {
     phoneConnectCard.hidden = !state.session.localEmergency;
   }

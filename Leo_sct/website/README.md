@@ -10,13 +10,19 @@ Edit robot topic namespaces in `robots.json`:
 }
 ```
 
-Run:
+Run from the repo root (`.../Leo_sct`):
 
 ```bash
 ros2 run rosbridge_server rosbridge_websocket
 # Optional for fully local QR generation:
 # python3 -m pip install qrcode[pil]
 python3 website/server.py --host 0.0.0.0 --port 8080
+```
+
+If your shell is already inside `website/`, use:
+
+```bash
+python3 server.py --host 0.0.0.0 --port 8080
 ```
 
 In browser:
