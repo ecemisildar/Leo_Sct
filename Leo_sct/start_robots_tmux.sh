@@ -18,7 +18,7 @@ ROBOTS=(
 usage() {
   cat <<'EOF'
 Usage:
-  ./start_robots_tmux.sh [--list] [--list-yamls] [--latest | --yaml id|file.yaml] [robot_name ...]
+  ./start_robots_tmux.sh [--list] [--list-yamls] [--latest | --yaml id|group/id|file.yaml] [robot_name ...]
 
 Examples:
   ./start_robots_tmux.sh
@@ -27,37 +27,72 @@ Examples:
   ./start_robots_tmux.sh --list-yamls
   ./start_robots_tmux.sh --latest Robot2
   ./start_robots_tmux.sh --yaml 2 Robot3 Robot4
+  ./start_robots_tmux.sh --yaml 5.4/1 Robot1
 EOF
 }
 
-list_yamls() {
-  local idx=1
-  while IFS= read -r name; do
-    printf '%d %s\n' "$idx" "$name"
-    idx=$((idx + 1))
-  done < <(find "$BEST_RESULTS_DIR" -maxdepth 1 -type f -name '*.yaml' -printf '%f\n' | sort)
+yaml_paths_sorted() {
+  find "$BEST_RESULTS_DIR" -mindepth 1 -type f -name '*.yaml' -printf '%P\n' | sort
 }
 
-yaml_names_sorted() {
-  find "$BEST_RESULTS_DIR" -maxdepth 1 -type f -name '*.yaml' -printf '%f\n' | sort
+list_yamls() {
+  local last_group=""
+  local group_idx=0
+  local idx=1
+  local path=""
+  while IFS= read -r path; do
+    local group="${path%/*}"
+    local name="${path##*/}"
+    if [[ "$group" == "$path" ]]; then
+      group="."
+    fi
+    if [[ "$group" != "$last_group" ]]; then
+      last_group="$group"
+      group_idx=1
+    fi
+    printf '%d %s/%d %s\n' "$idx" "$group" "$group_idx" "$name"
+    idx=$((idx + 1))
+    group_idx=$((group_idx + 1))
+  done < <(yaml_paths_sorted)
 }
 
 yaml_name_by_id() {
   local target_id="$1"
   local idx=1
-  local name
-  while IFS= read -r name; do
+  local path
+  while IFS= read -r path; do
     if [[ "$idx" == "$target_id" ]]; then
-      printf '%s\n' "$name"
+      printf '%s\n' "$path"
       return 0
     fi
     idx=$((idx + 1))
-  done < <(yaml_names_sorted)
+  done < <(yaml_paths_sorted)
+  return 1
+}
+
+yaml_name_by_group_id() {
+  local target_group="$1"
+  local target_id="$2"
+  local idx=1
+  local path
+  while IFS= read -r path; do
+    local group="${path%/*}"
+    if [[ "$group" == "$path" ]]; then
+      group="."
+    fi
+    if [[ "$group" == "$target_group" ]]; then
+      if [[ "$idx" == "$target_id" ]]; then
+        printf '%s\n' "$path"
+        return 0
+      fi
+      idx=$((idx + 1))
+    fi
+  done < <(yaml_paths_sorted)
   return 1
 }
 
 latest_yaml_name() {
-  find "$BEST_RESULTS_DIR" -maxdepth 1 -type f -name '*.yaml' -printf '%T@ %f\n' \
+  find "$BEST_RESULTS_DIR" -mindepth 1 -type f -name '*.yaml' -printf '%T@ %P\n' \
     | sort -nr \
     | head -n 1 \
     | cut -d' ' -f2-
@@ -74,13 +109,24 @@ resolve_yaml_name() {
     exit 1
   fi
 
+  if [[ "$input" =~ ^([^/]+)/([0-9]+)$ ]]; then
+    local group="${BASH_REMATCH[1]}"
+    local group_id="${BASH_REMATCH[2]}"
+    if yaml_name_by_group_id "$group" "$group_id"; then
+      return 0
+    fi
+    echo "YAML id not found in group '$group': $group_id" >&2
+    exit 1
+  fi
+
   if [[ -f "$BEST_RESULTS_DIR/$input" ]]; then
-    basename "$input"
+    printf '%s\n' "$input"
     return 0
   fi
 
   if [[ -f "$input" ]]; then
-    basename "$input"
+    local rel_path="${input#"$BEST_RESULTS_DIR"/}"
+    printf '%s\n' "$rel_path"
     return 0
   fi
 
