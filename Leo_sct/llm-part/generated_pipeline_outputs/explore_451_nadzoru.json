@@ -1,0 +1,229 @@
+{
+  "rationale": "Use a minimal plant split into sensing and motion capability, then encode the exploration policy in small deterministic specifications. The policy gives strong preference to forward progress in clear space, uses directed one-shot turns for side obstacles, uses a brief backward pulse only for front-obstacle recovery, and returns to forward exploration immediately when path_clear is observed. Action states self-loop on path_clear so open-loop pulses are not preempted, while safety-critical obstacle events can redirect recovery.",
+  "strategy": [
+    "Separate uncontrollable perception from controllable motion capability in the plant.",
+    "Use one policy specification for clear-space exploration, one for front-obstacle recovery, one for left-obstacle recovery, and one for right-obstacle recovery."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local obstacle sensing outcomes available at every step",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot motion command capability",
+      "states": [
+        "ready"
+      ],
+      "initial_states": [
+        "ready"
+      ],
+      "marked_states": [
+        "ready"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"ready\", \"move_forward\", \"ready\")",
+        "(\"ready\", \"rotate_clockwise\", \"ready\")",
+        "(\"ready\", \"rotate_counterclockwise\", \"ready\")",
+        "(\"ready\", \"full_rotate\", \"ready\")",
+        "(\"ready\", \"random_walk\", \"ready\")",
+        "(\"ready\", \"move_backward\", \"ready\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_explore_clear",
+      "purpose": "Bias strongly toward forward exploration in clear space; after side-obstacle corrections, return to forward motion as soon as path is clear",
+      "states": [
+        "monitor",
+        "clear_go",
+        "left_recover",
+        "right_recover"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "clear_go",
+        "left_recover",
+        "right_recover"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"clear_go\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"left_recover\")",
+        "(\"monitor\", \"obstacle_right\", \"right_recover\")",
+        "(\"clear_go\", \"move_forward\", \"monitor\")",
+        "(\"clear_go\", \"path_clear\", \"clear_go\")",
+        "(\"clear_go\", \"obstacle_front\", \"monitor\")",
+        "(\"clear_go\", \"obstacle_left\", \"left_recover\")",
+        "(\"clear_go\", \"obstacle_right\", \"right_recover\")",
+        "(\"left_recover\", \"rotate_clockwise\", \"monitor\")",
+        "(\"left_recover\", \"path_clear\", \"monitor\")",
+        "(\"left_recover\", \"obstacle_front\", \"monitor\")",
+        "(\"left_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"left_recover\", \"obstacle_right\", \"monitor\")",
+        "(\"right_recover\", \"rotate_counterclockwise\", \"monitor\")",
+        "(\"right_recover\", \"path_clear\", \"monitor\")",
+        "(\"right_recover\", \"obstacle_front\", \"monitor\")",
+        "(\"right_recover\", \"obstacle_left\", \"monitor\")",
+        "(\"right_recover\", \"obstacle_right\", \"right_recover\")"
+      ]
+    },
+    {
+      "name": "E2_front_recovery",
+      "purpose": "Require a dedicated front-obstacle recovery with one brief backward pulse, then immediate return to exploration when clear",
+      "states": [
+        "idle",
+        "front_blocked",
+        "back_step"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "front_blocked",
+        "back_step"
+      ],
+      "controllable_events": [
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"front_blocked\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"front_blocked\", \"move_backward\", \"back_step\")",
+        "(\"front_blocked\", \"path_clear\", \"idle\")",
+        "(\"front_blocked\", \"obstacle_front\", \"front_blocked\")",
+        "(\"front_blocked\", \"obstacle_left\", \"front_blocked\")",
+        "(\"front_blocked\", \"obstacle_right\", \"front_blocked\")",
+        "(\"back_step\", \"path_clear\", \"idle\")",
+        "(\"back_step\", \"obstacle_front\", \"idle\")",
+        "(\"back_step\", \"obstacle_left\", \"idle\")",
+        "(\"back_step\", \"obstacle_right\", \"idle\")"
+      ]
+    },
+    {
+      "name": "E3_left_obstacle_policy",
+      "purpose": "Any state reached by obstacle_left must use only clockwise turning recovery and never forward/random walk there",
+      "states": [
+        "free",
+        "need_cw"
+      ],
+      "initial_states": [
+        "free"
+      ],
+      "marked_states": [
+        "free",
+        "need_cw"
+      ],
+      "controllable_events": [
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"free\", \"path_clear\", \"free\")",
+        "(\"free\", \"obstacle_front\", \"free\")",
+        "(\"free\", \"obstacle_left\", \"need_cw\")",
+        "(\"free\", \"obstacle_right\", \"free\")",
+        "(\"need_cw\", \"rotate_clockwise\", \"free\")",
+        "(\"need_cw\", \"path_clear\", \"free\")",
+        "(\"need_cw\", \"obstacle_front\", \"free\")",
+        "(\"need_cw\", \"obstacle_left\", \"need_cw\")",
+        "(\"need_cw\", \"obstacle_right\", \"free\")"
+      ]
+    },
+    {
+      "name": "E4_right_obstacle_policy",
+      "purpose": "Any state reached by obstacle_right must use only counterclockwise turning recovery and never forward/random walk there",
+      "states": [
+        "free",
+        "need_ccw"
+      ],
+      "initial_states": [
+        "free"
+      ],
+      "marked_states": [
+        "free",
+        "need_ccw"
+      ],
+      "controllable_events": [
+        "rotate_counterclockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"free\", \"path_clear\", \"free\")",
+        "(\"free\", \"obstacle_front\", \"free\")",
+        "(\"free\", \"obstacle_left\", \"free\")",
+        "(\"free\", \"obstacle_right\", \"need_ccw\")",
+        "(\"need_ccw\", \"rotate_counterclockwise\", \"free\")",
+        "(\"need_ccw\", \"path_clear\", \"free\")",
+        "(\"need_ccw\", \"obstacle_front\", \"free\")",
+        "(\"need_ccw\", \"obstacle_left\", \"free\")",
+        "(\"need_ccw\", \"obstacle_right\", \"need_ccw\")"
+      ]
+    }
+  ]
+}

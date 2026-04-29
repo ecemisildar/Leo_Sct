@@ -1,0 +1,271 @@
+{
+  "rationale": "The design separates sensing and actuation in the plant, then uses small deterministic specifications to map sensed obstacle conditions to exactly one safe motion choice. Clear conditions strongly favor forward progress via move_forward and occasional random_walk. Obstacle responses are one-shot recovery actions only: front obstacles trigger a brief backward escape, left obstacles trigger clockwise turning, right obstacles trigger counterclockwise turning. A final recovery-to-explore specification ensures rapid return to forward exploration when path_clear is observed, while action states self-loop on non-critical path_clear to respect open-loop pulse execution.",
+  "strategy": [
+    "Split plant into a sensor outcome automaton and a motion capability automaton using only the given events.",
+    "Use perception-to-action specifications so each obstacle class reaches a dedicated recovery state with exactly one controllable action.",
+    "Bias clear operation toward move_forward, with random_walk allowed only in a dedicated clear/search mode.",
+    "Make recovery actions one-shot and return quickly to exploration when path_clear occurs.",
+    "Avoid unsafe forward/random_walk in any state reached by obstacle events."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local perception channel producing obstacle and clear observations",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion capability plant for all available robot motion commands",
+      "states": [
+        "motion"
+      ],
+      "initial_states": [
+        "motion"
+      ],
+      "marked_states": [
+        "motion"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"motion\", \"move_forward\", \"motion\")",
+        "(\"motion\", \"rotate_clockwise\", \"motion\")",
+        "(\"motion\", \"rotate_counterclockwise\", \"motion\")",
+        "(\"motion\", \"full_rotate\", \"motion\")",
+        "(\"motion\", \"random_walk\", \"motion\")",
+        "(\"motion\", \"move_backward\", \"motion\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_forward_progress",
+      "purpose": "Default exploration policy: when clear, execute one forward pulse",
+      "states": [
+        "idle",
+        "clear_ready"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "clear_ready"
+      ],
+      "controllable_events": [
+        "move_forward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"clear_ready\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"clear_ready\", \"path_clear\", \"clear_ready\")",
+        "(\"clear_ready\", \"obstacle_front\", \"idle\")",
+        "(\"clear_ready\", \"obstacle_left\", \"idle\")",
+        "(\"clear_ready\", \"obstacle_right\", \"idle\")",
+        "(\"clear_ready\", \"move_forward\", \"idle\")"
+      ]
+    },
+    {
+      "name": "E2_clear_search",
+      "purpose": "Allow occasional exploratory random_walk only in clear/search mode",
+      "states": [
+        "idle",
+        "search_ready"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "search_ready"
+      ],
+      "controllable_events": [
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"idle\", \"path_clear\", \"search_ready\")",
+        "(\"search_ready\", \"path_clear\", \"search_ready\")",
+        "(\"search_ready\", \"obstacle_front\", \"idle\")",
+        "(\"search_ready\", \"obstacle_left\", \"idle\")",
+        "(\"search_ready\", \"obstacle_right\", \"idle\")",
+        "(\"search_ready\", \"random_walk\", \"idle\")"
+      ]
+    },
+    {
+      "name": "E3_front_recovery",
+      "purpose": "Front obstacle recovery uses a brief one-shot backward escape only",
+      "states": [
+        "idle",
+        "front_blocked"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "front_blocked"
+      ],
+      "controllable_events": [
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"front_blocked\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"front_blocked\", \"path_clear\", \"front_blocked\")",
+        "(\"front_blocked\", \"obstacle_front\", \"front_blocked\")",
+        "(\"front_blocked\", \"obstacle_left\", \"front_blocked\")",
+        "(\"front_blocked\", \"obstacle_right\", \"front_blocked\")",
+        "(\"front_blocked\", \"move_backward\", \"idle\")"
+      ]
+    },
+    {
+      "name": "E4_left_recovery",
+      "purpose": "Obstacle on the left triggers a one-shot clockwise turn away from the blocked side",
+      "states": [
+        "idle",
+        "left_blocked"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "left_blocked"
+      ],
+      "controllable_events": [
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"left_blocked\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"left_blocked\", \"path_clear\", \"left_blocked\")",
+        "(\"left_blocked\", \"obstacle_front\", \"left_blocked\")",
+        "(\"left_blocked\", \"obstacle_left\", \"left_blocked\")",
+        "(\"left_blocked\", \"obstacle_right\", \"left_blocked\")",
+        "(\"left_blocked\", \"rotate_clockwise\", \"idle\")"
+      ]
+    },
+    {
+      "name": "E5_right_recovery",
+      "purpose": "Obstacle on the right triggers a one-shot counterclockwise turn away from the blocked side",
+      "states": [
+        "idle",
+        "right_blocked"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "right_blocked"
+      ],
+      "controllable_events": [
+        "rotate_counterclockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"right_blocked\")",
+        "(\"right_blocked\", \"path_clear\", \"right_blocked\")",
+        "(\"right_blocked\", \"obstacle_front\", \"right_blocked\")",
+        "(\"right_blocked\", \"obstacle_left\", \"right_blocked\")",
+        "(\"right_blocked\", \"obstacle_right\", \"right_blocked\")",
+        "(\"right_blocked\", \"rotate_counterclockwise\", \"idle\")"
+      ]
+    },
+    {
+      "name": "E6_no_full_rotate_default",
+      "purpose": "No full_rotate is enabled in ordinary exploration or ordinary obstacle recovery; last-resort scan is intentionally omitted to maximize coverage and keep recovery conservative",
+      "states": [
+        "q"
+      ],
+      "initial_states": [
+        "q"
+      ],
+      "marked_states": [
+        "q"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"q\", \"path_clear\", \"q\")",
+        "(\"q\", \"obstacle_front\", \"q\")",
+        "(\"q\", \"obstacle_left\", \"q\")",
+        "(\"q\", \"obstacle_right\", \"q\")"
+      ]
+    }
+  ]
+}

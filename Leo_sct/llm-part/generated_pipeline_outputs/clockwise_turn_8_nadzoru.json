@@ -1,0 +1,122 @@
+{
+  "rationale": "The plant models the robot's motion and perception capabilities using only the allowed events. The specification enforces safe exploration with an always-turn-right policy: move forward only when the path is clear, and rotate clockwise to recover from any obstacle. The supervisor never enables move_forward in any obstacle state and always returns to forward progress as soon as path_clear is observed.",
+  "strategy": [
+    "Separate plant automata for motion and perception to reflect the robot's hardware interface.",
+    "Specification automaton binds perception outcomes to allowed actions, enforcing safety and always-turn-right recovery."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion plant: models execution of move_forward and rotate_clockwise commands.",
+      "states": [
+        "idle",
+        "moving_forward",
+        "rotating_cw"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"moving_forward\")",
+        "(\"idle\", \"rotate_clockwise\", \"rotating_cw\")",
+        "(\"moving_forward\", \"move_forward\", \"moving_forward\")",
+        "(\"moving_forward\", \"rotate_clockwise\", \"rotating_cw\")",
+        "(\"rotating_cw\", \"move_forward\", \"moving_forward\")",
+        "(\"rotating_cw\", \"rotate_clockwise\", \"rotating_cw\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot perception plant: models uncontrollable sensor events for path and obstacles.",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration policy: enables move_forward only when path is clear, otherwise enables only rotate_clockwise for recovery; always-turn-right policy.",
+      "states": [
+        "clear",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "obs_front",
+        "obs_left",
+        "obs_right"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"clear\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"obs_front\", \"path_clear\", \"clear\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_front\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"obs_left\", \"path_clear\", \"clear\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"obs_right\", \"path_clear\", \"clear\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"rotate_commit\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"rotate_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"rotate_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"rotate_commit\", \"rotate_clockwise\", \"clear\")"
+      ]
+    }
+  ]
+}

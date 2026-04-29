@@ -1,0 +1,280 @@
+{
+  "rationale": "The plant automata model the robot's motion and perception capabilities, separating motion (G1) and perception (G2) for clarity and modularity. The specifications (E1-E4) bind perception outcomes to safe, progress-oriented actions, enforce conservative but non-repetitive recovery, and prevent unsafe or oscillatory behaviors. Recovery actions are short and directed, with full_rotate reserved for last-resort only after repeated failures. The design ensures forward progress dominates, with rapid return to exploration after recovery.",
+  "strategy": [
+    "Separate plant automata for motion commands and perception outcomes to allow modular specification binding.",
+    "Specification automata enforce safe, progress-maximizing action selection, conservative recovery, and prevent repeated or unsafe recovery actions."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion subsystem: models execution of motion commands as open-loop pulses.",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")",
+        "(\"idle\", \"move_backward\", \"idle\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot perception subsystem: models sensor outcomes for obstacle and path-clear events.",
+      "states": [
+        "perceive"
+      ],
+      "initial_states": [
+        "perceive"
+      ],
+      "marked_states": [
+        "perceive"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"perceive\", \"path_clear\", \"perceive\")",
+        "(\"perceive\", \"obstacle_front\", \"perceive\")",
+        "(\"perceive\", \"obstacle_left\", \"perceive\")",
+        "(\"perceive\", \"obstacle_right\", \"perceive\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Bind perception outcomes to safe, progress-oriented actions; enforce conservative recovery and rapid return to exploration.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "random_walk_commit",
+        "obs_front_recover",
+        "backward_commit",
+        "post_backward_turn",
+        "obs_left_recover",
+        "rotate_commit_cw",
+        "obs_right_recover",
+        "rotate_commit_ccw",
+        "stuck",
+        "full_rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"clear\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"obs_front_recover\", \"path_clear\", \"obs_front_recover\")",
+        "(\"obs_front_recover\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"obs_front_recover\", \"obstacle_left\", \"obs_front_recover\")",
+        "(\"obs_front_recover\", \"obstacle_right\", \"obs_front_recover\")",
+        "(\"obs_front_recover\", \"move_backward\", \"backward_commit\")",
+        "(\"backward_commit\", \"path_clear\", \"backward_commit\")",
+        "(\"backward_commit\", \"obstacle_front\", \"backward_commit\")",
+        "(\"backward_commit\", \"obstacle_left\", \"backward_commit\")",
+        "(\"backward_commit\", \"obstacle_right\", \"backward_commit\")",
+        "(\"backward_commit\", \"rotate_clockwise\", \"post_backward_turn\")",
+        "(\"post_backward_turn\", \"path_clear\", \"clear\")",
+        "(\"post_backward_turn\", \"obstacle_front\", \"stuck\")",
+        "(\"post_backward_turn\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"post_backward_turn\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"post_backward_turn\", \"move_forward\", \"forward_commit\")",
+        "(\"obs_left_recover\", \"path_clear\", \"obs_left_recover\")",
+        "(\"obs_left_recover\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"obs_left_recover\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"obs_left_recover\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"obs_left_recover\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+        "(\"rotate_commit_cw\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit_cw\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"rotate_commit_cw\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"rotate_commit_cw\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"rotate_commit_cw\", \"move_forward\", \"forward_commit\")",
+        "(\"obs_right_recover\", \"path_clear\", \"obs_right_recover\")",
+        "(\"obs_right_recover\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"obs_right_recover\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"obs_right_recover\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"obs_right_recover\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+        "(\"rotate_commit_ccw\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit_ccw\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"rotate_commit_ccw\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"rotate_commit_ccw\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"rotate_commit_ccw\", \"move_forward\", \"forward_commit\")",
+        "(\"stuck\", \"path_clear\", \"stuck\")",
+        "(\"stuck\", \"obstacle_front\", \"stuck\")",
+        "(\"stuck\", \"obstacle_left\", \"stuck\")",
+        "(\"stuck\", \"obstacle_right\", \"stuck\")",
+        "(\"stuck\", \"full_rotate\", \"full_rotate_commit\")",
+        "(\"full_rotate_commit\", \"path_clear\", \"full_rotate_commit\")",
+        "(\"full_rotate_commit\", \"obstacle_front\", \"full_rotate_commit\")",
+        "(\"full_rotate_commit\", \"obstacle_left\", \"full_rotate_commit\")",
+        "(\"full_rotate_commit\", \"obstacle_right\", \"full_rotate_commit\")",
+        "(\"full_rotate_commit\", \"move_forward\", \"clear\")",
+        "(\"random_walk_commit\", \"path_clear\", \"random_walk_commit\")",
+        "(\"random_walk_commit\", \"obstacle_front\", \"obs_front_recover\")",
+        "(\"random_walk_commit\", \"obstacle_left\", \"obs_left_recover\")",
+        "(\"random_walk_commit\", \"obstacle_right\", \"obs_right_recover\")",
+        "(\"random_walk_commit\", \"random_walk\", \"clear\")"
+      ]
+    },
+    {
+      "name": "E2",
+      "purpose": "Enforce that move_backward is only used as a one-shot recovery after obstacle_front, never chained or used in clear/exploration states.",
+      "states": [
+        "ready",
+        "after_backward"
+      ],
+      "initial_states": [
+        "ready"
+      ],
+      "marked_states": [
+        "ready"
+      ],
+      "controllable_events": [
+        "move_backward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "obstacle_front",
+        "path_clear",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"ready\", \"obstacle_front\", \"after_backward\")",
+        "(\"ready\", \"path_clear\", \"ready\")",
+        "(\"ready\", \"obstacle_left\", \"ready\")",
+        "(\"ready\", \"obstacle_right\", \"ready\")",
+        "(\"after_backward\", \"move_backward\", \"ready\")",
+        "(\"after_backward\", \"rotate_clockwise\", \"ready\")",
+        "(\"after_backward\", \"obstacle_front\", \"after_backward\")",
+        "(\"after_backward\", \"path_clear\", \"after_backward\")",
+        "(\"after_backward\", \"obstacle_left\", \"after_backward\")",
+        "(\"after_backward\", \"obstacle_right\", \"after_backward\")"
+      ]
+    },
+    {
+      "name": "E3",
+      "purpose": "Enforce that full_rotate is only used as a last-resort after stuck, never chained or used in clear/exploration/recovery states.",
+      "states": [
+        "not_stuck",
+        "last_resort"
+      ],
+      "initial_states": [
+        "not_stuck"
+      ],
+      "marked_states": [
+        "not_stuck"
+      ],
+      "controllable_events": [
+        "full_rotate",
+        "move_forward"
+      ],
+      "uncontrollable_events": [
+        "obstacle_front",
+        "path_clear",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"not_stuck\", \"obstacle_front\", \"last_resort\")",
+        "(\"not_stuck\", \"path_clear\", \"not_stuck\")",
+        "(\"not_stuck\", \"obstacle_left\", \"not_stuck\")",
+        "(\"not_stuck\", \"obstacle_right\", \"not_stuck\")",
+        "(\"last_resort\", \"full_rotate\", \"not_stuck\")",
+        "(\"last_resort\", \"move_forward\", \"not_stuck\")",
+        "(\"last_resort\", \"obstacle_front\", \"last_resort\")",
+        "(\"last_resort\", \"path_clear\", \"last_resort\")",
+        "(\"last_resort\", \"obstacle_left\", \"last_resort\")",
+        "(\"last_resort\", \"obstacle_right\", \"last_resort\")"
+      ]
+    },
+    {
+      "name": "E4",
+      "purpose": "Prevent oscillation: do not allow both rotate_clockwise and rotate_counterclockwise as controllables in the same state; enforce consistent recovery direction.",
+      "states": [
+        "neutral",
+        "cw_only",
+        "ccw_only"
+      ],
+      "initial_states": [
+        "neutral"
+      ],
+      "marked_states": [
+        "neutral"
+      ],
+      "controllable_events": [
+        "rotate_clockwise",
+        "rotate_counterclockwise"
+      ],
+      "uncontrollable_events": [
+        "obstacle_left",
+        "obstacle_right",
+        "obstacle_front",
+        "path_clear"
+      ],
+      "transitions": [
+        "(\"neutral\", \"obstacle_left\", \"cw_only\")",
+        "(\"neutral\", \"obstacle_right\", \"ccw_only\")",
+        "(\"neutral\", \"obstacle_front\", \"neutral\")",
+        "(\"neutral\", \"path_clear\", \"neutral\")",
+        "(\"cw_only\", \"rotate_clockwise\", \"neutral\")",
+        "(\"cw_only\", \"obstacle_left\", \"cw_only\")",
+        "(\"cw_only\", \"obstacle_right\", \"ccw_only\")",
+        "(\"cw_only\", \"obstacle_front\", \"neutral\")",
+        "(\"cw_only\", \"path_clear\", \"neutral\")",
+        "(\"ccw_only\", \"rotate_counterclockwise\", \"neutral\")",
+        "(\"ccw_only\", \"obstacle_left\", \"cw_only\")",
+        "(\"ccw_only\", \"obstacle_right\", \"ccw_only\")",
+        "(\"ccw_only\", \"obstacle_front\", \"neutral\")",
+        "(\"ccw_only\", \"path_clear\", \"neutral\")"
+      ]
+    }
+  ]
+}

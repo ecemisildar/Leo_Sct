@@ -1,0 +1,248 @@
+{
+  "rationale": "The design separates sensing availability from motion capability in the plant and uses compact specifications to map each sensed condition to exactly one safe motion choice. Clear conditions bias strongly toward forward progress via move_forward, while obstacle conditions force a one-shot recovery state before exploration resumes. Because uncontrollable events are processed before controllable actions and motion pulses are open-loop, obstacle-triggered recovery states disable forward/random_walk and use conservative directed turns or a brief backward escape only for front obstacles. path_clear in recovery returns quickly to forward exploration.",
+  "strategy": [
+    "Use simple plant automata: one for sensor outcomes and one for motion command capability.",
+    "Use one specification per perception-to-action binding so each reached condition enables exactly one controllable action.",
+    "Bias clear sensing to move_forward rather than random_walk to maximize steady coverage progress.",
+    "Handle obstacle_front with a dedicated move_backward recovery, then a directed clockwise turn, then immediate return to exploration when path_clear appears.",
+    "Handle obstacle_left with rotate_clockwise and obstacle_right with rotate_counterclockwise for consistent turn-away behavior.",
+    "Use full_rotate nowhere in the nominal policy so it remains available in the plant but not selected unless additional specs are later added."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local perception channel producing uncontrollable obstacle/clear observations.",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion command capability for one-shot open-loop action pulses.",
+      "states": [
+        "motion"
+      ],
+      "initial_states": [
+        "motion"
+      ],
+      "marked_states": [
+        "motion"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"motion\", \"move_forward\", \"motion\")",
+        "(\"motion\", \"rotate_clockwise\", \"motion\")",
+        "(\"motion\", \"rotate_counterclockwise\", \"motion\")",
+        "(\"motion\", \"full_rotate\", \"motion\")",
+        "(\"motion\", \"random_walk\", \"motion\")",
+        "(\"motion\", \"move_backward\", \"motion\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_clear_to_forward",
+      "purpose": "In clear conditions, enable forward exploration as the default progress-maximizing action.",
+      "states": [
+        "monitor",
+        "clear_ready"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "clear_ready"
+      ],
+      "controllable_events": [
+        "move_forward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"clear_ready\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"monitor\")",
+        "(\"monitor\", \"obstacle_right\", \"monitor\")",
+        "(\"clear_ready\", \"path_clear\", \"clear_ready\")",
+        "(\"clear_ready\", \"obstacle_front\", \"monitor\")",
+        "(\"clear_ready\", \"obstacle_left\", \"monitor\")",
+        "(\"clear_ready\", \"obstacle_right\", \"monitor\")",
+        "(\"clear_ready\", \"move_forward\", \"monitor\")"
+      ]
+    },
+    {
+      "name": "E2_front_escape_back",
+      "purpose": "On front obstacle, require a brief one-shot backward escape before any return to exploration.",
+      "states": [
+        "monitor",
+        "front_back"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "front_back"
+      ],
+      "controllable_events": [
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"monitor\")",
+        "(\"monitor\", \"obstacle_front\", \"front_back\")",
+        "(\"monitor\", \"obstacle_left\", \"monitor\")",
+        "(\"monitor\", \"obstacle_right\", \"monitor\")",
+        "(\"front_back\", \"path_clear\", \"front_back\")",
+        "(\"front_back\", \"obstacle_front\", \"front_back\")",
+        "(\"front_back\", \"obstacle_left\", \"front_back\")",
+        "(\"front_back\", \"obstacle_right\", \"front_back\")",
+        "(\"front_back\", \"move_backward\", \"monitor\")"
+      ]
+    },
+    {
+      "name": "E3_post_back_turn_cw",
+      "purpose": "After the backward escape, require a single clockwise turn to create forward clearance and avoid repeated backing.",
+      "states": [
+        "idle",
+        "need_turn"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "need_turn"
+      ],
+      "controllable_events": [
+        "move_backward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"idle\", \"move_backward\", \"need_turn\")",
+        "(\"need_turn\", \"path_clear\", \"need_turn\")",
+        "(\"need_turn\", \"obstacle_front\", \"need_turn\")",
+        "(\"need_turn\", \"obstacle_left\", \"need_turn\")",
+        "(\"need_turn\", \"obstacle_right\", \"need_turn\")",
+        "(\"need_turn\", \"rotate_clockwise\", \"idle\")"
+      ]
+    },
+    {
+      "name": "E4_left_obstacle_turn_cw",
+      "purpose": "If the left side is blocked, force a clockwise turn-away recovery and forbid forward/random walk there.",
+      "states": [
+        "monitor",
+        "left_recover"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "left_recover"
+      ],
+      "controllable_events": [
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"monitor\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"left_recover\")",
+        "(\"monitor\", \"obstacle_right\", \"monitor\")",
+        "(\"left_recover\", \"path_clear\", \"left_recover\")",
+        "(\"left_recover\", \"obstacle_front\", \"left_recover\")",
+        "(\"left_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"left_recover\", \"obstacle_right\", \"left_recover\")",
+        "(\"left_recover\", \"rotate_clockwise\", \"monitor\")"
+      ]
+    },
+    {
+      "name": "E5_right_obstacle_turn_ccw",
+      "purpose": "If the right side is blocked, force a counterclockwise turn-away recovery and forbid forward/random walk there.",
+      "states": [
+        "monitor",
+        "right_recover"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "right_recover"
+      ],
+      "controllable_events": [
+        "rotate_counterclockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"monitor\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"monitor\")",
+        "(\"monitor\", \"obstacle_right\", \"right_recover\")",
+        "(\"right_recover\", \"path_clear\", \"right_recover\")",
+        "(\"right_recover\", \"obstacle_front\", \"right_recover\")",
+        "(\"right_recover\", \"obstacle_left\", \"right_recover\")",
+        "(\"right_recover\", \"obstacle_right\", \"right_recover\")",
+        "(\"right_recover\", \"rotate_counterclockwise\", \"monitor\")"
+      ]
+    }
+  ]
+}

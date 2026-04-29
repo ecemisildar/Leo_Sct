@@ -42,6 +42,8 @@ python3 run_pipeline.py --task find_marker --skip-llm
 python3 run_pipeline.py --task wall_follow --run-llm
 python3 run_pipeline.py --task zigzag --run-llm
 python3 run_pipeline.py --task explore --run-llm --prompt-set-file prompt_groups_explore.txt
+python3 run_pipeline.py --task explore --run-llm --prompt-set-file prompt_groups_explore.txt --prompt-repeats 3 --model gpt-5.4
+python3 run_pipeline.py --task explore --run-llm --prompt-set-file prompt_groups_explore.txt --prompt-repeats 3 --model gpt-5.4 --results-llm-dir ../results_backward
 ```
 
 Required flag:
@@ -54,9 +56,13 @@ LLM control flags:
 - `--skip-llm`: skip LLM and reuse latest JSON for the selected task.
 - `--user-task`: pass one free-form task prompt directly on the CLI.
 - `--user-task-file`: read one free-form task prompt from a text file.
+- `--model`: choose the OpenAI model for the LLM step (default: `gpt-4.1`).
 - `--prompt-set-file`: read grouped prompts from a text file with `[long]`,
   `[medium]`, and `[vague]` sections; each section must contain 5 prompts
   separated by `---`.
+- `--prompt-repeats`: repeat each grouped prompt this many times. With the
+  default explore prompt file, `--prompt-repeats 3` runs `15 * 3 = 45` LLM
+  generations.
 
 Note: `RUN_LLM` defaults to `True` in code, so `--skip-llm` is the explicit way
 to bypass LLM generation.
@@ -74,6 +80,7 @@ Generated files:
 - `des/full_pipeline/E<N>.xml`
 - `des/full_pipeline/Sloc<N>.xml`
 - `des/full_pipeline/script.txt`
+- `results_backward/<task>/<group>/prompt_<N>/run_<M>/*.yaml` for grouped prompt YAML batches
 
 YAML outputs written to:
 

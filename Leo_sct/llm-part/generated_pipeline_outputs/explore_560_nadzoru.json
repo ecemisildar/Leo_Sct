@@ -1,0 +1,164 @@
+{
+  "rationale": "Use a small plant split into sensing and motion capability, then encode the exploration/recovery policy in specifications. The policy gives one clear controllable action per decision/recovery state, keeps all uncontrollable events defined in every spec state, treats obstacle events as safety-critical preemptions in action states, prefers forward progress in clear conditions, uses brief directed turns for ordinary recovery, and reserves full_rotate for a dedicated last-resort stuck state reached only after repeated front blockage.",
+  "strategy": [
+    "Separate sensor outcomes from motion-actuation capability in G so E can impose safe event-to-action bindings cleanly.",
+    "Bias toward coverage by making clear/path_clear lead to move_forward, using random_walk only as a secondary exploration mode after a forward pulse, using directed turns for side/front obstacles, and using move_backward and full_rotate only in dedicated recovery chains."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Perception channel for obstacle and clear observations",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion capability plant for all available robot commands",
+      "states": [
+        "ready"
+      ],
+      "initial_states": [
+        "ready"
+      ],
+      "marked_states": [
+        "ready"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"ready\", \"move_forward\", \"ready\")",
+        "(\"ready\", \"rotate_clockwise\", \"ready\")",
+        "(\"ready\", \"rotate_counterclockwise\", \"ready\")",
+        "(\"ready\", \"full_rotate\", \"ready\")",
+        "(\"ready\", \"random_walk\", \"ready\")",
+        "(\"ready\", \"move_backward\", \"ready\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_policy",
+      "purpose": "Main exploration and obstacle-recovery policy with one-shot action states and dedicated last-resort handling",
+      "states": [
+        "clear_decide",
+        "forward_commit",
+        "wander_commit",
+        "left_recover",
+        "right_recover",
+        "front_back",
+        "front_turn",
+        "front_retry",
+        "stuck",
+        "scan_commit"
+      ],
+      "initial_states": [
+        "clear_decide"
+      ],
+      "marked_states": [
+        "clear_decide",
+        "forward_commit",
+        "wander_commit",
+        "left_recover",
+        "right_recover",
+        "front_back",
+        "front_turn",
+        "front_retry",
+        "stuck",
+        "scan_commit"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_decide\", \"path_clear\", \"clear_decide\")",
+        "(\"clear_decide\", \"obstacle_front\", \"front_back\")",
+        "(\"clear_decide\", \"obstacle_left\", \"left_recover\")",
+        "(\"clear_decide\", \"obstacle_right\", \"right_recover\")",
+        "(\"clear_decide\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"front_back\")",
+        "(\"forward_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"forward_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"forward_commit\", \"random_walk\", \"wander_commit\")",
+        "(\"wander_commit\", \"path_clear\", \"wander_commit\")",
+        "(\"wander_commit\", \"obstacle_front\", \"front_back\")",
+        "(\"wander_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"wander_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"wander_commit\", \"move_forward\", \"clear_decide\")",
+        "(\"left_recover\", \"path_clear\", \"clear_decide\")",
+        "(\"left_recover\", \"obstacle_front\", \"front_back\")",
+        "(\"left_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"left_recover\", \"obstacle_right\", \"right_recover\")",
+        "(\"left_recover\", \"rotate_clockwise\", \"clear_decide\")",
+        "(\"right_recover\", \"path_clear\", \"clear_decide\")",
+        "(\"right_recover\", \"obstacle_front\", \"front_back\")",
+        "(\"right_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"right_recover\", \"obstacle_right\", \"right_recover\")",
+        "(\"right_recover\", \"rotate_counterclockwise\", \"clear_decide\")",
+        "(\"front_back\", \"path_clear\", \"front_back\")",
+        "(\"front_back\", \"obstacle_front\", \"front_back\")",
+        "(\"front_back\", \"obstacle_left\", \"front_back\")",
+        "(\"front_back\", \"obstacle_right\", \"front_back\")",
+        "(\"front_back\", \"move_backward\", \"front_turn\")",
+        "(\"front_turn\", \"path_clear\", \"front_turn\")",
+        "(\"front_turn\", \"obstacle_front\", \"front_turn\")",
+        "(\"front_turn\", \"obstacle_left\", \"front_turn\")",
+        "(\"front_turn\", \"obstacle_right\", \"front_turn\")",
+        "(\"front_turn\", \"rotate_clockwise\", \"front_retry\")",
+        "(\"front_retry\", \"path_clear\", \"clear_decide\")",
+        "(\"front_retry\", \"obstacle_front\", \"stuck\")",
+        "(\"front_retry\", \"obstacle_left\", \"left_recover\")",
+        "(\"front_retry\", \"obstacle_right\", \"right_recover\")",
+        "(\"front_retry\", \"move_forward\", \"forward_commit\")",
+        "(\"stuck\", \"path_clear\", \"clear_decide\")",
+        "(\"stuck\", \"obstacle_front\", \"stuck\")",
+        "(\"stuck\", \"obstacle_left\", \"stuck\")",
+        "(\"stuck\", \"obstacle_right\", \"stuck\")",
+        "(\"stuck\", \"full_rotate\", \"scan_commit\")",
+        "(\"scan_commit\", \"path_clear\", \"clear_decide\")",
+        "(\"scan_commit\", \"obstacle_front\", \"front_back\")",
+        "(\"scan_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"scan_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"scan_commit\", \"move_forward\", \"forward_commit\")"
+      ]
+    }
+  ]
+}

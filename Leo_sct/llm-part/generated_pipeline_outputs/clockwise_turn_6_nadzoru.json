@@ -1,0 +1,107 @@
+{
+  "rationale": "The plant models the robot's motion and perception capabilities, separating action commits from sensor-driven state. The specification enforces the always-turn-right recovery policy: move_forward is only allowed when path_clear is true, and rotate_clockwise is the only recovery action after any obstacle event. Recovery states only allow rotate_clockwise, and return to forward progress only after path_clear.",
+  "strategy": [
+    "Separate plant automata for motion (move_forward, rotate_clockwise) and perception (path_clear, obstacle_front, obstacle_left, obstacle_right)",
+    "Specification automaton binds path_clear to move_forward, and any obstacle event to rotate_clockwise recovery, returning to forward progress only after path_clear"
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion and perception plant: models the robot's ability to move forward, rotate clockwise, and receive sensor events.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "recovery",
+        "rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"forward_commit\")",
+        "(\"clear\", \"obstacle_front\", \"recovery\")",
+        "(\"clear\", \"obstacle_left\", \"recovery\")",
+        "(\"clear\", \"obstacle_right\", \"recovery\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"recovery\")",
+        "(\"forward_commit\", \"obstacle_left\", \"recovery\")",
+        "(\"forward_commit\", \"obstacle_right\", \"recovery\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"recovery\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"recovery\", \"obstacle_front\", \"recovery\")",
+        "(\"recovery\", \"obstacle_left\", \"recovery\")",
+        "(\"recovery\", \"obstacle_right\", \"recovery\")",
+        "(\"recovery\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit\", \"obstacle_front\", \"recovery\")",
+        "(\"rotate_commit\", \"obstacle_left\", \"recovery\")",
+        "(\"rotate_commit\", \"obstacle_right\", \"recovery\")",
+        "(\"rotate_commit\", \"path_clear\", \"rotate_commit\")",
+        "(\"rotate_commit\", \"rotate_clockwise\", \"recovery\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Specification: Enforces always-turn-right recovery policy, only allows move_forward in clear, only rotate_clockwise in recovery, and transitions back to clear only after path_clear.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "recovery",
+        "rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"forward_commit\")",
+        "(\"clear\", \"obstacle_front\", \"recovery\")",
+        "(\"clear\", \"obstacle_left\", \"recovery\")",
+        "(\"clear\", \"obstacle_right\", \"recovery\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"recovery\")",
+        "(\"forward_commit\", \"obstacle_left\", \"recovery\")",
+        "(\"forward_commit\", \"obstacle_right\", \"recovery\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"recovery\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"recovery\", \"obstacle_front\", \"recovery\")",
+        "(\"recovery\", \"obstacle_left\", \"recovery\")",
+        "(\"recovery\", \"obstacle_right\", \"recovery\")",
+        "(\"recovery\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit\", \"rotate_clockwise\", \"recovery\")",
+        "(\"rotate_commit\", \"obstacle_front\", \"recovery\")",
+        "(\"rotate_commit\", \"obstacle_left\", \"recovery\")",
+        "(\"rotate_commit\", \"obstacle_right\", \"recovery\")",
+        "(\"rotate_commit\", \"path_clear\", \"rotate_commit\")"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "rationale": "Use a minimal plant split into sensing and motion capability, then encode the exploration policy in one deterministic specification with clear exploration states and dedicated one-shot recovery states. The policy prioritizes move_forward in clear space, uses occasional random_walk only from a clear-side branch, reacts conservatively to obstacle events, uses move_backward only for front-obstacle escape, and returns to forward exploration as soon as path_clear is observed.",
+  "strategy": [
+    "Separate uncontrollable perception from controllable motion capability in G",
+    "Encode safe progress-biased behavior in E with one controllable action per action state and total uncontrollable branching in every state"
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local perception channel producing obstacle and clear observations",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion capability plant for all available robot action pulses",
+      "states": [
+        "ready"
+      ],
+      "initial_states": [
+        "ready"
+      ],
+      "marked_states": [
+        "ready"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"ready\", \"move_forward\", \"ready\")",
+        "(\"ready\", \"rotate_clockwise\", \"ready\")",
+        "(\"ready\", \"rotate_counterclockwise\", \"ready\")",
+        "(\"ready\", \"full_rotate\", \"ready\")",
+        "(\"ready\", \"random_walk\", \"ready\")",
+        "(\"ready\", \"move_backward\", \"ready\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Progress-biased safe exploration policy with dedicated obstacle recovery and rapid return to forward motion",
+      "states": [
+        "clear_forward",
+        "clear_wander",
+        "front_back",
+        "front_turn_cw",
+        "left_turn_cw",
+        "right_turn_ccw",
+        "scan_escape"
+      ],
+      "initial_states": [
+        "clear_forward"
+      ],
+      "marked_states": [
+        "clear_forward",
+        "clear_wander",
+        "front_back",
+        "front_turn_cw",
+        "left_turn_cw",
+        "right_turn_ccw",
+        "scan_escape"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_forward\", \"path_clear\", \"clear_forward\")",
+        "(\"clear_forward\", \"obstacle_front\", \"front_back\")",
+        "(\"clear_forward\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"clear_forward\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"clear_forward\", \"move_forward\", \"clear_wander\")",
+        "(\"clear_wander\", \"path_clear\", \"clear_wander\")",
+        "(\"clear_wander\", \"obstacle_front\", \"front_back\")",
+        "(\"clear_wander\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"clear_wander\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"clear_wander\", \"random_walk\", \"clear_forward\")",
+        "(\"front_back\", \"path_clear\", \"front_back\")",
+        "(\"front_back\", \"obstacle_front\", \"scan_escape\")",
+        "(\"front_back\", \"obstacle_left\", \"front_back\")",
+        "(\"front_back\", \"obstacle_right\", \"front_back\")",
+        "(\"front_back\", \"move_backward\", \"front_turn_cw\")",
+        "(\"front_turn_cw\", \"path_clear\", \"clear_forward\")",
+        "(\"front_turn_cw\", \"obstacle_front\", \"scan_escape\")",
+        "(\"front_turn_cw\", \"obstacle_left\", \"front_turn_cw\")",
+        "(\"front_turn_cw\", \"obstacle_right\", \"front_turn_cw\")",
+        "(\"front_turn_cw\", \"rotate_clockwise\", \"clear_forward\")",
+        "(\"left_turn_cw\", \"path_clear\", \"clear_forward\")",
+        "(\"left_turn_cw\", \"obstacle_front\", \"front_back\")",
+        "(\"left_turn_cw\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"left_turn_cw\", \"obstacle_right\", \"left_turn_cw\")",
+        "(\"left_turn_cw\", \"rotate_clockwise\", \"clear_forward\")",
+        "(\"right_turn_ccw\", \"path_clear\", \"clear_forward\")",
+        "(\"right_turn_ccw\", \"obstacle_front\", \"front_back\")",
+        "(\"right_turn_ccw\", \"obstacle_left\", \"right_turn_ccw\")",
+        "(\"right_turn_ccw\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"right_turn_ccw\", \"rotate_counterclockwise\", \"clear_forward\")",
+        "(\"scan_escape\", \"path_clear\", \"clear_forward\")",
+        "(\"scan_escape\", \"obstacle_front\", \"scan_escape\")",
+        "(\"scan_escape\", \"obstacle_left\", \"scan_escape\")",
+        "(\"scan_escape\", \"obstacle_right\", \"scan_escape\")",
+        "(\"scan_escape\", \"full_rotate\", \"clear_forward\")"
+      ]
+    }
+  ]
+}

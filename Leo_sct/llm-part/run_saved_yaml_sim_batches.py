@@ -15,9 +15,16 @@ WORKSPACE_ROOT = THIS_DIR.parents[2]
 DEFAULT_SETUP_BASH = WORKSPACE_ROOT / "install" / "setup.bash"
 DEFAULT_YAML_ROOT = PROJECT_ROOT / "results_llm" / "explore"
 DEFAULT_RESULTS_ROOT = PROJECT_ROOT / "results_exp" / "explore"
-EXPECTED_GROUPS = ("long", "medium", "vague")
+EXPECTED_GROUPS = ("long", "medium", "short")
 EXPECTED_PROMPTS = range(1, 6)
 EXPECTED_RUNS = range(1, 4)
+SPAWN_LAYOUTS = ("spread", "middle_circle", "random_safe")
+GROUP_INPUT_DIRS = {
+    "long": "long",
+    "medium": "medium",
+    "short": "vague",
+    "vague": "vague",
+}
 
 
 def _iter_yaml_runs(yaml_root: Path) -> Iterable[tuple[str, str, str, Path, Path]]:
@@ -32,11 +39,33 @@ def _iter_yaml_runs(yaml_root: Path) -> Iterable[tuple[str, str, str, Path, Path
         yield group_name, prompt_name, run_name, yaml_path, prompt_file
 
 
+def _iter_yaml_runs_interleaved(yaml_root: Path) -> Iterable[tuple[str, str, str, Path, Path]]:
+    """Yield prompt_1 long/medium/short, then prompt_2 long/medium/short, etc."""
+    yielded: set[Path] = set()
+    for prompt in EXPECTED_PROMPTS:
+        for group in EXPECTED_GROUPS:
+            input_group = GROUP_INPUT_DIRS.get(group, group)
+            prompt_dir = yaml_root / input_group / f"prompt_{prompt}"
+            for yaml_path in sorted(prompt_dir.glob("run_*/*.yaml")):
+                run_dir = yaml_path.parent
+                prompt_file = run_dir / "prompt.txt"
+                if not prompt_file.exists():
+                    raise SystemExit(f"Missing prompt.txt next to YAML: {yaml_path}")
+                yielded.add(yaml_path.resolve())
+                yield group, f"prompt_{prompt}", run_dir.name, yaml_path, prompt_file
+
+    # Include any non-standard saved YAMLs after the expected prompt/group order.
+    for group, prompt_name, run_name, yaml_path, prompt_file in _iter_yaml_runs(yaml_root):
+        if yaml_path.resolve() not in yielded:
+            yield group, prompt_name, run_name, yaml_path, prompt_file
+
+
 def _iter_expected_yaml_runs(yaml_root: Path) -> Iterable[tuple[str, str, str, Path | None, Path | None]]:
     for group in EXPECTED_GROUPS:
         for prompt in EXPECTED_PROMPTS:
             for run in EXPECTED_RUNS:
-                run_dir = yaml_root / group / f"prompt_{prompt}" / f"run_{run}"
+                input_group = GROUP_INPUT_DIRS.get(group, group)
+                run_dir = yaml_root / input_group / f"prompt_{prompt}" / f"run_{run}"
                 yaml_paths = sorted(run_dir.glob("*.yaml"))
                 prompt_file = run_dir / "prompt.txt"
                 yaml_path = yaml_paths[0] if len(yaml_paths) == 1 else None
@@ -57,7 +86,8 @@ def _single_yaml_run(yaml_path: Path) -> tuple[str, str, str, Path, Path]:
 
 
 def _resolve_yaml_selector(yaml_root: Path, group: str, prompt: int, run: int) -> Path:
-    run_dir = yaml_root / group / f"prompt_{prompt}" / f"run_{run}"
+    input_group = GROUP_INPUT_DIRS.get(group, group)
+    run_dir = yaml_root / input_group / f"prompt_{prompt}" / f"run_{run}"
     yaml_paths = sorted(run_dir.glob("*.yaml"))
     if len(yaml_paths) != 1:
         raise SystemExit(f"Expected exactly one YAML in {run_dir}, found {len(yaml_paths)}")
@@ -96,6 +126,21 @@ def _run_artifacts_saved(run_dir: Path) -> bool:
         "SAVE_STATUS.txt",
     ]
     return all((run_dir / name).exists() for name in required)
+
+
+def _last_coverage_time(run_dir: Path) -> float | None:
+    coverage_csv = run_dir / "coverage_timeseries.csv"
+    if not coverage_csv.exists():
+        return None
+    last_time = None
+    with coverage_csv.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                last_time = float(row.get("time_s", ""))
+            except (TypeError, ValueError):
+                continue
+    return last_time
 
 
 def _find_existing_saved_run(results_parent: Path) -> Path | None:
@@ -154,6 +199,158 @@ def _build_launch_cmd(
     return " && ".join(commands)
 
 
+def _run_single_simulation(
+    *,
+    manifest_path: Path,
+    group: str,
+    prompt: str,
+    run_name: str,
+    layout: str,
+    trial: int,
+    results_parent: Path,
+    yaml_path: Path,
+    prompt_path: Path,
+    setup_bash: Path,
+    build_packages: list[str],
+    run_duration: float,
+    total_robots: int,
+    headless: bool,
+    auto_start: bool,
+    auto_start_supervisor: bool,
+    skip_build: bool,
+    capture_output: bool,
+    stop_on_error: bool,
+    analyze_after_run: bool,
+) -> str:
+    results_parent.mkdir(parents=True, exist_ok=True)
+    existing_run_dir = _find_existing_saved_run(results_parent)
+    if existing_run_dir is not None:
+        _append_manifest_row(
+            manifest_path,
+            {
+                "group": group,
+                "prompt": prompt,
+                "run": run_name,
+                "layout": layout,
+                "trial": str(trial),
+                "yaml_path": str(yaml_path),
+                "prompt_path": str(prompt_path),
+                "results_parent": str(results_parent),
+                "run_output_dir": str(existing_run_dir),
+                "status": "skipped_existing",
+            },
+        )
+        print(
+            f"[SKIPPED] group={group} prompt={prompt} run={run_name} "
+            f"layout={layout} trial={trial} existing={existing_run_dir}"
+        )
+        return "skipped_existing"
+
+    before_runs = {path.resolve() for path in results_parent.glob("run_*") if path.is_dir()}
+
+    launch_cmd = _build_launch_cmd(
+        setup_bash=setup_bash,
+        build_packages=build_packages,
+        run_duration=run_duration,
+        total_robots=total_robots,
+        spawn_layout=layout,
+        results_dir=results_parent,
+        yaml_path=yaml_path,
+        prompt_path=prompt_path,
+        headless=headless,
+        auto_start=auto_start,
+        auto_start_supervisor=auto_start_supervisor,
+        skip_build=skip_build,
+    )
+
+    status = "ok"
+    launch_failed = False
+    try:
+        if capture_output:
+            stdout_path = results_parent / "launch_stdout.log"
+            stderr_path = results_parent / "launch_stderr.log"
+            with stdout_path.open("a", encoding="utf-8") as stdout_f, stderr_path.open(
+                "a", encoding="utf-8"
+            ) as stderr_f:
+                subprocess.run(
+                    ["bash", "-lc", launch_cmd],
+                    cwd=WORKSPACE_ROOT,
+                    check=True,
+                    stdout=stdout_f,
+                    stderr=stderr_f,
+                )
+        else:
+            subprocess.run(
+                ["bash", "-lc", launch_cmd],
+                cwd=WORKSPACE_ROOT,
+                check=True,
+            )
+    except subprocess.CalledProcessError:
+        launch_failed = True
+
+    after_runs = sorted(path.resolve() for path in results_parent.glob("run_*") if path.is_dir())
+    new_runs = [path for path in after_runs if path not in before_runs]
+    run_output_dir = str(new_runs[-1]) if new_runs else ""
+    saved_ok = bool(run_output_dir) and _run_artifacts_saved(Path(run_output_dir))
+    duration_ok = False
+    if saved_ok:
+        coverage_end_s = _last_coverage_time(Path(run_output_dir))
+        duration_ok = (
+            coverage_end_s is not None
+            and coverage_end_s >= max(0.0, run_duration - 5.0)
+        )
+        if not duration_ok:
+            status = "short_run"
+
+    if saved_ok and analyze_after_run:
+        try:
+            subprocess.run(
+                [
+                    "python3",
+                    str(PROJECT_ROOT / "swarm_basics/swarm_basics/analyze_run_from_logs.py"),
+                    "--results-dir",
+                    str(Path(run_output_dir).parent),
+                ],
+                cwd=PROJECT_ROOT,
+                check=True,
+            )
+        except subprocess.CalledProcessError:
+            status = "analysis_failed"
+            if stop_on_error:
+                raise
+
+    if launch_failed:
+        if saved_ok and duration_ok:
+            if status != "analysis_failed":
+                status = "ok"
+        else:
+            if status != "short_run":
+                status = "failed"
+
+    _append_manifest_row(
+        manifest_path,
+        {
+            "group": group,
+            "prompt": prompt,
+            "run": run_name,
+            "layout": layout,
+            "trial": str(trial),
+            "yaml_path": str(yaml_path),
+            "prompt_path": str(prompt_path),
+            "results_parent": str(results_parent),
+            "run_output_dir": run_output_dir,
+            "status": status,
+        },
+    )
+    print(
+        f"[{status.upper()}] group={group} prompt={prompt} run={run_name} "
+        f"layout={layout} trial={trial} results={run_output_dir or results_parent}"
+    )
+    if stop_on_error and status in {"failed", "short_run", "analysis_failed"}:
+        raise subprocess.CalledProcessError(1, ["bash", "-lc", launch_cmd])
+    return status
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run saved grouped YAML supervisors in Gazebo and save each simulation immediately."
@@ -163,10 +360,17 @@ def main() -> int:
         "--yaml-file",
         help="Run exactly one YAML file instead of scanning --yaml-root.",
     )
-    parser.add_argument("--group", choices=["long", "medium", "vague"])
+    parser.add_argument("--group", choices=["long", "medium", "short", "vague"])
     parser.add_argument("--prompt", type=int, help="Prompt ordinal within the group, 1-5.")
     parser.add_argument("--run", type=int, help="Run ordinal for the YAML, usually 1-3.")
     parser.add_argument("--results-root", default=str(DEFAULT_RESULTS_ROOT))
+    parser.add_argument(
+        "--results-parent",
+        help=(
+            "Exact parent directory for simulation run_* output. "
+            "Only valid with --yaml-file or --group/--prompt/--run and --once-per-yaml."
+        ),
+    )
     parser.add_argument("--setup-bash", default=str(DEFAULT_SETUP_BASH))
     parser.add_argument("--run-duration", type=float, default=200.0)
     parser.add_argument("--total-robots", type=int, default=5)
@@ -186,7 +390,28 @@ def main() -> int:
         "--layouts",
         nargs="+",
         default=["spread", "middle_circle"],
-        choices=["spread", "middle_circle"],
+        choices=SPAWN_LAYOUTS,
+    )
+    parser.add_argument(
+        "--once-per-yaml",
+        action="store_true",
+        help="Run exactly one Gazebo simulation for each YAML instead of iterating all layouts and trials.",
+    )
+    parser.add_argument(
+        "--interleave-groups",
+        action="store_true",
+        help="Scan YAMLs as prompt_1 long/medium/short, then prompt_2 long/medium/short, etc.",
+    )
+    parser.add_argument(
+        "--analyze-after-run",
+        action="store_true",
+        help="Run offline coverage/collision analysis immediately after each saved simulation.",
+    )
+    parser.add_argument(
+        "--once-layout",
+        default="spread",
+        choices=SPAWN_LAYOUTS,
+        help="Layout to use with --once-per-yaml. Default: spread.",
     )
     parser.add_argument("--headless", action="store_true", default=True)
     parser.add_argument("--no-headless", dest="headless", action="store_false")
@@ -204,6 +429,7 @@ def main() -> int:
 
     yaml_root = Path(args.yaml_root).resolve()
     results_root = Path(args.results_root).resolve()
+    exact_results_parent = Path(args.results_parent).resolve() if args.results_parent else None
     setup_bash = Path(args.setup_bash).resolve()
     manifest_path = results_root / "simulation_manifest.csv"
 
@@ -213,11 +439,14 @@ def main() -> int:
 
     if args.yaml_file and selector_used:
         raise SystemExit("Use either --yaml-file or (--group --prompt --run), not both.")
+    if exact_results_parent is not None and (not args.once_per_yaml or (not args.yaml_file and not selector_used)):
+        raise SystemExit("--results-parent requires --once-per-yaml and a single YAML selection.")
 
     if selector_used:
         if not yaml_root.exists():
             raise SystemExit(f"YAML root not found: {yaml_root}")
-        run_dir = yaml_root / args.group / f"prompt_{args.prompt}" / f"run_{args.run}"
+        input_group = GROUP_INPUT_DIRS.get(args.group, args.group)
+        run_dir = yaml_root / input_group / f"prompt_{args.prompt}" / f"run_{args.run}"
         yaml_paths = sorted(run_dir.glob("*.yaml"))
         prompt_path = run_dir / "prompt.txt"
         yaml_path = yaml_paths[0] if len(yaml_paths) == 1 else None
@@ -231,7 +460,8 @@ def main() -> int:
     else:
         if not yaml_root.exists():
             raise SystemExit(f"YAML root not found: {yaml_root}")
-        run_entries = list(_iter_yaml_runs(yaml_root))
+        iterator = _iter_yaml_runs_interleaved if args.interleave_groups else _iter_yaml_runs
+        run_entries = list(iterator(yaml_root))
 
     if not run_entries:
         raise SystemExit(f"YAML root not found: {yaml_root}")
@@ -262,122 +492,64 @@ def main() -> int:
                 f"[SKIPPED] group={group} prompt={prompt} run={run_name} missing YAML or prompt.txt"
             )
             continue
+        if args.once_per_yaml:
+            results_parent = (
+                exact_results_parent
+                if exact_results_parent is not None
+                else results_root / group / prompt / run_name / args.once_layout / "trial_1"
+            )
+            status = _run_single_simulation(
+                manifest_path=manifest_path,
+                group=group,
+                prompt=prompt,
+                run_name=run_name,
+                layout=args.once_layout,
+                trial=1,
+                results_parent=results_parent,
+                yaml_path=yaml_path,
+                prompt_path=prompt_path,
+                setup_bash=setup_bash,
+                build_packages=args.build_packages,
+                run_duration=args.run_duration,
+                total_robots=args.total_robots,
+                headless=args.headless,
+                auto_start=args.auto_start,
+                auto_start_supervisor=args.auto_start_supervisor,
+                skip_build=args.skip_build,
+                capture_output=args.capture_output,
+                stop_on_error=args.stop_on_error,
+                analyze_after_run=args.analyze_after_run,
+            )
+            if status == "failed":
+                failures += 1
+            continue
         for layout in args.layouts:
             for trial in range(1, args.trials + 1):
                 results_parent = results_root / group / prompt / run_name / layout / f"trial_{trial}"
-                results_parent.mkdir(parents=True, exist_ok=True)
-                existing_run_dir = _find_existing_saved_run(results_parent)
-                if existing_run_dir is not None:
-                    _append_manifest_row(
-                        manifest_path,
-                        {
-                            "group": group,
-                            "prompt": prompt,
-                            "run": run_name,
-                            "layout": layout,
-                            "trial": str(trial),
-                            "yaml_path": str(yaml_path),
-                            "prompt_path": str(prompt_path),
-                            "results_parent": str(results_parent),
-                            "run_output_dir": str(existing_run_dir),
-                            "status": "skipped_existing",
-                        },
-                    )
-                    print(
-                        f"[SKIPPED] group={group} prompt={prompt} run={run_name} "
-                        f"layout={layout} trial={trial} existing={existing_run_dir}"
-                    )
-                    continue
-                before_runs = {path.resolve() for path in results_parent.glob("run_*") if path.is_dir()}
-
-                launch_cmd = _build_launch_cmd(
+                status = _run_single_simulation(
+                    manifest_path=manifest_path,
+                    group=group,
+                    prompt=prompt,
+                    run_name=run_name,
+                    layout=layout,
+                    trial=trial,
+                    results_parent=results_parent,
+                    yaml_path=yaml_path,
+                    prompt_path=prompt_path,
                     setup_bash=setup_bash,
                     build_packages=args.build_packages,
                     run_duration=args.run_duration,
                     total_robots=args.total_robots,
-                    spawn_layout=layout,
-                    results_dir=results_parent,
-                    yaml_path=yaml_path,
-                    prompt_path=prompt_path,
                     headless=args.headless,
                     auto_start=args.auto_start,
                     auto_start_supervisor=args.auto_start_supervisor,
                     skip_build=args.skip_build,
+                    capture_output=args.capture_output,
+                    stop_on_error=args.stop_on_error,
+                    analyze_after_run=args.analyze_after_run,
                 )
-
-                status = "ok"
-                launch_failed = False
-                try:
-                    if args.capture_output:
-                        stdout_path = results_parent / "launch_stdout.log"
-                        stderr_path = results_parent / "launch_stderr.log"
-                        with stdout_path.open("a", encoding="utf-8") as stdout_f, stderr_path.open(
-                            "a", encoding="utf-8"
-                        ) as stderr_f:
-                            subprocess.run(
-                                ["bash", "-lc", launch_cmd],
-                                cwd=WORKSPACE_ROOT,
-                                check=True,
-                                stdout=stdout_f,
-                                stderr=stderr_f,
-                            )
-                    else:
-                        subprocess.run(
-                            ["bash", "-lc", launch_cmd],
-                            cwd=WORKSPACE_ROOT,
-                            check=True,
-                        )
-                except subprocess.CalledProcessError:
-                    launch_failed = True
-
-                after_runs = sorted(path.resolve() for path in results_parent.glob("run_*") if path.is_dir())
-                new_runs = [path for path in after_runs if path not in before_runs]
-                run_output_dir = str(new_runs[-1]) if new_runs else ""
-                saved_ok = bool(run_output_dir) and _run_artifacts_saved(Path(run_output_dir))
-
-                if launch_failed:
-                    if saved_ok:
-                        status = "ok"
-                    else:
-                        status = "failed"
-                        failures += 1
-                        if args.stop_on_error:
-                            _append_manifest_row(
-                                manifest_path,
-                                {
-                                    "group": group,
-                                    "prompt": prompt,
-                                    "run": run_name,
-                                    "layout": layout,
-                                    "trial": str(trial),
-                                    "yaml_path": str(yaml_path),
-                                    "prompt_path": str(prompt_path),
-                                    "results_parent": str(results_parent),
-                                    "run_output_dir": run_output_dir,
-                                    "status": status,
-                                },
-                            )
-                            raise subprocess.CalledProcessError(1, ["bash", "-lc", launch_cmd])
-
-                _append_manifest_row(
-                    manifest_path,
-                    {
-                        "group": group,
-                        "prompt": prompt,
-                        "run": run_name,
-                        "layout": layout,
-                        "trial": str(trial),
-                        "yaml_path": str(yaml_path),
-                        "prompt_path": str(prompt_path),
-                        "results_parent": str(results_parent),
-                        "run_output_dir": run_output_dir,
-                        "status": status,
-                    },
-                )
-                print(
-                    f"[{status.upper()}] group={group} prompt={prompt} run={run_name} "
-                    f"layout={layout} trial={trial} results={run_output_dir or results_parent}"
-                )
+                if status == "failed":
+                    failures += 1
 
     print(f"Wrote manifest to {manifest_path}")
     if failures:

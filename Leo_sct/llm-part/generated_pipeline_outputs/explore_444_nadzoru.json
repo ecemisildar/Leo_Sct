@@ -1,0 +1,158 @@
+{
+  "rationale": "The plant is split into sensing and motion capability so the supervisor can react to uncontrollable obstacle observations before issuing one-shot motion pulses. The specifications encode a progress-biased exploration policy: use forward motion in clear conditions, use directed short turns for side obstacles, use a brief backward escape only for front obstacles, and return to forward exploration immediately when path_clear is observed. Action states self-loop on path_clear so the intended pulse is not preempted in the same step, while obstacle events can still force safe recovery.",
+  "strategy": [
+    "Separate uncontrollable perception from controllable motion capability in G",
+    "Use small deterministic specifications to bind sensed conditions to exactly one allowed controllable action per decision state",
+    "Bias clear-space behavior to move_forward rather than rotate or back up",
+    "Use rotate_clockwise for left-side blockage and rotate_counterclockwise for right-side blockage consistently",
+    "Reserve move_backward for dedicated front-obstacle recovery only, then transition to a turn recovery state",
+    "Return to clear exploration as soon as path_clear occurs after recovery"
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local obstacle perception channel producing uncontrollable environment observations",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion actuator capability for one-shot open-loop motion commands",
+      "states": [
+        "ready"
+      ],
+      "initial_states": [
+        "ready"
+      ],
+      "marked_states": [
+        "ready"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"ready\", \"move_forward\", \"ready\")",
+        "(\"ready\", \"rotate_clockwise\", \"ready\")",
+        "(\"ready\", \"rotate_counterclockwise\", \"ready\")",
+        "(\"ready\", \"full_rotate\", \"ready\")",
+        "(\"ready\", \"random_walk\", \"ready\")",
+        "(\"ready\", \"move_backward\", \"ready\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Main exploration and obstacle-recovery policy",
+      "states": [
+        "clear",
+        "forward_commit",
+        "obs_front",
+        "back_commit",
+        "turn_after_back",
+        "cw_commit",
+        "obs_left",
+        "ccw_commit",
+        "obs_right"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "forward_commit",
+        "obs_front",
+        "back_commit",
+        "turn_after_back",
+        "cw_commit",
+        "obs_left",
+        "ccw_commit",
+        "obs_right"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"path_clear\", \"forward_commit\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"move_backward\", \"back_commit\")",
+        "(\"obs_front\", \"path_clear\", \"clear\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+        "(\"back_commit\", \"move_backward\", \"turn_after_back\")",
+        "(\"back_commit\", \"path_clear\", \"back_commit\")",
+        "(\"back_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"back_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"back_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"turn_after_back\", \"rotate_clockwise\", \"clear\")",
+        "(\"turn_after_back\", \"path_clear\", \"clear\")",
+        "(\"turn_after_back\", \"obstacle_front\", \"obs_front\")",
+        "(\"turn_after_back\", \"obstacle_left\", \"obs_left\")",
+        "(\"turn_after_back\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"cw_commit\")",
+        "(\"obs_left\", \"path_clear\", \"clear\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"cw_commit\", \"rotate_clockwise\", \"clear\")",
+        "(\"cw_commit\", \"path_clear\", \"cw_commit\")",
+        "(\"cw_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"cw_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"cw_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"rotate_counterclockwise\", \"ccw_commit\")",
+        "(\"obs_right\", \"path_clear\", \"clear\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"ccw_commit\", \"rotate_counterclockwise\", \"clear\")",
+        "(\"ccw_commit\", \"path_clear\", \"ccw_commit\")",
+        "(\"ccw_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"ccw_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"ccw_commit\", \"obstacle_right\", \"obs_right\")"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import os
 import math
+import random
 import time
 import xml.etree.ElementTree as ET
 import xacro
@@ -159,6 +160,38 @@ def _build_middle_circle_slots(total_robots: int, world_path: str):
     )
 
 
+def _build_random_safe_slots(total_robots: int, world_path: str):
+    obstacles = _load_world_obstacles(world_path)
+    rng = random.Random(time.time_ns())
+    min_robot_spacing = 1.25
+    wall_margin = 0.75
+    obstacle_margin = 0.7
+    max_attempts = 10000
+
+    robots = []
+    for _ in range(max_attempts):
+        if len(robots) >= total_robots:
+            break
+        x = rng.uniform(-5.0 + wall_margin, 5.0 - wall_margin)
+        y = rng.uniform(-5.0 + wall_margin, 5.0 - wall_margin)
+        if not _point_is_free(x, y, obstacles, wall_margin, obstacle_margin):
+            continue
+        if any(math.hypot(x - robot["x"], y - robot["y"]) < min_robot_spacing for robot in robots):
+            continue
+        robots.append({
+            "x": x,
+            "y": y,
+            "yaw": rng.uniform(-math.pi, math.pi),
+        })
+
+    if len(robots) < total_robots:
+        raise RuntimeError(
+            f"Only sampled {len(robots)} random safe spawn slots in {world_path}, "
+            f"need {total_robots}."
+        )
+    return robots
+
+
 def generate_launch_description():
 
     leo_description = get_package_share_directory("leo_description")
@@ -217,7 +250,7 @@ def generate_launch_description():
     spawn_layout_arg = DeclareLaunchArgument(
         "spawn_layout",
         default_value="spread",
-        description="Robot spawn layout: 'spread' or 'middle_circle'.",
+        description="Robot spawn layout: 'spread', 'middle_circle', or 'random_safe'.",
     )
 
     # total_robots_arg = LaunchConfiguration("total_robots")
@@ -248,9 +281,11 @@ def generate_launch_description():
             base_slots = _build_robot_spawn_slots(total_robots, world_path)
         elif spawn_layout == "middle_circle":
             base_slots = _build_middle_circle_slots(total_robots, world_path)
+        elif spawn_layout == "random_safe":
+            base_slots = _build_random_safe_slots(total_robots, world_path)
         else:
             raise RuntimeError(
-                f"Unknown spawn_layout '{spawn_layout}'. Use 'spread' or 'middle_circle'."
+                f"Unknown spawn_layout '{spawn_layout}'. Use 'spread', 'middle_circle', or 'random_safe'."
             )
         robots = []
         for i, slot in enumerate(base_slots):

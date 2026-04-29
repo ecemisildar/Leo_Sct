@@ -17,25 +17,48 @@ DEFAULT_CONSTRAINTS = [
     "Do NOT introduce any new controllable or uncontrollable events. Use ONLY the provided event lists.",
     "Do NOT invent sensor events beyond the given uncontrollable list (e.g., no 'battery_low', etc.).",
     "All transitions must be formatted exactly as: (\"state\", \"event\", \"next\").",
-    "Determinism required: for each (state, event) pair, specify EXACTLY ONE next state. No duplicates.",
-    "No epsilon transitions. Every transition must be labeled by one event from the lists.",
-    "For EVERY state, include an outgoing transition for ALL uncontrollable events (total w.r.t. uncontrollables).",
-    "For EVERY non-terminal state, include at least ONE controllable transition (otherwise the robot may stall).",
+    "Determinism is required: for each (state, event) pair, specify EXACTLY ONE next state. No duplicates.",
+    "Every transition must be labeled by one event from the lists.",
+    "For EVERY state, include an outgoing transition for ALL uncontrollable events (total w.r.t. uncontrollable events).",
+    "Every non-terminal state must enable exactly one controllable action, unless the state is purely a perception/decision state used only for uncontrollable-event branching.",
     "Prefer a single clear controllable action per state, but choose the action that maximizes forward progress when safe.",
     "Runtime semantics: uncontrollable events are processed BEFORE a controllable action each step.",
-    "Therefore, in action/commit/scan/recovery states, non-critical uncontrollables (e.g., path_clear) should usually SELF-LOOP to avoid preempting the intended controllable in the same step.",
-    "Only safety-critical uncontrollables (obstacle_*) should force leaving an action/commit state.",
-    "The exploration objective is not just safety; the supervisor should spend most safe time making spatial progress instead of rotating in place.",
+    "Therefore, in action/commit/scan/recovery states, non-critical uncontrollable events (e.g., path_clear) should usually SELF-LOOP to avoid preempting the intended controllable in the same step.",
+    "Only safety-critical uncontrollable events (obstacle_*) should force leaving an action/commit state.",
     "When path_clear is observed after a recovery, return to a forward-progress state quickly rather than chaining extra scan or recovery states.",
-    "Use full_rotate sparingly and only as a last-resort escape or scan behavior after repeated blocked conditions; do not make it the default reaction to ordinary obstacles.",
-    "Prefer move_forward or random_walk in clear states, and prefer short directed turns over large scans in ordinary recovery states.",
+
+    "move_backward is a brief one-step escape action, not a normal exploration or recovery behavior.",
+    "Use move_backward only after obstacle_front, and only when a short backward escape is needed before turning or resuming exploration.",
+    "Do not use move_backward in clear, initial, search, path_clear, obstacle_left, or obstacle_right states.",
+    "move_backward must only be reachable from dedicated front-obstacle recovery states.",
+    "Do not transition into move_backward directly from clear, move_forward, random_walk, obstacle_left, or obstacle_right handling states.",
+    "After move_backward, transition only to a short directed-turn recovery state or a decision/perception state, never to another backward state.",
+    "Use move_backward carefully: the robot has only a forward-looking camera and receives no rear obstacle input, so backward motion must be rare, brief, and recovery-oriented.",
+
+    "full_rotate is a last-resort reorientation action, not a standard obstacle-recovery action.",
+    "Do not use full_rotate as the immediate response to obstacle_left or obstacle_right.",
+    "Do not use full_rotate as the default response to obstacle_front if a short directed turn can resolve the blockage.",
+    "Ordinary obstacle recovery must prefer short directed turns (rotate_clockwise or rotate_counterclockwise).",
+    "Short directed turns are the default obstacle-recovery behavior; full_rotate is reserved for last-resort reorientation only.",
+    "Use full_rotate only when short directed turns repeatedly fail to restore progress.",
+    "Use full_rotate only after repeated blocked conditions via a dedicated stuck/last_resort helper state.",
+    "full_rotate must only be reachable from a dedicated stuck/last_resort state, not from clear, move_forward, random_walk, or immediate obstacle-recovery states.",
+    "Do not transition directly into full_rotate from clear, move_forward, random_walk, obstacle_left, obstacle_right, or obstacle_front handling states.",
+    "Any state whose primary controllable is full_rotate must be one-shot and must transition out immediately after execution.",
+    "A full_rotate state must not self-loop on any controllable event.",
+    "After full_rotate, the supervisor must return to a forward-progress or short-turn decision state, not to another scan, rotate, or full_rotate state.",
+    "Do not chain full_rotate actions or transition from full_rotate into another full_rotate-capable state without first attempting forward progress.",
+
+    "Do not use repeated rotation or full_rotate as a substitute for exploration progress.",
+    "After any recovery action, the supervisor must attempt forward progress again as soon as safely possible.",
+    "Pure rotation sequences must remain brief and recovery-oriented; they must not become steady-state exploration behavior.",
+
     "Avoid oscillations: do NOT enable both rotate_clockwise and rotate_counterclockwise as controllables in the same state.",
-    "Keep the behavior consistent: obs_left should prefer rotate_clockwise OR a clear escape policy; obs_right should prefer rotate_counterclockwise (or vice versa), but do not alternate rapidly.",
-    "You MAY introduce helper states such as forward_commit, rotate_commit_cw, rotate_commit_ccw, recover_back, but keep the total number of helper states small.",
+    "Keep the behavior consistent: obstacle_left should prefer rotate_clockwise OR a clear escape policy; obstacle_right should prefer rotate_counterclockwise (or vice versa), but do not alternate rapidly.",
+    "You MAY introduce helper states such as forward_commit, rotate_commit_cw, rotate_commit_ccw, recover_back, stuck, last_resort, but keep the total number of helper states small.",
     "Commit/scan/recovery states must be ONE-SHOT on their primary controllable action: the primary controllable must transition OUT to a decision/perception state (e.g., clear), NOT self-loop.",
-    "Examples (illustrative only): forward_commit: move_forward->clear; rotate_commit_cw: rotate_clockwise->clear; rotate_commit_ccw: rotate_counterclockwise->clear; recover_back: move_backward->clear.",
-    "Do NOT create infinite controllable loops like full_rotate->scan_full, move_backward->recover_back, or move_forward->forward_commit.",
 ]
+
 
 DEFAULT_STATE_SEMANTICS = {
     "clear": "no obstacle in front/left/right; safe to advance.",
@@ -55,8 +78,8 @@ DEFAULT_EVENT_SEMANTICS = {
     "rotate_clockwise": "apply clockwise rotation for 0.2 s (one pulse).",
     "rotate_counterclockwise": "apply counterclockwise rotation for 0.2 s (one pulse).",
     "full_rotate": "rotate 360 degrees (atomic action; completes a full scan).",
-    "stop": "set velocity to zero (stop).",
 }
+
 
 
 def merge_prompt_semantics(

@@ -182,14 +182,13 @@ def load_obstacle_rectangles(world_sdf: Path):
             link_pose = parse_pose(link.findtext("pose"))
             for collision in link.findall("collision"):
                 collision_pose = parse_pose(collision.findtext("pose"))
-                size_text = collision.findtext("geometry/box/size")
-                if not size_text:
-                    continue
-                sx, sy, _ = (float(v) for v in size_text.split())
                 x = model_pose[0] + link_pose[0] + collision_pose[0]
                 y = model_pose[1] + link_pose[1] + collision_pose[1]
                 yaw = model_pose[5] + link_pose[5] + collision_pose[5]
-                obstacles.append((x, y, sx, sy, yaw))
+                size_text = collision.findtext("geometry/box/size")
+                if size_text:
+                    sx, sy, _ = (float(v) for v in size_text.split())
+                    obstacles.append((x, y, sx, sy, yaw))
     return obstacles
 
 

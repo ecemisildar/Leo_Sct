@@ -1,12 +1,13 @@
 {
   "explore": {
     "goal": "Explore conservatively, avoid collisions reliably, and make steady coverage progress",
-    "controllable_events": [
+      "controllable_events": [
       "move_forward",
       "rotate_clockwise",
       "rotate_counterclockwise",
       "full_rotate",
-      "random_walk"
+      "random_walk",
+      "move_backward"
     ],
     "uncontrollable_events": [
       "path_clear",
@@ -15,100 +16,16 @@
       "obstacle_right"
     ],
     "constraints": [
-      "The robot executes controllable motion as open-loop pulses, so obstacle avoidance must be conservative and recovery-oriented.",
+      "The robot executes controllable motion as open-loop pulses",
+      "The supervisor controls one robot locally.",
       "Do not collide with obstacles or other robots.",
-      "In clear non-obstacle states, prefer random_walk as the default exploration action; move_forward may be used only in dedicated short-progress states.",
-      "At least one clear or search state must enable random_walk so it is used as part of the exploration policy.",
       "Every non-terminal explore state must enable exactly one controllable action.",
-      "The initial clear exploration state must not use move_forward as its only controllable.",
-      "If obstacle_front occurs, transition to a dedicated recovery state whose only controllable is rotate_clockwise, rotate_counterclockwise, or full_rotate.",
-      "States reached by obstacle_left must enable exactly one controllable and it must be rotate_clockwise or full_rotate.",
+      "If obstacle_front occurs, transition to a dedicated recovery state whose only controllable is move_backward, rotate_clockwise, rotate_counterclockwise, or full_rotate.",
+        "States reached by obstacle_left must enable exactly one controllable and it must be rotate_clockwise or full_rotate.",
       "States reached by obstacle_right must enable exactly one controllable and it must be rotate_counterclockwise or full_rotate.",
       "No state reached by any obstacle event may enable move_forward or random_walk.",
-      "After any obstacle event, the supervisor must pass through a turn-recovery state before returning to exploration.",
-      "Do not use full_rotate in initial, clear, search, or path_clear-reached states; it is allowed only in dedicated obstacle-recovery states.",
-      "Avoid long forward streaks; exploration should alternate between random_walk, short forward progress, and recovery turns."
-    ],
-    "include_default_constraints": true
-  },
-  "wall_follow": {
-    "goal": "Follow the wall consistently while staying safe and avoiding oscillations.",
-    "controllable_events": [
-      "move_forward",
-      "rotate_clockwise",
-      "rotate_counterclockwise",
-      "full_rotate",
-      "random_walk"
-    ],
-    "uncontrollable_events": [
-      "path_clear",
-      "obstacle_front",
-      "obstacle_left",
-      "obstacle_right"
-    ],
-    "constraints": [
-      "Interpret 'wall on left' as obstacle_left while obstacle_front is false.",
-      "Prefer actions that keep obstacle_left active; if obstacle_left disappears, rotate left to re-acquire it.",
-      "If obstacle_front occurs, perform a right turn to avoid collision, then re-acquire the left wall.",
-      "Avoid oscillation: never allow both rotate directions in the same state; keep a consistent turn direction until path_clear.",
-      "Use forward motion as the default only when path_clear and obstacle_left are true (wall present and front clear)."
-    ],
-    "include_default_constraints": true
-  },
-  "zigzag": {
-    "goal": "Explore the arena in a zigzag pattern while staying safe and avoiding oscillations.",
-    "controllable_events": [
-      "move_forward",
-      "move_backward",
-      "rotate_clockwise",
-      "rotate_counterclockwise",
-      "full_rotate"
-    ],
-    "uncontrollable_events": [
-      "path_clear",
-      "obstacle_front",
-      "obstacle_left",
-      "obstacle_right"
-    ],
-    "constraints": [
-      "Alternate between forward movement and alternating turn directions to create a zigzag path.",
-      "After each forward commit, prefer a turn in the opposite direction from the last turn.",
-      "If obstacle_front occurs, perform a recovery turn and resume the zigzag pattern.",
-      "Avoid oscillation: do not allow both rotate directions in the same state; commit to a turn direction until path_clear."
-    ],
-    "include_default_constraints": true
-  },
-  "find_marker": {
-    "goal": "Find the marker object as soon as possible and get close to it and stop while staying safe.",
-    "controllable_events": [
-      "move_forward",
-      "random_walk",
-      "rotate_clockwise",
-      "rotate_counterclockwise",
-      "full_rotate",
-      "move_to_marker",
-      "stop"
-    ],
-    "uncontrollable_events": [
-      "path_clear",
-      "obstacle_front",
-      "obstacle_left",
-      "obstacle_right",
-      "marker_seen",
-      "marker_lost",
-      "marker_close"
-    ],
-    "constraints": [
-      "Prioritize finding and approaching the marker quickly; exploration is only for reacquisition when marker is not visible.",
-      "Transition tuple format is strict: (\"state\", \"event\", \"next\"). The second field MUST be one of the allowed controllable/uncontrollable events.",
-      "Helper names such as forward_commit, rotate_commit_cw, rotate_commit_ccw, scan_full, marker_track are state names only; never place helper names in the event field.",
-      "When marker_seen occurs in clear/scan/search states, switch to marker tracking where move_to_marker is the primary controllable action.",
-      "Do not use stop as the primary controllable action when only marker_seen is true; continue approach until marker_close.",
-      "When marker_lost occurs during tracking, return to search/scan behavior instead of continuing move_to_marker blindly.",
-      "When marker_close occurs in any state, transition to a terminal goal state where stop is the only controllable action.",
-      "In search mode, alternate short forward progress with scan/rotate actions; avoid long straight runs without scanning.",
-      "In clear, do not force move_forward only; allow rotate/full_rotate or commit-based scanning to improve marker reacquisition.",
-      "After obstacle recovery, pass through a scan/search state before resuming forward exploration."
+      "After any obstacle event, the supervisor must pass through an obstacle-recovery state before returning to exploration.",
+      "Do not use full_rotate in initial, clear, search, or path_clear-reached states; it is allowed only in dedicated obstacle-recovery states."
     ],
     "include_default_constraints": true
   }

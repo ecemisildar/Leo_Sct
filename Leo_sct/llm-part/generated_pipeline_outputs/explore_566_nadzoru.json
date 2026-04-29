@@ -1,0 +1,153 @@
+{
+  "rationale": "Model sensing and actuation as separate plants, then encode a compact supervisor policy with specification automata that map sensed obstacle conditions to one-shot motion choices. The policy prioritizes move_forward in clear space, allows occasional random_walk for coverage variation, uses directed turns for side/front obstacles, uses move_backward only in dedicated front-recovery, and reserves full_rotate for a dedicated repeated-front-blocked last-resort path.",
+  "strategy": [
+    "Separate uncontrollable perception from controllable motion capability",
+    "Use one-shot action states so open-loop pulses complete without being preempted by path_clear",
+    "Bias clear-space behavior toward forward progress with only occasional random_walk",
+    "Route obstacle_front through backward-then-turn recovery, with a rare stuck path to full_rotate",
+    "Keep obstacle_left and obstacle_right recovery directional and consistent"
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Perception channel for obstacle/path observations",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion capability for all available robot action pulses",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")",
+        "(\"idle\", \"move_backward\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_policy",
+      "purpose": "Main exploration and obstacle-recovery policy",
+      "states": [
+        "clear_forward",
+        "clear_wander",
+        "front_back",
+        "front_turn_ccw",
+        "left_turn_cw",
+        "right_turn_ccw",
+        "front_seen_once",
+        "last_resort_scan"
+      ],
+      "initial_states": [
+        "clear_forward"
+      ],
+      "marked_states": [
+        "clear_forward",
+        "clear_wander",
+        "front_back",
+        "front_turn_ccw",
+        "left_turn_cw",
+        "right_turn_ccw",
+        "front_seen_once",
+        "last_resort_scan"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_forward\", \"path_clear\", \"clear_forward\")",
+        "(\"clear_forward\", \"obstacle_front\", \"front_back\")",
+        "(\"clear_forward\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"clear_forward\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"clear_forward\", \"move_forward\", \"clear_wander\")",
+        "(\"clear_wander\", \"path_clear\", \"clear_wander\")",
+        "(\"clear_wander\", \"obstacle_front\", \"front_back\")",
+        "(\"clear_wander\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"clear_wander\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"clear_wander\", \"random_walk\", \"clear_forward\")",
+        "(\"front_back\", \"path_clear\", \"front_back\")",
+        "(\"front_back\", \"obstacle_front\", \"front_back\")",
+        "(\"front_back\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"front_back\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"front_back\", \"move_backward\", \"front_turn_ccw\")",
+        "(\"front_turn_ccw\", \"path_clear\", \"front_turn_ccw\")",
+        "(\"front_turn_ccw\", \"obstacle_front\", \"front_seen_once\")",
+        "(\"front_turn_ccw\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"front_turn_ccw\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"front_turn_ccw\", \"rotate_counterclockwise\", \"clear_forward\")",
+        "(\"left_turn_cw\", \"path_clear\", \"left_turn_cw\")",
+        "(\"left_turn_cw\", \"obstacle_front\", \"front_back\")",
+        "(\"left_turn_cw\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"left_turn_cw\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"left_turn_cw\", \"rotate_clockwise\", \"clear_forward\")",
+        "(\"right_turn_ccw\", \"path_clear\", \"right_turn_ccw\")",
+        "(\"right_turn_ccw\", \"obstacle_front\", \"front_back\")",
+        "(\"right_turn_ccw\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"right_turn_ccw\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"right_turn_ccw\", \"rotate_counterclockwise\", \"clear_forward\")",
+        "(\"front_seen_once\", \"path_clear\", \"clear_forward\")",
+        "(\"front_seen_once\", \"obstacle_front\", \"last_resort_scan\")",
+        "(\"front_seen_once\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"front_seen_once\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"front_seen_once\", \"rotate_counterclockwise\", \"clear_forward\")",
+        "(\"last_resort_scan\", \"path_clear\", \"last_resort_scan\")",
+        "(\"last_resort_scan\", \"obstacle_front\", \"last_resort_scan\")",
+        "(\"last_resort_scan\", \"obstacle_left\", \"last_resort_scan\")",
+        "(\"last_resort_scan\", \"obstacle_right\", \"last_resort_scan\")",
+        "(\"last_resort_scan\", \"full_rotate\", \"clear_forward\")"
+      ]
+    }
+  ]
+}

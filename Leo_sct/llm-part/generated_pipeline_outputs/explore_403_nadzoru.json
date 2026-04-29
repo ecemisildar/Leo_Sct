@@ -1,0 +1,139 @@
+{
+  "rationale": "Model sensing and motion as separate plants, then use compact specifications to map clear sensing to forward-progress actions and obstacle sensing to one-shot recovery actions. The policy favors move_forward in clear space, uses random_walk only as a secondary exploration mode, applies directed turns away from side obstacles, and uses a brief move_backward only for front-obstacle escape before quickly returning to forward exploration. Action states self-loop on path_clear so intended open-loop pulses are not preempted by non-critical sensing updates.",
+  "strategy": [
+    "Separate uncontrollable perception from controllable motion capability",
+    "Use perception/decision states plus one-shot action/recovery states",
+    "Bias clear-space behavior toward move_forward, with random_walk as a secondary clear-space option",
+    "Use rotate_clockwise for obstacle_left and rotate_counterclockwise for obstacle_right consistently",
+    "Use move_backward only after obstacle_front and only as a single brief escape pulse",
+    "Return to clear exploration immediately on path_clear after recovery when safe",
+    "Make all states total with respect to uncontrollable events and deterministic"
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local obstacle perception channel for the robot",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot motion command capability; each controllable event is available as a pulse action",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")",
+        "(\"idle\", \"move_backward\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_policy",
+      "purpose": "Main exploration and obstacle-recovery policy with strong forward-progress bias and safe one-shot recovery",
+      "states": [
+        "clear_decide",
+        "forward_commit",
+        "wander_commit",
+        "front_recover_back",
+        "left_recover_turn",
+        "right_recover_turn"
+      ],
+      "initial_states": [
+        "clear_decide"
+      ],
+      "marked_states": [
+        "clear_decide",
+        "forward_commit",
+        "wander_commit",
+        "front_recover_back",
+        "left_recover_turn",
+        "right_recover_turn"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_decide\", \"path_clear\", \"forward_commit\")",
+        "(\"clear_decide\", \"obstacle_front\", \"front_recover_back\")",
+        "(\"clear_decide\", \"obstacle_left\", \"left_recover_turn\")",
+        "(\"clear_decide\", \"obstacle_right\", \"right_recover_turn\")",
+        "(\"forward_commit\", \"move_forward\", \"wander_commit\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"front_recover_back\")",
+        "(\"forward_commit\", \"obstacle_left\", \"left_recover_turn\")",
+        "(\"forward_commit\", \"obstacle_right\", \"right_recover_turn\")",
+        "(\"wander_commit\", \"random_walk\", \"clear_decide\")",
+        "(\"wander_commit\", \"path_clear\", \"wander_commit\")",
+        "(\"wander_commit\", \"obstacle_front\", \"front_recover_back\")",
+        "(\"wander_commit\", \"obstacle_left\", \"left_recover_turn\")",
+        "(\"wander_commit\", \"obstacle_right\", \"right_recover_turn\")",
+        "(\"front_recover_back\", \"move_backward\", \"clear_decide\")",
+        "(\"front_recover_back\", \"path_clear\", \"clear_decide\")",
+        "(\"front_recover_back\", \"obstacle_front\", \"front_recover_back\")",
+        "(\"front_recover_back\", \"obstacle_left\", \"left_recover_turn\")",
+        "(\"front_recover_back\", \"obstacle_right\", \"right_recover_turn\")",
+        "(\"left_recover_turn\", \"rotate_clockwise\", \"clear_decide\")",
+        "(\"left_recover_turn\", \"path_clear\", \"clear_decide\")",
+        "(\"left_recover_turn\", \"obstacle_front\", \"front_recover_back\")",
+        "(\"left_recover_turn\", \"obstacle_left\", \"left_recover_turn\")",
+        "(\"left_recover_turn\", \"obstacle_right\", \"left_recover_turn\")",
+        "(\"right_recover_turn\", \"rotate_counterclockwise\", \"clear_decide\")",
+        "(\"right_recover_turn\", \"path_clear\", \"clear_decide\")",
+        "(\"right_recover_turn\", \"obstacle_front\", \"front_recover_back\")",
+        "(\"right_recover_turn\", \"obstacle_left\", \"right_recover_turn\")",
+        "(\"right_recover_turn\", \"obstacle_right\", \"right_recover_turn\")"
+      ]
+    }
+  ]
+}

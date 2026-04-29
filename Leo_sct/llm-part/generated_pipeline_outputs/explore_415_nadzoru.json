@@ -1,0 +1,165 @@
+{
+  "rationale": "Model sensing and motion as separate plants, then use compact specifications to map clear sensing to forward-biased exploration and obstacle sensing to one-shot recovery. Because uncontrollable events are processed before controllable pulses, action states self-loop on non-critical path_clear and only obstacle events preempt when safety requires it. The policy prefers move_forward in clear space, uses directed turns for side obstacles, reserves move_backward for front-obstacle escape, and returns to forward exploration immediately once path_clear is observed.",
+  "strategy": [
+    "Split plant into a sensor outcome plant and a motion capability plant using only the given events",
+    "Use one policy specification with perception states and one-shot action states so each non-perception state enables exactly one controllable action",
+    "Bias clear operation to move_forward, allow random_walk only in a dedicated clear-search branch, and keep obstacle recovery conservative and brief",
+    "Use rotate_clockwise for left obstacles and rotate_counterclockwise for right obstacles consistently; use move_backward only after obstacle_front",
+    "Make all states total on uncontrollable events and let path_clear quickly return recovery states to forward exploration"
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local obstacle sensing outcomes available to the supervisor",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot motion command capability for one-shot open-loop pulses",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")",
+        "(\"idle\", \"move_backward\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration and obstacle-recovery policy with forward bias and safe one-shot recovery",
+      "states": [
+        "monitor",
+        "clear_ready",
+        "forward_commit",
+        "wander_commit",
+        "front_recover",
+        "back_commit",
+        "left_recover",
+        "cw_commit",
+        "right_recover",
+        "ccw_commit"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "clear_ready",
+        "forward_commit",
+        "wander_commit",
+        "front_recover",
+        "back_commit",
+        "left_recover",
+        "cw_commit",
+        "right_recover",
+        "ccw_commit"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"clear_ready\")",
+        "(\"monitor\", \"obstacle_front\", \"front_recover\")",
+        "(\"monitor\", \"obstacle_left\", \"left_recover\")",
+        "(\"monitor\", \"obstacle_right\", \"right_recover\")",
+        "(\"clear_ready\", \"path_clear\", \"clear_ready\")",
+        "(\"clear_ready\", \"obstacle_front\", \"front_recover\")",
+        "(\"clear_ready\", \"obstacle_left\", \"left_recover\")",
+        "(\"clear_ready\", \"obstacle_right\", \"right_recover\")",
+        "(\"clear_ready\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"front_recover\")",
+        "(\"forward_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"forward_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"forward_commit\", \"move_forward\", \"wander_commit\")",
+        "(\"wander_commit\", \"path_clear\", \"wander_commit\")",
+        "(\"wander_commit\", \"obstacle_front\", \"front_recover\")",
+        "(\"wander_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"wander_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"wander_commit\", \"random_walk\", \"monitor\")",
+        "(\"front_recover\", \"path_clear\", \"clear_ready\")",
+        "(\"front_recover\", \"obstacle_front\", \"front_recover\")",
+        "(\"front_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"front_recover\", \"obstacle_right\", \"right_recover\")",
+        "(\"front_recover\", \"move_backward\", \"back_commit\")",
+        "(\"back_commit\", \"path_clear\", \"clear_ready\")",
+        "(\"back_commit\", \"obstacle_front\", \"front_recover\")",
+        "(\"back_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"back_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"back_commit\", \"move_backward\", \"left_recover\")",
+        "(\"left_recover\", \"path_clear\", \"clear_ready\")",
+        "(\"left_recover\", \"obstacle_front\", \"front_recover\")",
+        "(\"left_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"left_recover\", \"obstacle_right\", \"right_recover\")",
+        "(\"left_recover\", \"rotate_clockwise\", \"cw_commit\")",
+        "(\"cw_commit\", \"path_clear\", \"clear_ready\")",
+        "(\"cw_commit\", \"obstacle_front\", \"front_recover\")",
+        "(\"cw_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"cw_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"cw_commit\", \"rotate_clockwise\", \"monitor\")",
+        "(\"right_recover\", \"path_clear\", \"clear_ready\")",
+        "(\"right_recover\", \"obstacle_front\", \"front_recover\")",
+        "(\"right_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"right_recover\", \"obstacle_right\", \"right_recover\")",
+        "(\"right_recover\", \"rotate_counterclockwise\", \"ccw_commit\")",
+        "(\"ccw_commit\", \"path_clear\", \"clear_ready\")",
+        "(\"ccw_commit\", \"obstacle_front\", \"front_recover\")",
+        "(\"ccw_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"ccw_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"ccw_commit\", \"rotate_counterclockwise\", \"monitor\")"
+      ]
+    }
+  ]
+}

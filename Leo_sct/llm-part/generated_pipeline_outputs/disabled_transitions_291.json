@@ -1,0 +1,586 @@
+{
+  "gloc_name": "Gloc291",
+  "sloc_name": "Sloc291",
+  "states": [
+    {
+      "sloc_state": "sense,motion,back_commit,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,back_commit,q",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "sense,motion,forward_progress,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,back_commit,q",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "sense,motion,ccw_commit,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,ccw_commit,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,ccw_commit,q",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion,forward_progress,q",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "sense,motion,clear_explore,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,clear_explore,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,clear_explore,q",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion,rw_commit,q",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "sense,motion,cw_commit,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,cw_commit,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,cw_commit,q",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion,forward_progress,q",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "sense,motion,forward_progress,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,forward_progress,q",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "sense,motion,fw_commit,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,forward_progress,q",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "sense,motion,fw_commit,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,fw_commit,q",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "sense,motion,clear_explore,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,fw_commit,q",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "sense,motion,recover_back,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,recover_back,q",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "sense,motion,back_commit,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "sense,motion,recover_ccw,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion,ccw_commit,q",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "sense,motion,recover_cw,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion,cw_commit,q",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "sense,motion,rw_commit,q",
+      "gloc_state": "sense,motion",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "sense,motion,rw_commit,q",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "sense,motion,recover_back,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "sense,motion,recover_cw,q",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "sense,motion,recover_ccw,q",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "sense,motion,rw_commit,q",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "sense,motion,clear_explore,q",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "sense,motion",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "sense,motion",
+          "controllable": true
+        }
+      ]
+    }
+  ]
+}

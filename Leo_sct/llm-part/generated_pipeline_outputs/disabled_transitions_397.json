@@ -1,0 +1,702 @@
+{
+  "gloc_name": "Gloc397",
+  "sloc_name": "Sloc397",
+  "states": [
+    {
+      "sloc_state": "percept,idle,clear",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept,idle,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,forward_commit",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept,idle,clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,full_rotate_commit",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle,clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,obs_front",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept,idle,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,obs_left",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle,recover_turn_cw_left",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,obs_right",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle,recover_turn_ccw_right",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,recover_back",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept,idle,recover_turn_cw",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,recover_turn_cw",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,recover_turn_ccw",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,recover_turn_cw",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,recover_turn_ccw",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle,clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,recover_turn_ccw_right",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle,clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,recover_turn_cw",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle,clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,recover_turn_cw_left",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle,clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept,idle,stuck",
+      "gloc_state": "percept,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept,idle,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept,idle,stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept,idle,obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept,idle,obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept,idle,clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept,idle",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept,idle",
+          "controllable": true
+        }
+      ]
+    }
+  ]
+}

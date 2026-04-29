@@ -1,0 +1,93 @@
+{
+  "rationale": "The plant models the robot's motion and perception capabilities with the given events. The specification enforces safe exploration: move_forward is only allowed when path_clear is true, and rotate_clockwise is the only allowed recovery when any obstacle is detected. The supervisor always prefers forward progress but reacts immediately to obstacles with a right turn, returning to forward exploration as soon as the path is clear.",
+  "strategy": [
+    "Separate plant automata for motion and perception, but combine into a single plant for simplicity since all events are local.",
+    "Specification automaton encodes the always-turn-right policy: move_forward only when clear, rotate_clockwise as the only recovery, and transitions back to forward as soon as path_clear is observed."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Models the robot's motion and perception event structure.",
+      "states": [
+        "idle",
+        "forward_commit",
+        "rotate_commit"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"forward_commit\")",
+        "(\"idle\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"forward_commit\", \"path_clear\", \"idle\")",
+        "(\"forward_commit\", \"obstacle_front\", \"idle\")",
+        "(\"forward_commit\", \"obstacle_left\", \"idle\")",
+        "(\"forward_commit\", \"obstacle_right\", \"idle\")",
+        "(\"forward_commit\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"rotate_clockwise\", \"forward_commit\")",
+        "(\"rotate_commit\", \"path_clear\", \"idle\")",
+        "(\"rotate_commit\", \"obstacle_front\", \"idle\")",
+        "(\"rotate_commit\", \"obstacle_left\", \"idle\")",
+        "(\"rotate_commit\", \"obstacle_right\", \"idle\")",
+        "(\"rotate_commit\", \"move_forward\", \"rotate_commit\")",
+        "(\"rotate_commit\", \"rotate_clockwise\", \"rotate_commit\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Enforces safe always-turn-right exploration: move_forward only when path_clear, rotate_clockwise as only recovery.",
+      "states": [
+        "clear",
+        "recovery"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "recovery"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"move_forward\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"recovery\")",
+        "(\"clear\", \"obstacle_left\", \"recovery\")",
+        "(\"clear\", \"obstacle_right\", \"recovery\")",
+        "(\"recovery\", \"rotate_clockwise\", \"recovery\")",
+        "(\"recovery\", \"path_clear\", \"clear\")",
+        "(\"recovery\", \"obstacle_front\", \"recovery\")",
+        "(\"recovery\", \"obstacle_left\", \"recovery\")",
+        "(\"recovery\", \"obstacle_right\", \"recovery\")"
+      ]
+    }
+  ]
+}

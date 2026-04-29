@@ -1,0 +1,95 @@
+{
+  "rationale": "The plant models the robot's motion and perception capabilities, separating controllable actions (move_forward, rotate_clockwise) from uncontrollable sensor events (path_clear, obstacle_front, obstacle_left, obstacle_right). The specification enforces strict safety: never move forward into a front obstacle, always recover by turning right (rotate_clockwise) when any obstacle is detected, and resume forward exploration only when the path is clear. Only one controllable is enabled per state, and all uncontrollables are handled deterministically. The design biases toward forward progress and minimizes recovery time.",
+  "strategy": [
+    "Separate plant automata for motion and perception, with all events modeled as transitions.",
+    "Specification automaton encodes a right-turn-only recovery policy, disables forward motion in obstacle states, and resumes exploration immediately when clear."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion and perception: models the robot's ability to move forward, rotate clockwise, and receive obstacle/clearance sensor events.",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration supervisor: enforces safe exploration, strict obstacle avoidance, and right-turn-only recovery. Only enables move_forward when clear; disables forward in obstacle states; enables rotate_clockwise as the only recovery action.",
+      "states": [
+        "clear",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"clear\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_front\")",
+        "(\"obs_front\", \"path_clear\", \"clear\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_left\")",
+        "(\"obs_left\", \"path_clear\", \"clear\")",
+        "(\"obs_right\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_right\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_right\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"rotate_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"rotate_commit\", \"obstacle_right\", \"obs_right\")"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,276 @@
+{
+  "rationale": "Use a small plant split into sensing and motion capability, then encode the exploration policy in specifications. The policy gives priority to forward progress in clear space, inserts only occasional brief random-walk variation, uses directed one-shot turns for side/front obstacles, allows a rare one-shot backward escape only after front blockage, and reserves full_rotate for a dedicated last-resort stuck state after repeated blocked outcomes.",
+  "strategy": [
+    "Separate uncontrollable perception from controllable motion capability so the supervisor can enforce safe action choices from sensor outcomes.",
+    "Layer compact specifications: clear-space progress bias, obstacle-specific recovery, one-shot action commits, and a last-resort full-rotate path only after repeated front blockage."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local obstacle sensing outcomes available each step",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion command capability for one-step open-loop pulses and scan action",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")",
+        "(\"idle\", \"move_backward\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_clear_forward_bias",
+      "purpose": "Default exploration policy: in clear space prefer forward progress, with occasional brief random-walk variation",
+      "states": [
+        "monitor",
+        "clear_fwd",
+        "clear_rw"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "clear_fwd",
+        "clear_rw"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"clear_fwd\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"monitor\")",
+        "(\"monitor\", \"obstacle_right\", \"monitor\")",
+        "(\"clear_fwd\", \"path_clear\", \"clear_fwd\")",
+        "(\"clear_fwd\", \"obstacle_front\", \"monitor\")",
+        "(\"clear_fwd\", \"obstacle_left\", \"monitor\")",
+        "(\"clear_fwd\", \"obstacle_right\", \"monitor\")",
+        "(\"clear_fwd\", \"move_forward\", \"clear_rw\")",
+        "(\"clear_rw\", \"path_clear\", \"clear_rw\")",
+        "(\"clear_rw\", \"obstacle_front\", \"monitor\")",
+        "(\"clear_rw\", \"obstacle_left\", \"monitor\")",
+        "(\"clear_rw\", \"obstacle_right\", \"monitor\")",
+        "(\"clear_rw\", \"random_walk\", \"clear_fwd\")"
+      ]
+    },
+    {
+      "name": "E2_left_recovery",
+      "purpose": "Obstacle on left triggers a brief clockwise recovery turn; no forward/random action in obstacle recovery",
+      "states": [
+        "monitor",
+        "left_turn"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "left_turn"
+      ],
+      "controllable_events": [
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"monitor\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"left_turn\")",
+        "(\"monitor\", \"obstacle_right\", \"monitor\")",
+        "(\"left_turn\", \"path_clear\", \"left_turn\")",
+        "(\"left_turn\", \"obstacle_front\", \"monitor\")",
+        "(\"left_turn\", \"obstacle_left\", \"left_turn\")",
+        "(\"left_turn\", \"obstacle_right\", \"monitor\")",
+        "(\"left_turn\", \"rotate_clockwise\", \"monitor\")"
+      ]
+    },
+    {
+      "name": "E3_right_recovery",
+      "purpose": "Obstacle on right triggers a brief counterclockwise recovery turn; no forward/random action in obstacle recovery",
+      "states": [
+        "monitor",
+        "right_turn"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "right_turn"
+      ],
+      "controllable_events": [
+        "rotate_counterclockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"monitor\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"monitor\")",
+        "(\"monitor\", \"obstacle_right\", \"right_turn\")",
+        "(\"right_turn\", \"path_clear\", \"right_turn\")",
+        "(\"right_turn\", \"obstacle_front\", \"monitor\")",
+        "(\"right_turn\", \"obstacle_left\", \"monitor\")",
+        "(\"right_turn\", \"obstacle_right\", \"right_turn\")",
+        "(\"right_turn\", \"rotate_counterclockwise\", \"monitor\")"
+      ]
+    },
+    {
+      "name": "E4_front_recovery_progressive",
+      "purpose": "Front obstacle recovery: first a one-shot backward escape, then a one-shot clockwise turn, then immediate return to exploration if clear; escalate to last resort only after repeated front blockage",
+      "states": [
+        "monitor",
+        "front_back",
+        "front_turn_cw",
+        "front_retry",
+        "stuck_prep"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "front_back",
+        "front_turn_cw",
+        "front_retry",
+        "stuck_prep"
+      ],
+      "controllable_events": [
+        "move_backward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"monitor\")",
+        "(\"monitor\", \"obstacle_front\", \"front_back\")",
+        "(\"monitor\", \"obstacle_left\", \"monitor\")",
+        "(\"monitor\", \"obstacle_right\", \"monitor\")",
+        "(\"front_back\", \"path_clear\", \"front_back\")",
+        "(\"front_back\", \"obstacle_front\", \"front_back\")",
+        "(\"front_back\", \"obstacle_left\", \"front_back\")",
+        "(\"front_back\", \"obstacle_right\", \"front_back\")",
+        "(\"front_back\", \"move_backward\", \"front_turn_cw\")",
+        "(\"front_turn_cw\", \"path_clear\", \"front_turn_cw\")",
+        "(\"front_turn_cw\", \"obstacle_front\", \"front_turn_cw\")",
+        "(\"front_turn_cw\", \"obstacle_left\", \"front_turn_cw\")",
+        "(\"front_turn_cw\", \"obstacle_right\", \"front_turn_cw\")",
+        "(\"front_turn_cw\", \"rotate_clockwise\", \"front_retry\")",
+        "(\"front_retry\", \"path_clear\", \"monitor\")",
+        "(\"front_retry\", \"obstacle_front\", \"stuck_prep\")",
+        "(\"front_retry\", \"obstacle_left\", \"monitor\")",
+        "(\"front_retry\", \"obstacle_right\", \"monitor\")",
+        "(\"stuck_prep\", \"path_clear\", \"monitor\")",
+        "(\"stuck_prep\", \"obstacle_front\", \"stuck_prep\")",
+        "(\"stuck_prep\", \"obstacle_left\", \"monitor\")",
+        "(\"stuck_prep\", \"obstacle_right\", \"monitor\")"
+      ]
+    },
+    {
+      "name": "E5_last_resort_full_rotate",
+      "purpose": "Allow full_rotate only from a dedicated stuck state reached after repeated front blockage; one-shot and then return to exploration",
+      "states": [
+        "idle",
+        "stuck",
+        "scan_done"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "stuck",
+        "scan_done"
+      ],
+      "controllable_events": [
+        "full_rotate"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"stuck\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"stuck\", \"path_clear\", \"idle\")",
+        "(\"stuck\", \"obstacle_front\", \"stuck\")",
+        "(\"stuck\", \"obstacle_left\", \"stuck\")",
+        "(\"stuck\", \"obstacle_right\", \"stuck\")",
+        "(\"stuck\", \"full_rotate\", \"scan_done\")",
+        "(\"scan_done\", \"path_clear\", \"idle\")",
+        "(\"scan_done\", \"obstacle_front\", \"idle\")",
+        "(\"scan_done\", \"obstacle_left\", \"idle\")",
+        "(\"scan_done\", \"obstacle_right\", \"idle\")"
+      ]
+    }
+  ]
+}

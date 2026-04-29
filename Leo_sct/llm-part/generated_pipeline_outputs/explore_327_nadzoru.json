@@ -1,0 +1,150 @@
+{
+  "rationale": "Use a small plant split into sensing and motion capability, then encode the exploration/recovery policy in one deterministic specification. The spec gives exactly one controllable action in each active policy state, keeps all uncontrollable events total, treats obstacle events as safety-critical, uses random_walk as the default clear-state exploration action, inserts dedicated obstacle-recovery states after every obstacle event, uses brief backward escape only for front obstacles, prefers directed turns for side obstacles, and returns quickly to exploration when path_clear is observed.",
+  "strategy": [
+    "Separate uncontrollable perception from controllable motion capability with simple plant automata.",
+    "Use one policy specification with clear explore, progress, and obstacle-recovery states; self-loop path_clear in commit/recovery states and let obstacle_* preempt only when safety-critical."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local obstacle sensing outcomes available to the supervisor",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot motion command capability",
+      "states": [
+        "ready"
+      ],
+      "initial_states": [
+        "ready"
+      ],
+      "marked_states": [
+        "ready"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"ready\", \"move_forward\", \"ready\")",
+        "(\"ready\", \"rotate_clockwise\", \"ready\")",
+        "(\"ready\", \"rotate_counterclockwise\", \"ready\")",
+        "(\"ready\", \"full_rotate\", \"ready\")",
+        "(\"ready\", \"random_walk\", \"ready\")",
+        "(\"ready\", \"move_backward\", \"ready\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration and obstacle-avoidance policy with one-shot commits and conservative recovery",
+      "states": [
+        "clear_explore",
+        "forward_progress",
+        "rw_commit",
+        "fw_commit",
+        "recover_back",
+        "turn_cw",
+        "turn_ccw",
+        "scan_full"
+      ],
+      "initial_states": [
+        "clear_explore"
+      ],
+      "marked_states": [
+        "clear_explore",
+        "forward_progress",
+        "rw_commit",
+        "fw_commit",
+        "recover_back",
+        "turn_cw",
+        "turn_ccw",
+        "scan_full"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_explore\", \"path_clear\", \"clear_explore\")",
+        "(\"clear_explore\", \"obstacle_front\", \"recover_back\")",
+        "(\"clear_explore\", \"obstacle_left\", \"turn_cw\")",
+        "(\"clear_explore\", \"obstacle_right\", \"turn_ccw\")",
+        "(\"clear_explore\", \"random_walk\", \"forward_progress\")",
+        "(\"forward_progress\", \"path_clear\", \"forward_progress\")",
+        "(\"forward_progress\", \"obstacle_front\", \"recover_back\")",
+        "(\"forward_progress\", \"obstacle_left\", \"turn_cw\")",
+        "(\"forward_progress\", \"obstacle_right\", \"turn_ccw\")",
+        "(\"forward_progress\", \"move_forward\", \"clear_explore\")",
+        "(\"rw_commit\", \"path_clear\", \"rw_commit\")",
+        "(\"rw_commit\", \"obstacle_front\", \"recover_back\")",
+        "(\"rw_commit\", \"obstacle_left\", \"turn_cw\")",
+        "(\"rw_commit\", \"obstacle_right\", \"turn_ccw\")",
+        "(\"rw_commit\", \"random_walk\", \"forward_progress\")",
+        "(\"fw_commit\", \"path_clear\", \"fw_commit\")",
+        "(\"fw_commit\", \"obstacle_front\", \"recover_back\")",
+        "(\"fw_commit\", \"obstacle_left\", \"turn_cw\")",
+        "(\"fw_commit\", \"obstacle_right\", \"turn_ccw\")",
+        "(\"fw_commit\", \"move_forward\", \"clear_explore\")",
+        "(\"recover_back\", \"path_clear\", \"recover_back\")",
+        "(\"recover_back\", \"obstacle_front\", \"scan_full\")",
+        "(\"recover_back\", \"obstacle_left\", \"turn_cw\")",
+        "(\"recover_back\", \"obstacle_right\", \"turn_ccw\")",
+        "(\"recover_back\", \"move_backward\", \"clear_explore\")",
+        "(\"turn_cw\", \"path_clear\", \"turn_cw\")",
+        "(\"turn_cw\", \"obstacle_front\", \"recover_back\")",
+        "(\"turn_cw\", \"obstacle_left\", \"scan_full\")",
+        "(\"turn_cw\", \"obstacle_right\", \"turn_ccw\")",
+        "(\"turn_cw\", \"rotate_clockwise\", \"clear_explore\")",
+        "(\"turn_ccw\", \"path_clear\", \"turn_ccw\")",
+        "(\"turn_ccw\", \"obstacle_front\", \"recover_back\")",
+        "(\"turn_ccw\", \"obstacle_left\", \"turn_cw\")",
+        "(\"turn_ccw\", \"obstacle_right\", \"scan_full\")",
+        "(\"turn_ccw\", \"rotate_counterclockwise\", \"clear_explore\")",
+        "(\"scan_full\", \"path_clear\", \"scan_full\")",
+        "(\"scan_full\", \"obstacle_front\", \"scan_full\")",
+        "(\"scan_full\", \"obstacle_left\", \"scan_full\")",
+        "(\"scan_full\", \"obstacle_right\", \"scan_full\")",
+        "(\"scan_full\", \"full_rotate\", \"clear_explore\")"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,229 @@
+{
+  "rationale": "Use a minimal sensor plant plus a motion plant, then encode the exploration policy in small deterministic specifications. Clear sensing drives random-walk exploration by default, obstacle sensing forces one-shot turn recovery, and a small alternation spec biases steady coverage by inserting short forward pulses after random-walk while never allowing forward in obstacle-recovery states.",
+  "strategy": [
+    "Separate sensing and motion into compact plants so synthesis can disable unsafe controllables without inventing new events",
+    "Use dedicated obstacle-triggered recovery specs with one-shot turn commands and a small alternation spec to mix random_walk and move_forward for coverage"
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "environment sensing outcomes for path and obstacle observations",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "robot motion command capability",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_clear_to_random",
+      "purpose": "default exploration policy: when path is clear, enable random_walk",
+      "states": [
+        "wait",
+        "clear_ready"
+      ],
+      "initial_states": [
+        "wait"
+      ],
+      "marked_states": [
+        "wait",
+        "clear_ready"
+      ],
+      "controllable_events": [
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"wait\", \"path_clear\", \"clear_ready\")",
+        "(\"wait\", \"obstacle_front\", \"wait\")",
+        "(\"wait\", \"obstacle_left\", \"wait\")",
+        "(\"wait\", \"obstacle_right\", \"wait\")",
+        "(\"clear_ready\", \"path_clear\", \"clear_ready\")",
+        "(\"clear_ready\", \"obstacle_front\", \"wait\")",
+        "(\"clear_ready\", \"obstacle_left\", \"wait\")",
+        "(\"clear_ready\", \"obstacle_right\", \"wait\")",
+        "(\"clear_ready\", \"random_walk\", \"wait\")"
+      ]
+    },
+    {
+      "name": "E2_front_recovery_cw",
+      "purpose": "front obstacle forces dedicated one-shot clockwise recovery turn",
+      "states": [
+        "wait",
+        "front_turn"
+      ],
+      "initial_states": [
+        "wait"
+      ],
+      "marked_states": [
+        "wait",
+        "front_turn"
+      ],
+      "controllable_events": [
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"wait\", \"path_clear\", \"wait\")",
+        "(\"wait\", \"obstacle_front\", \"front_turn\")",
+        "(\"wait\", \"obstacle_left\", \"wait\")",
+        "(\"wait\", \"obstacle_right\", \"wait\")",
+        "(\"front_turn\", \"path_clear\", \"front_turn\")",
+        "(\"front_turn\", \"obstacle_front\", \"front_turn\")",
+        "(\"front_turn\", \"obstacle_left\", \"front_turn\")",
+        "(\"front_turn\", \"obstacle_right\", \"front_turn\")",
+        "(\"front_turn\", \"rotate_clockwise\", \"wait\")"
+      ]
+    },
+    {
+      "name": "E3_left_recovery_cw",
+      "purpose": "left obstacle forces a dedicated clockwise turn state",
+      "states": [
+        "wait",
+        "left_turn"
+      ],
+      "initial_states": [
+        "wait"
+      ],
+      "marked_states": [
+        "wait",
+        "left_turn"
+      ],
+      "controllable_events": [
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"wait\", \"path_clear\", \"wait\")",
+        "(\"wait\", \"obstacle_front\", \"wait\")",
+        "(\"wait\", \"obstacle_left\", \"left_turn\")",
+        "(\"wait\", \"obstacle_right\", \"wait\")",
+        "(\"left_turn\", \"path_clear\", \"left_turn\")",
+        "(\"left_turn\", \"obstacle_front\", \"left_turn\")",
+        "(\"left_turn\", \"obstacle_left\", \"left_turn\")",
+        "(\"left_turn\", \"obstacle_right\", \"left_turn\")",
+        "(\"left_turn\", \"rotate_clockwise\", \"wait\")"
+      ]
+    },
+    {
+      "name": "E4_right_recovery_ccw",
+      "purpose": "right obstacle forces a dedicated counterclockwise turn state",
+      "states": [
+        "wait",
+        "right_turn"
+      ],
+      "initial_states": [
+        "wait"
+      ],
+      "marked_states": [
+        "wait",
+        "right_turn"
+      ],
+      "controllable_events": [
+        "rotate_counterclockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"wait\", \"path_clear\", \"wait\")",
+        "(\"wait\", \"obstacle_front\", \"wait\")",
+        "(\"wait\", \"obstacle_left\", \"wait\")",
+        "(\"wait\", \"obstacle_right\", \"right_turn\")",
+        "(\"right_turn\", \"path_clear\", \"right_turn\")",
+        "(\"right_turn\", \"obstacle_front\", \"right_turn\")",
+        "(\"right_turn\", \"obstacle_left\", \"right_turn\")",
+        "(\"right_turn\", \"obstacle_right\", \"right_turn\")",
+        "(\"right_turn\", \"rotate_counterclockwise\", \"wait\")"
+      ]
+    },
+    {
+      "name": "E5_progress_alternation",
+      "purpose": "bias coverage by allowing a short forward pulse only immediately after random_walk, preventing long forward streaks",
+      "states": [
+        "need_random",
+        "need_forward"
+      ],
+      "initial_states": [
+        "need_random"
+      ],
+      "marked_states": [
+        "need_random",
+        "need_forward"
+      ],
+      "controllable_events": [
+        "random_walk",
+        "move_forward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"need_random\", \"random_walk\", \"need_forward\")",
+        "(\"need_forward\", \"move_forward\", \"need_random\")"
+      ]
+    }
+  ]
+}

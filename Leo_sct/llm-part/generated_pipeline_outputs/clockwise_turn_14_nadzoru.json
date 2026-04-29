@@ -1,0 +1,96 @@
+{
+  "rationale": "The plant models the robot's motion and perception interface. The specification encodes a strict always-turn-right exploration policy with explicit obstacle recovery, ensuring forward motion only when safe and using rotate_clockwise as the sole recovery/turn action. No state reached by an obstacle event enables move_forward. After recovery, the robot resumes forward progress as soon as the path is clear.",
+  "strategy": [
+    "Separate plant automata for motion-perception interface and supervisor logic",
+    "Specification automaton encodes safe exploration with always-turn-right recovery, enabling move_forward only in clear state and rotate_clockwise in all obstacle states"
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion and perception interface: models execution of move_forward and rotate_clockwise, and reception of sensor events.",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Safe exploration supervisor: enables move_forward only when clear, rotate_clockwise as the only recovery/turn action, and disables forward motion in all obstacle states.",
+      "states": [
+        "clear",
+        "obs_front",
+        "obs_left",
+        "obs_right",
+        "rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"clear\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"obs_front\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_front\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_front\")",
+        "(\"obs_front\", \"path_clear\", \"rotate_commit\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_left\")",
+        "(\"obs_left\", \"path_clear\", \"rotate_commit\")",
+        "(\"obs_right\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_right\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_right\")",
+        "(\"obs_right\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_right\", \"path_clear\", \"rotate_commit\")",
+        "(\"rotate_commit\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"rotate_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"rotate_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"rotate_commit\", \"rotate_clockwise\", \"rotate_commit\")"
+      ]
+    }
+  ]
+}

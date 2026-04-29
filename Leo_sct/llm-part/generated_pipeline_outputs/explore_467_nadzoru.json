@@ -1,0 +1,189 @@
+{
+  "rationale": "Use a minimal plant split into sensing and motion capability, then encode the exploration policy in small deterministic specifications. The policy gives clear priority to forward progress in clear space, uses short directed turns for side/front obstacles, allows a rare one-shot backward escape only from a dedicated front-obstacle recovery state, and reserves full_rotate for a dedicated last-resort stuck state after repeated front blockage. Action states are one-shot, obstacle-triggered states never enable move_forward or random_walk, and all states that include uncontrollable events are total on the uncontrollable alphabet.",
+  "strategy": [
+    "Separate plant sensing from motion capability so specifications can bind sensor outcomes to exactly one safe controllable action per policy state.",
+    "Use a compact layered specification set: clear-space progress, left/right directed recovery, front recovery with rare backward escape, and a last-resort full-rotate path only after repeated front blockage."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local obstacle sensing outcomes available to the supervisor",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot motion command capability",
+      "states": [
+        "motion"
+      ],
+      "initial_states": [
+        "motion"
+      ],
+      "marked_states": [
+        "motion"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"motion\", \"move_forward\", \"motion\")",
+        "(\"motion\", \"rotate_clockwise\", \"motion\")",
+        "(\"motion\", \"rotate_counterclockwise\", \"motion\")",
+        "(\"motion\", \"full_rotate\", \"motion\")",
+        "(\"motion\", \"random_walk\", \"motion\")",
+        "(\"motion\", \"move_backward\", \"motion\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_progress_and_recovery",
+      "purpose": "Main exploration policy: prefer forward progress in clear space, use short directed turns on side obstacles, use a dedicated front-obstacle recovery path with rare backward escape, and return to exploration quickly when clear",
+      "states": [
+        "clear_decide",
+        "forward_commit",
+        "wander_commit",
+        "left_recover",
+        "right_recover",
+        "front_back",
+        "front_turn",
+        "stuck"
+      ],
+      "initial_states": [
+        "clear_decide"
+      ],
+      "marked_states": [
+        "clear_decide",
+        "forward_commit",
+        "wander_commit",
+        "left_recover",
+        "right_recover",
+        "front_back",
+        "front_turn",
+        "stuck"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "random_walk",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_decide\", \"path_clear\", \"clear_decide\")",
+        "(\"clear_decide\", \"obstacle_front\", \"front_back\")",
+        "(\"clear_decide\", \"obstacle_left\", \"left_recover\")",
+        "(\"clear_decide\", \"obstacle_right\", \"right_recover\")",
+        "(\"clear_decide\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"front_back\")",
+        "(\"forward_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"forward_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"forward_commit\", \"random_walk\", \"wander_commit\")",
+        "(\"wander_commit\", \"path_clear\", \"wander_commit\")",
+        "(\"wander_commit\", \"obstacle_front\", \"front_back\")",
+        "(\"wander_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"wander_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"wander_commit\", \"move_forward\", \"forward_commit\")",
+        "(\"left_recover\", \"path_clear\", \"clear_decide\")",
+        "(\"left_recover\", \"obstacle_front\", \"front_back\")",
+        "(\"left_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"left_recover\", \"obstacle_right\", \"left_recover\")",
+        "(\"left_recover\", \"rotate_clockwise\", \"clear_decide\")",
+        "(\"right_recover\", \"path_clear\", \"clear_decide\")",
+        "(\"right_recover\", \"obstacle_front\", \"front_back\")",
+        "(\"right_recover\", \"obstacle_left\", \"right_recover\")",
+        "(\"right_recover\", \"obstacle_right\", \"right_recover\")",
+        "(\"right_recover\", \"rotate_counterclockwise\", \"clear_decide\")",
+        "(\"front_back\", \"path_clear\", \"front_back\")",
+        "(\"front_back\", \"obstacle_front\", \"front_back\")",
+        "(\"front_back\", \"obstacle_left\", \"front_back\")",
+        "(\"front_back\", \"obstacle_right\", \"front_back\")",
+        "(\"front_back\", \"move_backward\", \"front_turn\")",
+        "(\"front_turn\", \"path_clear\", \"clear_decide\")",
+        "(\"front_turn\", \"obstacle_front\", \"stuck\")",
+        "(\"front_turn\", \"obstacle_left\", \"front_turn\")",
+        "(\"front_turn\", \"obstacle_right\", \"front_turn\")",
+        "(\"front_turn\", \"rotate_clockwise\", \"clear_decide\")",
+        "(\"stuck\", \"path_clear\", \"clear_decide\")",
+        "(\"stuck\", \"obstacle_front\", \"stuck\")",
+        "(\"stuck\", \"obstacle_left\", \"stuck\")",
+        "(\"stuck\", \"obstacle_right\", \"stuck\")"
+      ]
+    },
+    {
+      "name": "E2_last_resort_full_rotate",
+      "purpose": "Allow full_rotate only from a dedicated stuck state reached after repeated front blockage, then force return to forward-progress decision",
+      "states": [
+        "normal",
+        "stuck_ready",
+        "scan_commit"
+      ],
+      "initial_states": [
+        "normal"
+      ],
+      "marked_states": [
+        "normal",
+        "stuck_ready",
+        "scan_commit"
+      ],
+      "controllable_events": [
+        "full_rotate"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"normal\", \"path_clear\", \"normal\")",
+        "(\"normal\", \"obstacle_left\", \"normal\")",
+        "(\"normal\", \"obstacle_right\", \"normal\")",
+        "(\"normal\", \"obstacle_front\", \"stuck_ready\")",
+        "(\"stuck_ready\", \"path_clear\", \"normal\")",
+        "(\"stuck_ready\", \"obstacle_left\", \"stuck_ready\")",
+        "(\"stuck_ready\", \"obstacle_right\", \"stuck_ready\")",
+        "(\"stuck_ready\", \"obstacle_front\", \"stuck_ready\")",
+        "(\"stuck_ready\", \"full_rotate\", \"scan_commit\")",
+        "(\"scan_commit\", \"path_clear\", \"normal\")",
+        "(\"scan_commit\", \"obstacle_front\", \"normal\")",
+        "(\"scan_commit\", \"obstacle_left\", \"normal\")",
+        "(\"scan_commit\", \"obstacle_right\", \"normal\")"
+      ]
+    }
+  ]
+}

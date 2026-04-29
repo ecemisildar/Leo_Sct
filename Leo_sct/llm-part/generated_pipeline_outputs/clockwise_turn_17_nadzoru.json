@@ -1,0 +1,99 @@
+{
+  "rationale": "The plant models the robot's motion and perception capabilities, with uncontrollable events for obstacle sensing and controllable events for motion. The specification enforces safe exploration: move_forward is only allowed when the path is clear; any obstacle event triggers a rotate_clockwise recovery, and forward progress resumes only after path_clear. The design is deterministic, never stalls, and always prefers forward motion when safe, using rotate_clockwise as the only recovery/turn action.",
+  "strategy": [
+    "Separate plant automata for motion-perception and specification for safe exploration policy.",
+    "Always-turn-right policy: rotate_clockwise is the only allowed turn/recovery; move_forward is only enabled in clear state."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Models the robot's motion and perception: move_forward and rotate_clockwise as controllable actions; path_clear, obstacle_front, obstacle_left, obstacle_right as uncontrollable sensor events.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "recovery_right"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"forward_commit\")",
+        "(\"clear\", \"obstacle_front\", \"recovery_right\")",
+        "(\"clear\", \"obstacle_left\", \"recovery_right\")",
+        "(\"clear\", \"obstacle_right\", \"recovery_right\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"rotate_clockwise\", \"forward_commit\")",
+        "(\"forward_commit\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"recovery_right\")",
+        "(\"forward_commit\", \"obstacle_left\", \"recovery_right\")",
+        "(\"forward_commit\", \"obstacle_right\", \"recovery_right\")",
+        "(\"recovery_right\", \"rotate_clockwise\", \"recovery_right\")",
+        "(\"recovery_right\", \"move_forward\", \"recovery_right\")",
+        "(\"recovery_right\", \"path_clear\", \"clear\")",
+        "(\"recovery_right\", \"obstacle_front\", \"recovery_right\")",
+        "(\"recovery_right\", \"obstacle_left\", \"recovery_right\")",
+        "(\"recovery_right\", \"obstacle_right\", \"recovery_right\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Enforces safe exploration: enables move_forward only in clear, disables move_forward in recovery; enables rotate_clockwise only in recovery; ensures transitions to recovery on any obstacle event and back to clear only after path_clear.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "recovery_right"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"forward_commit\")",
+        "(\"clear\", \"obstacle_front\", \"recovery_right\")",
+        "(\"clear\", \"obstacle_left\", \"recovery_right\")",
+        "(\"clear\", \"obstacle_right\", \"recovery_right\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"recovery_right\")",
+        "(\"forward_commit\", \"obstacle_left\", \"recovery_right\")",
+        "(\"forward_commit\", \"obstacle_right\", \"recovery_right\")",
+        "(\"forward_commit\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"rotate_clockwise\", \"forward_commit\")",
+        "(\"recovery_right\", \"rotate_clockwise\", \"recovery_right\")",
+        "(\"recovery_right\", \"path_clear\", \"clear\")",
+        "(\"recovery_right\", \"obstacle_front\", \"recovery_right\")",
+        "(\"recovery_right\", \"obstacle_left\", \"recovery_right\")",
+        "(\"recovery_right\", \"obstacle_right\", \"recovery_right\")",
+        "(\"recovery_right\", \"move_forward\", \"recovery_right\")"
+      ]
+    }
+  ]
+}

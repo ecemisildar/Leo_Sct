@@ -1,0 +1,203 @@
+{
+  "rationale": "The plant is split into two automata: one for perception (sensors) and one for motion commands. The specification binds perception outcomes to safe, progress-oriented actions, enforcing conservative recovery only when needed. Forward and random_walk are prioritized in clear states, while obstacle events trigger brief, directed recovery. Full_rotate and move_backward are reserved for last-resort and only reachable via dedicated states. All transitions are deterministic and respect the event and state constraints.",
+  "strategy": [
+    "Separate plant automata for perception and motion to allow modular specification binding.",
+    "Specification automata encode safe, progress-maximizing exploration with conservative, minimal recovery and rapid return to forward progress after obstacles clear."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Perception plant: models robot's local obstacle sensor outcomes.",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion plant: models robot's ability to execute motion commands.",
+      "states": [
+        "idle",
+        "forward_commit",
+        "random_walk_commit",
+        "rotate_commit_cw",
+        "rotate_commit_ccw",
+        "move_backward_commit",
+        "full_rotate_commit"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "forward_commit",
+        "random_walk_commit",
+        "rotate_commit_cw",
+        "rotate_commit_ccw",
+        "move_backward_commit",
+        "full_rotate_commit"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "random_walk",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "move_backward",
+        "full_rotate"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"forward_commit\")",
+        "(\"idle\", \"random_walk\", \"random_walk_commit\")",
+        "(\"idle\", \"rotate_clockwise\", \"rotate_commit_cw\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"rotate_commit_ccw\")",
+        "(\"idle\", \"move_backward\", \"move_backward_commit\")",
+        "(\"idle\", \"full_rotate\", \"full_rotate_commit\")",
+        "(\"forward_commit\", \"move_forward\", \"idle\")",
+        "(\"random_walk_commit\", \"random_walk\", \"idle\")",
+        "(\"rotate_commit_cw\", \"rotate_clockwise\", \"idle\")",
+        "(\"rotate_commit_ccw\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"move_backward_commit\", \"move_backward\", \"idle\")",
+        "(\"full_rotate_commit\", \"full_rotate\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Main exploration and recovery policy: binds perception to safe, progress-maximizing actions, enforcing conservative recovery and rapid return to exploration.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "random_walk_commit",
+        "obs_front",
+        "recover_back",
+        "recover_turn_cw",
+        "obs_left",
+        "recover_turn_cw_from_left",
+        "obs_right",
+        "recover_turn_ccw_from_right",
+        "stuck",
+        "last_resort_full_rotate",
+        "after_full_rotate"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "forward_commit",
+        "random_walk_commit",
+        "obs_front",
+        "recover_back",
+        "recover_turn_cw",
+        "obs_left",
+        "recover_turn_cw_from_left",
+        "obs_right",
+        "recover_turn_ccw_from_right",
+        "stuck",
+        "last_resort_full_rotate",
+        "after_full_rotate"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "random_walk",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "move_backward",
+        "full_rotate"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"obstacle_front\", \"obs_front\")",
+        "(\"clear\", \"obstacle_left\", \"obs_left\")",
+        "(\"clear\", \"obstacle_right\", \"obs_right\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"forward_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"forward_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"move_forward\", \"clear\")",
+        "(\"random_walk_commit\", \"obstacle_front\", \"obs_front\")",
+        "(\"random_walk_commit\", \"obstacle_left\", \"obs_left\")",
+        "(\"random_walk_commit\", \"obstacle_right\", \"obs_right\")",
+        "(\"random_walk_commit\", \"path_clear\", \"random_walk_commit\")",
+        "(\"random_walk_commit\", \"random_walk\", \"clear\")",
+        "(\"obs_front\", \"obstacle_front\", \"stuck\")",
+        "(\"obs_front\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_front\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_front\", \"path_clear\", \"clear\")",
+        "(\"obs_front\", \"move_backward\", \"recover_back\")",
+        "(\"recover_back\", \"obstacle_front\", \"stuck\")",
+        "(\"recover_back\", \"obstacle_left\", \"obs_left\")",
+        "(\"recover_back\", \"obstacle_right\", \"obs_right\")",
+        "(\"recover_back\", \"path_clear\", \"clear\")",
+        "(\"recover_back\", \"move_backward\", \"recover_turn_cw\")",
+        "(\"recover_turn_cw\", \"obstacle_front\", \"stuck\")",
+        "(\"recover_turn_cw\", \"obstacle_left\", \"obs_left\")",
+        "(\"recover_turn_cw\", \"obstacle_right\", \"obs_right\")",
+        "(\"recover_turn_cw\", \"path_clear\", \"clear\")",
+        "(\"recover_turn_cw\", \"rotate_clockwise\", \"clear\")",
+        "(\"obs_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_left\", \"obstacle_left\", \"stuck\")",
+        "(\"obs_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"obs_left\", \"path_clear\", \"clear\")",
+        "(\"obs_left\", \"rotate_clockwise\", \"recover_turn_cw_from_left\")",
+        "(\"recover_turn_cw_from_left\", \"obstacle_front\", \"obs_front\")",
+        "(\"recover_turn_cw_from_left\", \"obstacle_left\", \"stuck\")",
+        "(\"recover_turn_cw_from_left\", \"obstacle_right\", \"obs_right\")",
+        "(\"recover_turn_cw_from_left\", \"path_clear\", \"clear\")",
+        "(\"recover_turn_cw_from_left\", \"rotate_clockwise\", \"clear\")",
+        "(\"obs_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"obs_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"obs_right\", \"obstacle_right\", \"stuck\")",
+        "(\"obs_right\", \"path_clear\", \"clear\")",
+        "(\"obs_right\", \"rotate_counterclockwise\", \"recover_turn_ccw_from_right\")",
+        "(\"recover_turn_ccw_from_right\", \"obstacle_front\", \"obs_front\")",
+        "(\"recover_turn_ccw_from_right\", \"obstacle_left\", \"obs_left\")",
+        "(\"recover_turn_ccw_from_right\", \"obstacle_right\", \"stuck\")",
+        "(\"recover_turn_ccw_from_right\", \"path_clear\", \"clear\")",
+        "(\"recover_turn_ccw_from_right\", \"rotate_counterclockwise\", \"clear\")",
+        "(\"stuck\", \"obstacle_front\", \"stuck\")",
+        "(\"stuck\", \"obstacle_left\", \"stuck\")",
+        "(\"stuck\", \"obstacle_right\", \"stuck\")",
+        "(\"stuck\", \"path_clear\", \"clear\")",
+        "(\"stuck\", \"full_rotate\", \"last_resort_full_rotate\")",
+        "(\"last_resort_full_rotate\", \"obstacle_front\", \"obs_front\")",
+        "(\"last_resort_full_rotate\", \"obstacle_left\", \"obs_left\")",
+        "(\"last_resort_full_rotate\", \"obstacle_right\", \"obs_right\")",
+        "(\"last_resort_full_rotate\", \"path_clear\", \"clear\")",
+        "(\"last_resort_full_rotate\", \"full_rotate\", \"after_full_rotate\")",
+        "(\"after_full_rotate\", \"obstacle_front\", \"obs_front\")",
+        "(\"after_full_rotate\", \"obstacle_left\", \"obs_left\")",
+        "(\"after_full_rotate\", \"obstacle_right\", \"obs_right\")",
+        "(\"after_full_rotate\", \"path_clear\", \"clear\")",
+        "(\"after_full_rotate\", \"move_forward\", \"forward_commit\")"
+      ]
+    }
+  ]
+}

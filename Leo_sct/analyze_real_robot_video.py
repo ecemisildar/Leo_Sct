@@ -51,7 +51,7 @@ if hasattr(cv2, "ocl"):
 DEFAULT_ARENA_WIDTH_M = 3.0
 DEFAULT_ARENA_HEIGHT_M = 2.0
 DEFAULT_PIXELS_PER_METER = 250
-DEFAULT_GRID_SIZE_M = 0.05
+DEFAULT_GRID_SIZE_M = 0.10
 DEFAULT_ROBOT_WIDTH_M = 0.45
 DEFAULT_ROBOT_HEIGHT_M = 0.45
 DEFAULT_MARKER_TO_FRONT_M = 0.15
@@ -69,6 +69,22 @@ DEFAULT_FRAME_STEP = 2
 DEFAULT_MAX_MISSED_FRAMES = 12
 DEFAULT_ARUCO_DICT = "DICT_4X4_50"
 DEFAULT_ARUCO_IDS = [0, 1, 2]
+ROBOT_COLORS_BGR = [
+    (255, 99, 71),
+    (60, 179, 113),
+    (65, 105, 225),
+    (255, 191, 0),
+    (186, 85, 211),
+    (64, 224, 208),
+]
+ROBOT_COLORS_MPL = [
+    "#e76f51",
+    "#2a9d8f",
+    "#3a86ff",
+    "#f4a261",
+    "#9d4edd",
+    "#2ec4b6",
+]
 
 
 @dataclass
@@ -532,14 +548,21 @@ def build_coverage_grid(
     arena_width_m: float,
     arena_height_m: float,
     grid_size_m: float,
-) -> tuple[np.ndarray, int, int]:
+) -> tuple[np.ndarray, np.ndarray, int, int]:
     grid_width = int(math.ceil(arena_width_m / grid_size_m))
     grid_height = int(math.ceil(arena_height_m / grid_size_m))
-    return np.zeros((grid_height, grid_width), dtype=np.uint8), grid_width, grid_height
+    return (
+        np.zeros((grid_height, grid_width), dtype=np.uint8),
+        np.full((grid_height, grid_width), -1, dtype=np.int16),
+        grid_width,
+        grid_height,
+    )
 
 
 def mark_coverage(
     coverage_grid: np.ndarray,
+    coverage_owner_grid: np.ndarray,
+    track_id: int,
     x_m: float,
     y_m: float,
     robot_width_m: float,
@@ -562,8 +585,17 @@ def mark_coverage(
         for col in range(min_col, max_col + 1):
             if coverage_grid[row, col] == 0:
                 coverage_grid[row, col] = 1
+                coverage_owner_grid[row, col] = track_id
                 newly_visited.append((row, col))
     return newly_visited
+
+
+def get_robot_color_bgr(track_id: int) -> tuple[int, int, int]:
+    return ROBOT_COLORS_BGR[track_id % len(ROBOT_COLORS_BGR)]
+
+
+def get_robot_color_mpl(track_id: int) -> str:
+    return ROBOT_COLORS_MPL[track_id % len(ROBOT_COLORS_MPL)]
 
 
 def coverage_cell_record(
@@ -700,6 +732,7 @@ def draw_debug_overlay(
 def write_coverage_map(
     output_dir: Path,
     coverage_grid: np.ndarray,
+    coverage_owner_grid: np.ndarray,
     tracks_history: dict[int, list[tuple[float, float]]],
     arena_width_m: float,
     arena_height_m: float,
@@ -721,20 +754,14 @@ def write_coverage_map(
             y0 = int(round(row * cell_h))
             x1 = int(round((col + 1) * cell_w))
             y1 = int(round((row + 1) * cell_h))
-            cv2.rectangle(image, (x0, y0), (x1, y1), (40, 170, 40), thickness=-1)
+            owner_track_id = int(coverage_owner_grid[row, col])
+            color = get_robot_color_bgr(owner_track_id) if owner_track_id >= 0 else (40, 170, 40)
+            cv2.rectangle(image, (x0, y0), (x1, y1), color, thickness=-1)
 
-    colors = [
-        (255, 255, 255),
-        (0, 220, 255),
-        (255, 160, 0),
-        (255, 0, 255),
-        (0, 255, 0),
-        (0, 128, 255),
-    ]
     for track_id, points in sorted(tracks_history.items()):
         if len(points) < 2:
             continue
-        color = colors[track_id % len(colors)]
+        color = get_robot_color_bgr(track_id)
         pixel_points = [
             (int(round(x_m * pixels_per_meter)), int(round(y_m * pixels_per_meter)))
             for x_m, y_m in points
@@ -748,6 +775,7 @@ def write_coverage_map(
 def plot_coverage_map_matplotlib(
     output_dir: Path,
     coverage_grid: np.ndarray,
+    coverage_owner_grid: np.ndarray,
     tracks_history: dict[int, list[tuple[float, float]]],
     arena_width_m: float,
     arena_height_m: float,
@@ -765,7 +793,11 @@ def plot_coverage_map_matplotlib(
         for col in range(grid_w):
             x = col * grid_size_m
             y = row * grid_size_m
-            color = "green" if coverage_grid[row, col] else "red"
+            if coverage_grid[row, col]:
+                owner_track_id = int(coverage_owner_grid[row, col])
+                color = get_robot_color_mpl(owner_track_id) if owner_track_id >= 0 else "green"
+            else:
+                color = "red"
             rect = plt.Rectangle(
                 (x, y),
                 grid_size_m,
@@ -780,7 +812,13 @@ def plot_coverage_map_matplotlib(
         if len(points) < 2:
             continue
         xs, ys = zip(*points)
-        ax.plot(xs, ys, linewidth=1.2, label=f"robot_{track_id}")
+        ax.plot(
+            xs,
+            ys,
+            linewidth=1.2,
+            color=get_robot_color_mpl(track_id),
+            label=f"robot_{track_id}",
+        )
 
     visited_cells = int(coverage_grid.sum())
     free_cells = int(coverage_grid.size)
@@ -911,7 +949,7 @@ def analyze_video(args: argparse.Namespace) -> Path:
     capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
     aruco_detector = create_aruco_detector(DEFAULT_ARUCO_DICT)
-    coverage_grid, grid_width, _ = build_coverage_grid(
+    coverage_grid, coverage_owner_grid, grid_width, _ = build_coverage_grid(
         args.arena_width_m, args.arena_height_m, args.grid_size_m
     )
 
@@ -1025,6 +1063,8 @@ def analyze_video(args: argparse.Namespace) -> Path:
                 )
                 new_cells = mark_coverage(
                     coverage_grid,
+                    coverage_owner_grid,
+                    track.track_id,
                     x_m,
                     y_m,
                     args.robot_width_m,
@@ -1185,6 +1225,7 @@ def analyze_video(args: argparse.Namespace) -> Path:
     write_coverage_map(
         output_dir,
         coverage_grid,
+        coverage_owner_grid,
         tracks_history,
         args.arena_width_m,
         args.arena_height_m,
@@ -1193,6 +1234,7 @@ def analyze_video(args: argparse.Namespace) -> Path:
     coverage_map_plot_path = plot_coverage_map_matplotlib(
         output_dir,
         coverage_grid,
+        coverage_owner_grid,
         tracks_history,
         args.arena_width_m,
         args.arena_height_m,

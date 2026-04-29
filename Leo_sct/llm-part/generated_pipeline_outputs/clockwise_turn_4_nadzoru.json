@@ -1,0 +1,115 @@
+{
+  "rationale": "The plant models the robot's motion and perception interface, with open-loop motion pulses and discrete obstacle sensor events. The specification enforces safe exploration with a strong bias toward forward progress, always turning right (rotate_clockwise) for any obstacle, and only allowing move_forward when the path is clear. All obstacle events force a transition to a recovery state where only rotate_clockwise is enabled. After recovery, the robot waits for path_clear before resuming forward motion. No state enables both move_forward and rotate_clockwise, and all transitions are deterministic.",
+  "strategy": [
+    "Model robot motion and perception as a single plant automaton with explicit commit states for each controllable action.",
+    "Specification automaton enforces: (1) move_forward only when clear, (2) rotate_clockwise as the only recovery/turn action, (3) immediate recovery on any obstacle event, (4) return to forward progress as soon as path_clear is observed."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot motion and perception interface: models open-loop motion pulses and discrete obstacle sensor events.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "recovery_right",
+        "rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"forward_commit\")",
+        "(\"clear\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"recovery_right\")",
+        "(\"clear\", \"obstacle_left\", \"recovery_right\")",
+        "(\"clear\", \"obstacle_right\", \"recovery_right\")",
+        "(\"forward_commit\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"rotate_clockwise\", \"forward_commit\")",
+        "(\"forward_commit\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"recovery_right\")",
+        "(\"forward_commit\", \"obstacle_left\", \"recovery_right\")",
+        "(\"forward_commit\", \"obstacle_right\", \"recovery_right\")",
+        "(\"recovery_right\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"recovery_right\", \"move_forward\", \"recovery_right\")",
+        "(\"recovery_right\", \"path_clear\", \"clear\")",
+        "(\"recovery_right\", \"obstacle_front\", \"recovery_right\")",
+        "(\"recovery_right\", \"obstacle_left\", \"recovery_right\")",
+        "(\"recovery_right\", \"obstacle_right\", \"recovery_right\")",
+        "(\"rotate_commit\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"rotate_commit\", \"move_forward\", \"rotate_commit\")",
+        "(\"rotate_commit\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit\", \"obstacle_front\", \"recovery_right\")",
+        "(\"rotate_commit\", \"obstacle_left\", \"recovery_right\")",
+        "(\"rotate_commit\", \"obstacle_right\", \"recovery_right\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Enforces safe exploration: move_forward only when clear, rotate_clockwise as the only recovery/turn action, and immediate recovery on any obstacle event.",
+      "states": [
+        "clear",
+        "forward_commit",
+        "recovery_right",
+        "rotate_commit"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"forward_commit\")",
+        "(\"clear\", \"rotate_clockwise\", \"clear\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"recovery_right\")",
+        "(\"clear\", \"obstacle_left\", \"recovery_right\")",
+        "(\"clear\", \"obstacle_right\", \"recovery_right\")",
+        "(\"forward_commit\", \"move_forward\", \"forward_commit\")",
+        "(\"forward_commit\", \"rotate_clockwise\", \"forward_commit\")",
+        "(\"forward_commit\", \"path_clear\", \"clear\")",
+        "(\"forward_commit\", \"obstacle_front\", \"recovery_right\")",
+        "(\"forward_commit\", \"obstacle_left\", \"recovery_right\")",
+        "(\"forward_commit\", \"obstacle_right\", \"recovery_right\")",
+        "(\"recovery_right\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"recovery_right\", \"move_forward\", \"recovery_right\")",
+        "(\"recovery_right\", \"path_clear\", \"clear\")",
+        "(\"recovery_right\", \"obstacle_front\", \"recovery_right\")",
+        "(\"recovery_right\", \"obstacle_left\", \"recovery_right\")",
+        "(\"recovery_right\", \"obstacle_right\", \"recovery_right\")",
+        "(\"rotate_commit\", \"rotate_clockwise\", \"rotate_commit\")",
+        "(\"rotate_commit\", \"move_forward\", \"rotate_commit\")",
+        "(\"rotate_commit\", \"path_clear\", \"clear\")",
+        "(\"rotate_commit\", \"obstacle_front\", \"recovery_right\")",
+        "(\"rotate_commit\", \"obstacle_left\", \"recovery_right\")",
+        "(\"rotate_commit\", \"obstacle_right\", \"recovery_right\")"
+      ]
+    }
+  ]
+}

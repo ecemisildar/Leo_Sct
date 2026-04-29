@@ -213,7 +213,7 @@ class RobotSupervisor(Node):
             "EV_random_walk": ActionSpec(linear_x=0.0, angular_z=0.0, hold_s=None),  # special handled below
             "EV_move_forward": ActionSpec(linear_x=0.2, angular_z=0.0),
             "EV_move_to_marker": ActionSpec(linear_x=0.0, angular_z=0.0),
-            # "EV_move_backward": ActionSpec(linear_x=-0.5, angular_z=0.0, hold_s=self.recovery_back_hold_s),
+            "EV_move_backward": ActionSpec(linear_x=-0.2, angular_z=0.0, hold_s=self.recovery_back_hold_s),
             "EV_rotate_clockwise": ActionSpec(
                 linear_x=0.0,
                 angular_z=-self.rotate_90_omega,
@@ -735,13 +735,22 @@ class RobotSupervisor(Node):
         if ev_name == "EV_random_walk":
             twist = Twist()
             twist.linear.x = self.rng.uniform(0.1, 0.4)
+            hold = self.motion_hold_duration
             if self.rng.random() < 0.6:
                 twist.angular.z = 0.0
             else:
-                twist.angular.z = self.rng.uniform(-0.35, 0.35)
+                turn_angle = self.rng.uniform(-math.pi, math.pi)
+                twist.angular.z = math.copysign(
+                    self.rng.uniform(0.35, 0.9),
+                    turn_angle,
+                )
+                hold = min(
+                    abs(turn_angle) / max(1e-6, abs(twist.angular.z)),
+                    1.4,
+                )
             self.active_event = ev_name
             self.active_twist = twist
-            self.motion_until = time.time() + self.motion_hold_duration
+            self.motion_until = time.time() + hold
             self._publish_cmd(self.active_twist)
             return
 

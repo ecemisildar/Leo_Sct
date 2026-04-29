@@ -1,0 +1,209 @@
+{
+  "rationale": "The model separates sensing from motion capability and uses small deterministic specifications to map sensed obstacle conditions to exactly one safe recovery or exploration action. Clear conditions strongly favor forward progress, obstacle-side conditions trigger directed one-shot turns away from the blocked side, and front obstacles trigger a brief backward escape before rapid return to forward exploration. Full rotation is included only as a plant capability and is not selected by the specifications, keeping it available but sparse.",
+  "strategy": [
+    "Use one plant automaton for sensor outcomes and one for motion commands.",
+    "Use perception-to-action specifications with one-shot commit states so uncontrollable sensing is total while each action state enables exactly one controllable event.",
+    "Bias clear-space behavior to move_forward rather than lingering in scan/turn states.",
+    "Use move_backward only in dedicated front-obstacle recovery and return to exploration as soon as path_clear is observed."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local obstacle sensing outcomes available before each control step",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Robot motion command capability",
+      "states": [
+        "motion"
+      ],
+      "initial_states": [
+        "motion"
+      ],
+      "marked_states": [
+        "motion"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"motion\", \"move_forward\", \"motion\")",
+        "(\"motion\", \"rotate_clockwise\", \"motion\")",
+        "(\"motion\", \"rotate_counterclockwise\", \"motion\")",
+        "(\"motion\", \"full_rotate\", \"motion\")",
+        "(\"motion\", \"random_walk\", \"motion\")",
+        "(\"motion\", \"move_backward\", \"motion\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_clear_forward",
+      "purpose": "In clear space, commit to forward exploration as the default high-coverage action",
+      "states": [
+        "monitor",
+        "clear_go"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "clear_go"
+      ],
+      "controllable_events": [
+        "move_forward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"clear_go\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"monitor\")",
+        "(\"monitor\", \"obstacle_right\", \"monitor\")",
+        "(\"clear_go\", \"move_forward\", \"monitor\")",
+        "(\"clear_go\", \"path_clear\", \"clear_go\")",
+        "(\"clear_go\", \"obstacle_front\", \"monitor\")",
+        "(\"clear_go\", \"obstacle_left\", \"monitor\")",
+        "(\"clear_go\", \"obstacle_right\", \"monitor\")"
+      ]
+    },
+    {
+      "name": "E2_front_recovery_back",
+      "purpose": "On front obstacle, perform one brief backward escape pulse only",
+      "states": [
+        "monitor",
+        "front_back"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "front_back"
+      ],
+      "controllable_events": [
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"monitor\")",
+        "(\"monitor\", \"obstacle_front\", \"front_back\")",
+        "(\"monitor\", \"obstacle_left\", \"monitor\")",
+        "(\"monitor\", \"obstacle_right\", \"monitor\")",
+        "(\"front_back\", \"move_backward\", \"monitor\")",
+        "(\"front_back\", \"path_clear\", \"front_back\")",
+        "(\"front_back\", \"obstacle_front\", \"front_back\")",
+        "(\"front_back\", \"obstacle_left\", \"front_back\")",
+        "(\"front_back\", \"obstacle_right\", \"front_back\")"
+      ]
+    },
+    {
+      "name": "E3_left_recovery_cw",
+      "purpose": "On left obstacle, turn right with a short clockwise pulse",
+      "states": [
+        "monitor",
+        "left_turn_cw"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "left_turn_cw"
+      ],
+      "controllable_events": [
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"monitor\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"monitor\", \"obstacle_right\", \"monitor\")",
+        "(\"left_turn_cw\", \"rotate_clockwise\", \"monitor\")",
+        "(\"left_turn_cw\", \"path_clear\", \"left_turn_cw\")",
+        "(\"left_turn_cw\", \"obstacle_front\", \"monitor\")",
+        "(\"left_turn_cw\", \"obstacle_left\", \"left_turn_cw\")",
+        "(\"left_turn_cw\", \"obstacle_right\", \"left_turn_cw\")"
+      ]
+    },
+    {
+      "name": "E4_right_recovery_ccw",
+      "purpose": "On right obstacle, turn left with a short counterclockwise pulse",
+      "states": [
+        "monitor",
+        "right_turn_ccw"
+      ],
+      "initial_states": [
+        "monitor"
+      ],
+      "marked_states": [
+        "monitor",
+        "right_turn_ccw"
+      ],
+      "controllable_events": [
+        "rotate_counterclockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"monitor\", \"path_clear\", \"monitor\")",
+        "(\"monitor\", \"obstacle_front\", \"monitor\")",
+        "(\"monitor\", \"obstacle_left\", \"monitor\")",
+        "(\"monitor\", \"obstacle_right\", \"right_turn_ccw\")",
+        "(\"right_turn_ccw\", \"rotate_counterclockwise\", \"monitor\")",
+        "(\"right_turn_ccw\", \"path_clear\", \"right_turn_ccw\")",
+        "(\"right_turn_ccw\", \"obstacle_front\", \"monitor\")",
+        "(\"right_turn_ccw\", \"obstacle_left\", \"right_turn_ccw\")",
+        "(\"right_turn_ccw\", \"obstacle_right\", \"right_turn_ccw\")"
+      ]
+    }
+  ]
+}

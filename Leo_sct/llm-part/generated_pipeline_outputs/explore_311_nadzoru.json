@@ -1,0 +1,136 @@
+{
+  "rationale": "Use a minimal plant split into sensing and motion capability, then encode the exploration policy in a single deterministic specification with small helper states. The specification is conservative under open-loop motion by forcing obstacle-triggered turn recovery, self-looping non-critical path_clear in commit states, forbidding forward/random motion in obstacle-reached states, and returning quickly to exploration once clear. Coverage is biased by making the initial clear state use random_walk, then alternating to a short move_forward progress state before returning to random exploration.",
+  "strategy": [
+    "Separate uncontrollable perception from controllable motion with two simple plant automata.",
+    "Use one policy specification with clear/search, short-progress, and one-shot turn-recovery states.",
+    "Make all states total on uncontrollables and deterministic.",
+    "Use random_walk in the initial clear exploration state, move_forward only in a dedicated short-progress state, and directed turns for ordinary obstacle recovery.",
+    "Reserve full_rotate for a dedicated last-resort recovery state reached only from repeated front blockage."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Perception plant generating obstacle and clear sensor outcomes.",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion capability plant exposing all available robot motion commands.",
+      "states": [
+        "ready"
+      ],
+      "initial_states": [
+        "ready"
+      ],
+      "marked_states": [
+        "ready"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"ready\", \"move_forward\", \"ready\")",
+        "(\"ready\", \"rotate_clockwise\", \"ready\")",
+        "(\"ready\", \"rotate_counterclockwise\", \"ready\")",
+        "(\"ready\", \"full_rotate\", \"ready\")",
+        "(\"ready\", \"random_walk\", \"ready\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration supervisor policy: random exploration when clear, short forward progress intermittently, directed turn recovery on obstacles, and sparse full scan only after repeated front blockage.",
+      "states": [
+        "clear_search",
+        "forward_progress",
+        "recover_front_cw",
+        "recover_left_cw",
+        "recover_right_ccw",
+        "front_blocked_again_scan"
+      ],
+      "initial_states": [
+        "clear_search"
+      ],
+      "marked_states": [
+        "clear_search",
+        "forward_progress",
+        "recover_front_cw",
+        "recover_left_cw",
+        "recover_right_ccw",
+        "front_blocked_again_scan"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_search\", \"path_clear\", \"clear_search\")",
+        "(\"clear_search\", \"obstacle_front\", \"recover_front_cw\")",
+        "(\"clear_search\", \"obstacle_left\", \"recover_left_cw\")",
+        "(\"clear_search\", \"obstacle_right\", \"recover_right_ccw\")",
+        "(\"clear_search\", \"random_walk\", \"forward_progress\")",
+        "(\"forward_progress\", \"path_clear\", \"forward_progress\")",
+        "(\"forward_progress\", \"obstacle_front\", \"recover_front_cw\")",
+        "(\"forward_progress\", \"obstacle_left\", \"recover_left_cw\")",
+        "(\"forward_progress\", \"obstacle_right\", \"recover_right_ccw\")",
+        "(\"forward_progress\", \"move_forward\", \"clear_search\")",
+        "(\"recover_front_cw\", \"path_clear\", \"recover_front_cw\")",
+        "(\"recover_front_cw\", \"obstacle_front\", \"front_blocked_again_scan\")",
+        "(\"recover_front_cw\", \"obstacle_left\", \"recover_left_cw\")",
+        "(\"recover_front_cw\", \"obstacle_right\", \"recover_right_ccw\")",
+        "(\"recover_front_cw\", \"rotate_clockwise\", \"clear_search\")",
+        "(\"recover_left_cw\", \"path_clear\", \"recover_left_cw\")",
+        "(\"recover_left_cw\", \"obstacle_front\", \"recover_front_cw\")",
+        "(\"recover_left_cw\", \"obstacle_left\", \"recover_left_cw\")",
+        "(\"recover_left_cw\", \"obstacle_right\", \"recover_right_ccw\")",
+        "(\"recover_left_cw\", \"rotate_clockwise\", \"clear_search\")",
+        "(\"recover_right_ccw\", \"path_clear\", \"recover_right_ccw\")",
+        "(\"recover_right_ccw\", \"obstacle_front\", \"recover_front_cw\")",
+        "(\"recover_right_ccw\", \"obstacle_left\", \"recover_left_cw\")",
+        "(\"recover_right_ccw\", \"obstacle_right\", \"recover_right_ccw\")",
+        "(\"recover_right_ccw\", \"rotate_counterclockwise\", \"clear_search\")",
+        "(\"front_blocked_again_scan\", \"path_clear\", \"front_blocked_again_scan\")",
+        "(\"front_blocked_again_scan\", \"obstacle_front\", \"front_blocked_again_scan\")",
+        "(\"front_blocked_again_scan\", \"obstacle_left\", \"recover_left_cw\")",
+        "(\"front_blocked_again_scan\", \"obstacle_right\", \"recover_right_ccw\")",
+        "(\"front_blocked_again_scan\", \"full_rotate\", \"clear_search\")"
+      ]
+    }
+  ]
+}

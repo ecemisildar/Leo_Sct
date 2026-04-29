@@ -19,6 +19,7 @@ import argparse
 import ast
 import json
 import os
+import random
 import re
 import sys
 import time
@@ -51,7 +52,7 @@ DEFAULT_REAL_YAML_OUT_DIR = (
 DEFAULT_PROFILE_PATH = THIS_DIR / "task_profiles.json"
 DEFAULT_OUTPUT_DIR = THIS_DIR / "generated_pipeline_outputs"
 DEFAULT_LLM_DIR = THIS_DIR
-DEFAULT_RESULTS_LLM_DIR = THIS_DIR.parent / "results_llm"
+DEFAULT_RESULTS_LLM_DIR = THIS_DIR.parent / "results_backward"
 DEFAULT_LLM_SUFFIX = "_nadzoru.json"
 DEFAULT_YAML_PREFIX = "sup_gpt_"
 DEFAULT_PROMPT_SET_FILE = THIS_DIR / "prompt_groups_explore.txt"
@@ -64,6 +65,8 @@ DEFAULT_KEY_FILE = THIS_DIR.parent / "api_key.txt"
 DEFAULT_MODEL = "gpt-4.1"
 DEFAULT_TIMEOUT_S = 120.0
 DEFAULT_RETRIES = 2
+DEFAULT_LLM_COOLDOWN_MIN_S = 1.0
+DEFAULT_LLM_COOLDOWN_MAX_S = 10.0
 
 # Skip JSON->XML and use an existing E1.xml in the generated output folder.
 START_FROM_XML_ONLY = False
@@ -218,7 +221,7 @@ def _validate_llm_json(
                 continue
             recovery_front = [
                 ev for ev in front_ctrls
-                if ev in {"full_rotate", "rotate_clockwise", "rotate_counterclockwise"}
+                if ev in {"move_backward", "full_rotate", "rotate_clockwise", "rotate_counterclockwise"}
             ]
             if not recovery_front:
                 explore_warnings.append(
@@ -409,6 +412,8 @@ def call_chat_completion(
     temperature: float,
     timeout_s: float,
     retries: int,
+    cooldown_min_s: float = DEFAULT_LLM_COOLDOWN_MIN_S,
+    cooldown_max_s: float = DEFAULT_LLM_COOLDOWN_MAX_S,
 ) -> Dict[str, object]:
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -428,6 +433,13 @@ def call_chat_completion(
     last_error: Exception | None = None
     for attempt in range(1, retries + 2):
         try:
+            if cooldown_max_s > 0:
+                delay = random.uniform(
+                    max(0.0, cooldown_min_s),
+                    max(cooldown_min_s, cooldown_max_s),
+                )
+                print(f"[LLM cooldown] sleeping {delay:.1f}s before request")
+                time.sleep(delay)
             response = requests.post(
                 "https://api.openai.com/v1/chat/completions",
                 headers=headers,
@@ -639,11 +651,32 @@ def _write_automaton_xml(automaton_payload: Dict[str, object], output_path: Path
     output_path.write_bytes(xml_payload)
 
 
+def _sanitize_automaton_var_name(name: str, fallback: str) -> str:
+    sanitized = re.sub(r"\W+", "_", name).strip("_")
+    if not sanitized or sanitized[0].isdigit():
+        sanitized = fallback
+    return sanitized
+
+
+def _unique_automaton_var_name(name: str, used_names: Set[str]) -> str:
+    if name not in used_names:
+        used_names.add(name)
+        return name
+    base = name
+    pos = 2
+    while f"{base}_{pos}" in used_names:
+        pos += 1
+    unique = f"{base}_{pos}"
+    used_names.add(unique)
+    return unique
+
+
 def _prepare_output_dir(
     output_dir: Path,
     index: str,
     llm_payload: Dict[str, object] | None,
     keep_existing_e: bool,
+    extra_spec_xml_paths: Sequence[Path] | None = None,
 ) -> Dict[str, object]:
     output_dir.mkdir(parents=True, exist_ok=True)
     sloc_xml = output_dir / f"Sloc{index}.xml"
@@ -660,16 +693,35 @@ def _prepare_output_dir(
     if llm_payload is not None:
         g_names: List[str] = []
         e_names: List[str] = []
+        used_names: Set[str] = set()
         for pos, automaton in enumerate(llm_payload["G"], start=1):
             path = output_dir / f"G{index}_{pos}.xml"
             _write_automaton_xml(automaton, path)
             g_xml_paths.append(path)
-            g_names.append(str(automaton["name"]))
+            name = str(automaton["name"])
+            g_names.append(name)
+            used_names.add(name)
         for pos, automaton in enumerate(llm_payload["E"], start=1):
             path = output_dir / f"E{index}_{pos}.xml"
             _write_automaton_xml(automaton, path)
             e_xml_paths.append(path)
-            e_names.append(str(automaton["name"]))
+            name = str(automaton["name"])
+            e_names.append(name)
+            used_names.add(name)
+
+        for pos, source_path in enumerate(extra_spec_xml_paths or [], start=1):
+            if not source_path.exists():
+                raise SystemExit(f"Extra spec XML not found: {source_path}")
+            target_name = f"E{index}_extra_{pos}_{source_path.name}"
+            target_path = output_dir / target_name
+            target_path.write_bytes(source_path.read_bytes())
+            extra_name = _sanitize_automaton_var_name(
+                source_path.stem,
+                fallback=f"ExtraSpec{pos}",
+            )
+            extra_name = _unique_automaton_var_name(extra_name, used_names)
+            e_xml_paths.append(target_path)
+            e_names.append(extra_name)
 
         plant_expr = g_names[0]
         for name in g_names[1:]:
@@ -951,6 +1003,9 @@ def _run_llm(
     llm_json: Path,
     user_task: str | None = None,
     print_prompt: bool = False,
+    model: str = DEFAULT_MODEL,
+    cooldown_min_s: float = DEFAULT_LLM_COOLDOWN_MIN_S,
+    cooldown_max_s: float = DEFAULT_LLM_COOLDOWN_MAX_S,
 ) -> None:
     profiles = _load_profiles(DEFAULT_PROFILE_PATH)
     if task not in profiles:
@@ -1007,10 +1062,12 @@ def _run_llm(
     result = call_chat_completion(
         api_key,
         prompt,
-        DEFAULT_MODEL,
+        model,
         0.2,
         DEFAULT_TIMEOUT_S,
         DEFAULT_RETRIES,
+        cooldown_min_s,
+        cooldown_max_s,
     )
     llm_json.write_text(
         json.dumps(_normalize_pipeline_payload(result), indent=2),
@@ -1045,6 +1102,27 @@ def _parse_prompt_set_file(path: Path) -> List[Dict[str, str]]:
     if not path.exists():
         raise SystemExit(f"Prompt set file not found: {path}")
 
+    raw_lines = path.read_text(encoding="utf-8").splitlines()
+    has_group_header = any(
+        line.strip().startswith("[") and line.strip().endswith("]") and len(line.strip()) > 2
+        for line in raw_lines
+    )
+    if not has_group_header:
+        prompts = re.split(r"\n\s*\n", "\n".join(raw_lines).strip())
+        entries = []
+        for ordinal, prompt in enumerate((p.strip() for p in prompts if p.strip()), start=1):
+            entries.append(
+                {
+                    "group": "new",
+                    "ordinal": str(ordinal),
+                    "label": f"new_{ordinal}",
+                    "prompt": prompt,
+                }
+            )
+        if not entries:
+            raise SystemExit(f"No prompts found in {path}")
+        return entries
+
     entries: List[Dict[str, str]] = []
     current_group: str | None = None
     current_lines: List[str] = []
@@ -1074,7 +1152,7 @@ def _parse_prompt_set_file(path: Path) -> List[Dict[str, str]]:
             }
         )
 
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
+    for raw_line in raw_lines:
         stripped = raw_line.strip()
         if stripped.startswith("[") and stripped.endswith("]") and len(stripped) > 2:
             flush_prompt()
@@ -1091,15 +1169,6 @@ def _parse_prompt_set_file(path: Path) -> List[Dict[str, str]]:
 
     if not entries:
         raise SystemExit(f"No prompts found in {path}")
-
-    expected_groups = ("long", "medium", "vague")
-    for group in expected_groups:
-        if group not in group_counts:
-            raise SystemExit(f"Missing [{group}] group in {path}")
-        if group_counts[group] != 5:
-            raise SystemExit(
-                f"Expected 5 prompts in [{group}] group in {path}, found {group_counts[group]}"
-            )
 
     return entries
 
@@ -1186,11 +1255,15 @@ def _run_single_pipeline(
     run_llm: bool,
     user_task: str | None,
     print_prompt: bool,
+    model: str = DEFAULT_MODEL,
     label: str | None = None,
     batch_group: str | None = None,
     batch_prompt_ordinal: str | None = None,
     batch_repeat_ordinal: int | None = None,
     batch_results_root: Path | None = None,
+    llm_cooldown_min_s: float = DEFAULT_LLM_COOLDOWN_MIN_S,
+    llm_cooldown_max_s: float = DEFAULT_LLM_COOLDOWN_MAX_S,
+    extra_spec_xml_paths: Sequence[Path] | None = None,
 ) -> Dict[str, object]:
     if run_llm:
         DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -1200,6 +1273,9 @@ def _run_single_pipeline(
             llm_json_path,
             user_task=user_task,
             print_prompt=print_prompt,
+            model=model,
+            cooldown_min_s=llm_cooldown_min_s,
+            cooldown_max_s=llm_cooldown_max_s,
         )
     else:
         llm_json_path = _latest_llm_json_path(DEFAULT_OUTPUT_DIR, task)
@@ -1223,6 +1299,7 @@ def _run_single_pipeline(
         index,
         llm_payload,
         START_FROM_XML_ONLY,
+        extra_spec_xml_paths=extra_spec_xml_paths,
     )
     if not START_FROM_XML_ONLY:
         for automaton in llm_payload["E"]:
@@ -1358,6 +1435,11 @@ def main() -> int:
         help="Print the final composed LLM prompt before running the pipeline.",
     )
     parser.add_argument(
+        "--model",
+        default=DEFAULT_MODEL,
+        help=f"OpenAI model to use for the LLM step. Default: {DEFAULT_MODEL}.",
+    )
+    parser.add_argument(
         "--prompt-set-file",
         help=(
             "Optional path to a grouped prompt file with [long], [medium], and [vague] sections. "
@@ -1380,7 +1462,39 @@ def main() -> int:
         default=str(DEFAULT_RESULTS_LLM_DIR),
         help="Root directory for grouped batch YAML outputs.",
     )
+    parser.add_argument(
+        "--extra-spec-xml",
+        action="append",
+        default=[],
+        help=(
+            "Additional Nadzoru XML spec/constraint to sync into Kloc with the "
+            "LLM-generated E automata before SupC. Can be provided multiple times."
+        ),
+    )
+    parser.add_argument(
+        "--llm-cooldown-min",
+        type=float,
+        default=DEFAULT_LLM_COOLDOWN_MIN_S,
+        help=(
+            "Minimum random cooldown in seconds before each OpenAI request. "
+            f"Default: {DEFAULT_LLM_COOLDOWN_MIN_S}."
+        ),
+    )
+    parser.add_argument(
+        "--llm-cooldown-max",
+        type=float,
+        default=DEFAULT_LLM_COOLDOWN_MAX_S,
+        help=(
+            "Maximum random cooldown in seconds before each OpenAI request. "
+            f"Default: {DEFAULT_LLM_COOLDOWN_MAX_S}."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.llm_cooldown_min < 0 or args.llm_cooldown_max < 0:
+        raise SystemExit("--llm-cooldown-min and --llm-cooldown-max must be non-negative.")
+    if args.llm_cooldown_max < args.llm_cooldown_min:
+        raise SystemExit("--llm-cooldown-max must be greater than or equal to --llm-cooldown-min.")
 
     if args.write_default_prompt_set:
         if DEFAULT_PROMPT_SET_FILE.exists():
@@ -1407,6 +1521,10 @@ def main() -> int:
     run_llm = args.run_llm and not args.skip_llm
     user_task = _read_optional_text(args.user_task, args.user_task_file)
     prompt_set_path = Path(args.prompt_set_file) if args.prompt_set_file else None
+    extra_spec_xml_paths = [Path(path).expanduser().resolve() for path in args.extra_spec_xml]
+    for path in extra_spec_xml_paths:
+        if not path.exists():
+            raise SystemExit(f"Extra spec XML not found: {path}")
     use_default_prompt_set = (
         prompt_set_path is None
         and user_task is None
@@ -1446,11 +1564,15 @@ def main() -> int:
                         run_llm=run_llm,
                         user_task=entry["prompt"],
                         print_prompt=args.print_prompt,
+                        model=args.model,
                         label=f"{entry['label']}_run_{repeat_idx}",
                         batch_group=entry["group"],
                         batch_prompt_ordinal=entry["ordinal"],
                         batch_repeat_ordinal=repeat_idx,
                         batch_results_root=results_root,
+                        llm_cooldown_min_s=args.llm_cooldown_min,
+                        llm_cooldown_max_s=args.llm_cooldown_max,
+                        extra_spec_xml_paths=extra_spec_xml_paths,
                     )
                     results.append((entry, repeat_idx, result))
                     print(
@@ -1499,6 +1621,10 @@ def main() -> int:
         run_llm=run_llm,
         user_task=user_task,
         print_prompt=args.print_prompt,
+        model=args.model,
+        llm_cooldown_min_s=args.llm_cooldown_min,
+        llm_cooldown_max_s=args.llm_cooldown_max,
+        extra_spec_xml_paths=extra_spec_xml_paths,
     )
     print(f"Wrote YAML to {result['yaml_real_out']} and {result['yaml_real_default']}")
     return 0

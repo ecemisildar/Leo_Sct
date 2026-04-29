@@ -1,0 +1,2900 @@
+{
+  "gloc_name": "Gloc404",
+  "sloc_name": "Sloc404",
+  "states": [
+    {
+      "sloc_state": "percept_clear,forward_commit,s_clear",
+      "gloc_state": "percept_clear,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_clear,idle,s_forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_clear,forward_commit,s_forward_commit",
+      "gloc_state": "percept_clear,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,forward_commit,s_forward_commit",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_clear,full_rotate_commit,s_clear",
+      "gloc_state": "percept_clear,full_rotate_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,full_rotate_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,full_rotate_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,full_rotate_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,full_rotate_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,full_rotate_commit,s_full_rotate_commit",
+      "gloc_state": "percept_clear,full_rotate_commit",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,full_rotate_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,full_rotate_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,full_rotate_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,full_rotate_commit,s_full_rotate_commit",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_clear,idle,s_after_back",
+      "gloc_state": "percept_clear,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_after_back",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_clear,rotate_commit_cw,s_rotate_commit_cw",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_clear,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_clear,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_clear,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_clear,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_clear,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,idle,s_clear",
+      "gloc_state": "percept_clear,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_clear,forward_commit,s_forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_clear,random_walk_commit,s_random_walk_commit",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_clear,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_clear,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_clear,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_clear,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,idle,s_forward_commit",
+      "gloc_state": "percept_clear,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_clear,forward_commit,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_forward_commit",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_clear,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_clear,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_clear,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_clear,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_clear,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,idle,s_random_walk_commit",
+      "gloc_state": "percept_clear,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_random_walk_commit",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_clear,random_walk_commit,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_clear,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_clear,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_clear,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_clear,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_clear,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,idle,s_rotate_commit_ccw",
+      "gloc_state": "percept_clear,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_rotate_commit_ccw",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_clear,rotate_commit_ccw,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_clear,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_clear,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_clear,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_clear,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_clear,rotate_commit_cw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,idle,s_rotate_commit_cw",
+      "gloc_state": "percept_clear,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_rotate_commit_cw",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_clear,rotate_commit_cw,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_clear,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_clear,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_clear,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_clear,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_clear,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,random_walk_commit,s_clear",
+      "gloc_state": "percept_clear,random_walk_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,random_walk_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,random_walk_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,random_walk_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,random_walk_commit,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_clear,idle,s_random_walk_commit",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_clear,random_walk_commit,s_random_walk_commit",
+      "gloc_state": "percept_clear,random_walk_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,random_walk_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,random_walk_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,random_walk_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,random_walk_commit,s_random_walk_commit",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_clear,recover_back,s_after_back",
+      "gloc_state": "percept_clear,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_after_back",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,recover_back,s_clear",
+      "gloc_state": "percept_clear,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,rotate_commit_ccw,s_clear",
+      "gloc_state": "percept_clear,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,rotate_commit_ccw,s_rotate_commit_ccw",
+      "gloc_state": "percept_clear,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_rotate_commit_ccw",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_clear,rotate_commit_cw,s_clear",
+      "gloc_state": "percept_clear,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_clear,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_clear,rotate_commit_cw,s_rotate_commit_cw",
+      "gloc_state": "percept_clear,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_rotate_commit_cw",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_front,forward_commit,s_forward_commit",
+      "gloc_state": "percept_obs_front,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_obs_front,idle,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,forward_commit,s_forward_commit",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_front,forward_commit,s_obs_front",
+      "gloc_state": "percept_obs_front,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,full_rotate_commit,s_full_rotate_commit",
+      "gloc_state": "percept_obs_front,full_rotate_commit",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_front,idle,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,full_rotate_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,full_rotate_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,full_rotate_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,full_rotate_commit,s_full_rotate_commit",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_front,full_rotate_commit,s_obs_front",
+      "gloc_state": "percept_obs_front,full_rotate_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,full_rotate_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,full_rotate_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,full_rotate_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,full_rotate_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,idle,s_after_back",
+      "gloc_state": "percept_obs_front,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_after_back",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_front,rotate_commit_cw,s_rotate_commit_cw",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_front,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_obs_front,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_front,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_front,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_front,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,idle,s_clear",
+      "gloc_state": "percept_obs_front,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_obs_front,forward_commit,s_forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_front,random_walk_commit,s_random_walk_commit",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_front,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_obs_front,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_front,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_front,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,idle,s_obs_front",
+      "gloc_state": "percept_obs_front,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_front,recover_back,s_recover_back",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_front,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_front,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_front,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_front,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_front,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,idle,s_recover_back",
+      "gloc_state": "percept_obs_front,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_front,recover_back,s_after_back",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_after_back",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_front,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_front,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_front,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_front,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_front,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,idle,s_stuck",
+      "gloc_state": "percept_obs_front,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_front,full_rotate_commit,s_full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_front,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_front,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_front,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_front,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_front,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,random_walk_commit,s_obs_front",
+      "gloc_state": "percept_obs_front,random_walk_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,random_walk_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,random_walk_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,random_walk_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,random_walk_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "random_walk",
+          "target": "percept_obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,random_walk_commit,s_random_walk_commit",
+      "gloc_state": "percept_obs_front,random_walk_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,random_walk_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,random_walk_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,random_walk_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,random_walk_commit,s_random_walk_commit",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_front,idle,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_front,recover_back,s_after_back",
+      "gloc_state": "percept_obs_front,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_after_back",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,recover_back,s_obs_front",
+      "gloc_state": "percept_obs_front,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_front,idle,s_recover_back",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_front,recover_back,s_recover_back",
+      "gloc_state": "percept_obs_front,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_front,idle,s_after_back",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_after_back",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_front,recover_back,s_stuck",
+      "gloc_state": "percept_obs_front,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,rotate_commit_ccw,s_obs_front",
+      "gloc_state": "percept_obs_front,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,rotate_commit_ccw,s_stuck",
+      "gloc_state": "percept_obs_front,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,rotate_commit_cw,s_obs_front",
+      "gloc_state": "percept_obs_front,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_front,rotate_commit_cw,s_rotate_commit_cw",
+      "gloc_state": "percept_obs_front,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_rotate_commit_cw",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_front,idle,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_front,rotate_commit_cw,s_stuck",
+      "gloc_state": "percept_obs_front,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_front,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,forward_commit,s_forward_commit",
+      "gloc_state": "percept_obs_left,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_obs_left,idle,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,forward_commit,s_forward_commit",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_left,forward_commit,s_obs_left",
+      "gloc_state": "percept_obs_left,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,full_rotate_commit,s_full_rotate_commit",
+      "gloc_state": "percept_obs_left,full_rotate_commit",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_left,idle,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,full_rotate_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,full_rotate_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,full_rotate_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,full_rotate_commit,s_full_rotate_commit",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_left,full_rotate_commit,s_obs_left",
+      "gloc_state": "percept_obs_left,full_rotate_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,full_rotate_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,full_rotate_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,full_rotate_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,full_rotate_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,idle,s_clear",
+      "gloc_state": "percept_obs_left,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_obs_left,forward_commit,s_forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_left,random_walk_commit,s_random_walk_commit",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_left,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_obs_left,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_left,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_left,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,idle,s_obs_left",
+      "gloc_state": "percept_obs_left,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_left,rotate_commit_cw,s_rotate_commit_cw",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_left,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_obs_left,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_left,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_left,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_left,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,idle,s_rotate_commit_cw",
+      "gloc_state": "percept_obs_left,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_rotate_commit_cw",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_left,rotate_commit_cw,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_left,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_obs_left,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_left,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_left,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_left,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,idle,s_stuck",
+      "gloc_state": "percept_obs_left,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_left,full_rotate_commit,s_full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_left,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_left,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_left,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_left,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_left,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,random_walk_commit,s_obs_left",
+      "gloc_state": "percept_obs_left,random_walk_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,random_walk_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,random_walk_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,random_walk_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,random_walk_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "random_walk",
+          "target": "percept_obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,random_walk_commit,s_random_walk_commit",
+      "gloc_state": "percept_obs_left,random_walk_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,random_walk_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,random_walk_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,random_walk_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,random_walk_commit,s_random_walk_commit",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_left,idle,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_left,recover_back,s_obs_left",
+      "gloc_state": "percept_obs_left,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,recover_back,s_stuck",
+      "gloc_state": "percept_obs_left,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,rotate_commit_ccw,s_obs_left",
+      "gloc_state": "percept_obs_left,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,rotate_commit_ccw,s_stuck",
+      "gloc_state": "percept_obs_left,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,rotate_commit_cw,s_clear",
+      "gloc_state": "percept_obs_left,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_left,rotate_commit_cw,s_obs_left",
+      "gloc_state": "percept_obs_left,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_left,idle,s_rotate_commit_cw",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_left,rotate_commit_cw,s_rotate_commit_cw",
+      "gloc_state": "percept_obs_left,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_rotate_commit_cw",
+          "controllable": false
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_left,idle,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_left,rotate_commit_cw,s_stuck",
+      "gloc_state": "percept_obs_left,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_left,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,forward_commit,s_forward_commit",
+      "gloc_state": "percept_obs_right,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_obs_right,idle,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,forward_commit,s_forward_commit",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_right,forward_commit,s_obs_right",
+      "gloc_state": "percept_obs_right,forward_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,forward_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,forward_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,forward_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,forward_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,full_rotate_commit,s_full_rotate_commit",
+      "gloc_state": "percept_obs_right,full_rotate_commit",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_right,idle,s_clear",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,full_rotate_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,full_rotate_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,full_rotate_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,full_rotate_commit,s_full_rotate_commit",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_right,full_rotate_commit,s_obs_right",
+      "gloc_state": "percept_obs_right,full_rotate_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,full_rotate_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,full_rotate_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,full_rotate_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,full_rotate_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,idle,s_clear",
+      "gloc_state": "percept_obs_right,idle",
+      "enabled_transitions": [
+        {
+          "event": "move_forward",
+          "target": "percept_obs_right,forward_commit,s_forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_right,random_walk_commit,s_random_walk_commit",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_right,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_obs_right,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_right,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_right,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,idle,s_obs_right",
+      "gloc_state": "percept_obs_right,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_right,rotate_commit_ccw,s_rotate_commit_ccw",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_right,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_obs_right,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_right,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_right,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_right,rotate_commit_cw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,idle,s_rotate_commit_ccw",
+      "gloc_state": "percept_obs_right,idle",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_rotate_commit_ccw",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_right,rotate_commit_ccw,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_right,full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "move_backward",
+          "target": "percept_obs_right,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_right,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_right,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_right,rotate_commit_cw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,idle,s_stuck",
+      "gloc_state": "percept_obs_right,idle",
+      "enabled_transitions": [
+        {
+          "event": "full_rotate",
+          "target": "percept_obs_right,full_rotate_commit,s_full_rotate_commit",
+          "controllable": true
+        },
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,idle,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,idle,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_right,recover_back",
+          "controllable": true
+        },
+        {
+          "event": "move_forward",
+          "target": "percept_obs_right,forward_commit",
+          "controllable": true
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_right,random_walk_commit",
+          "controllable": true
+        },
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_right,rotate_commit_cw",
+          "controllable": true
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_right,rotate_commit_ccw",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,random_walk_commit,s_obs_right",
+      "gloc_state": "percept_obs_right,random_walk_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,random_walk_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,random_walk_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,random_walk_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,random_walk_commit,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "random_walk",
+          "target": "percept_obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,random_walk_commit,s_random_walk_commit",
+      "gloc_state": "percept_obs_right,random_walk_commit",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,random_walk_commit,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,random_walk_commit,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,random_walk_commit,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,random_walk_commit,s_random_walk_commit",
+          "controllable": false
+        },
+        {
+          "event": "random_walk",
+          "target": "percept_obs_right,idle,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_right,recover_back,s_obs_right",
+      "gloc_state": "percept_obs_right,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,recover_back,s_stuck",
+      "gloc_state": "percept_obs_right,recover_back",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,recover_back,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,recover_back,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "move_backward",
+          "target": "percept_obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,rotate_commit_ccw,s_clear",
+      "gloc_state": "percept_obs_right,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,rotate_commit_ccw,s_obs_right",
+      "gloc_state": "percept_obs_right,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_right,idle,s_rotate_commit_ccw",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_right,rotate_commit_ccw,s_rotate_commit_ccw",
+      "gloc_state": "percept_obs_right,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_rotate_commit_ccw",
+          "controllable": false
+        },
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_right,idle,s_clear",
+          "controllable": true
+        }
+      ],
+      "disabled_transitions": []
+    },
+    {
+      "sloc_state": "percept_obs_right,rotate_commit_ccw,s_stuck",
+      "gloc_state": "percept_obs_right,rotate_commit_ccw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_ccw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_ccw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_counterclockwise",
+          "target": "percept_obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,rotate_commit_cw,s_obs_right",
+      "gloc_state": "percept_obs_right,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_obs_front",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_obs_left",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_obs_right",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_right,idle",
+          "controllable": true
+        }
+      ]
+    },
+    {
+      "sloc_state": "percept_obs_right,rotate_commit_cw,s_stuck",
+      "gloc_state": "percept_obs_right,rotate_commit_cw",
+      "enabled_transitions": [
+        {
+          "event": "obstacle_front",
+          "target": "percept_obs_front,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_left",
+          "target": "percept_obs_left,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "obstacle_right",
+          "target": "percept_obs_right,rotate_commit_cw,s_stuck",
+          "controllable": false
+        },
+        {
+          "event": "path_clear",
+          "target": "percept_clear,rotate_commit_cw,s_clear",
+          "controllable": false
+        }
+      ],
+      "disabled_transitions": [
+        {
+          "event": "rotate_clockwise",
+          "target": "percept_obs_right,idle",
+          "controllable": true
+        }
+      ]
+    }
+  ]
+}

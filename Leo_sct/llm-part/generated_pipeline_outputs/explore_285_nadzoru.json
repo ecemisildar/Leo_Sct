@@ -1,0 +1,137 @@
+{
+  "rationale": "Use a simple capability plant plus a compact policy specification. The specification separates clear exploration from obstacle recovery, respects uncontrollable-first runtime semantics by self-looping path_clear in commit/recovery states, forbids forward/random motion in obstacle states, and returns quickly to exploration after recovery. Random walk is the default in clear exploration, with a short forward pulse used in a dedicated progress state to bias coverage without long unsafe forward streaks.",
+  "strategy": [
+    "Model sensing and motion capability in a permissive plant with all events available and deterministic self-loops.",
+    "Encode the exploration policy in one deterministic specification with one-shot commit states and obstacle-specific recovery states."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Robot sensing and motion capability over the given event alphabet",
+      "states": [
+        "q"
+      ],
+      "initial_states": [
+        "q"
+      ],
+      "marked_states": [
+        "q"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"q\", \"move_forward\", \"q\")",
+        "(\"q\", \"rotate_clockwise\", \"q\")",
+        "(\"q\", \"rotate_counterclockwise\", \"q\")",
+        "(\"q\", \"full_rotate\", \"q\")",
+        "(\"q\", \"random_walk\", \"q\")",
+        "(\"q\", \"path_clear\", \"q\")",
+        "(\"q\", \"obstacle_front\", \"q\")",
+        "(\"q\", \"obstacle_left\", \"q\")",
+        "(\"q\", \"obstacle_right\", \"q\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration supervisor: default random exploration in clear space, short forward progress when still clear, and directed turn recovery on obstacles",
+      "states": [
+        "clear_explore",
+        "forward_progress",
+        "rw_commit",
+        "fw_commit",
+        "recover_front",
+        "recover_left",
+        "recover_right",
+        "turn_cw_commit",
+        "turn_ccw_commit"
+      ],
+      "initial_states": [
+        "clear_explore"
+      ],
+      "marked_states": [
+        "clear_explore",
+        "forward_progress",
+        "rw_commit",
+        "fw_commit",
+        "recover_front",
+        "recover_left",
+        "recover_right",
+        "turn_cw_commit",
+        "turn_ccw_commit"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_explore\", \"path_clear\", \"forward_progress\")",
+        "(\"clear_explore\", \"obstacle_front\", \"recover_front\")",
+        "(\"clear_explore\", \"obstacle_left\", \"recover_left\")",
+        "(\"clear_explore\", \"obstacle_right\", \"recover_right\")",
+        "(\"clear_explore\", \"random_walk\", \"rw_commit\")",
+        "(\"forward_progress\", \"path_clear\", \"forward_progress\")",
+        "(\"forward_progress\", \"obstacle_front\", \"recover_front\")",
+        "(\"forward_progress\", \"obstacle_left\", \"recover_left\")",
+        "(\"forward_progress\", \"obstacle_right\", \"recover_right\")",
+        "(\"forward_progress\", \"move_forward\", \"fw_commit\")",
+        "(\"rw_commit\", \"path_clear\", \"rw_commit\")",
+        "(\"rw_commit\", \"obstacle_front\", \"recover_front\")",
+        "(\"rw_commit\", \"obstacle_left\", \"recover_left\")",
+        "(\"rw_commit\", \"obstacle_right\", \"recover_right\")",
+        "(\"rw_commit\", \"random_walk\", \"forward_progress\")",
+        "(\"fw_commit\", \"path_clear\", \"fw_commit\")",
+        "(\"fw_commit\", \"obstacle_front\", \"recover_front\")",
+        "(\"fw_commit\", \"obstacle_left\", \"recover_left\")",
+        "(\"fw_commit\", \"obstacle_right\", \"recover_right\")",
+        "(\"fw_commit\", \"move_forward\", \"clear_explore\")",
+        "(\"recover_front\", \"path_clear\", \"recover_front\")",
+        "(\"recover_front\", \"obstacle_front\", \"recover_front\")",
+        "(\"recover_front\", \"obstacle_left\", \"recover_left\")",
+        "(\"recover_front\", \"obstacle_right\", \"recover_right\")",
+        "(\"recover_front\", \"rotate_clockwise\", \"turn_cw_commit\")",
+        "(\"recover_left\", \"path_clear\", \"recover_left\")",
+        "(\"recover_left\", \"obstacle_front\", \"recover_front\")",
+        "(\"recover_left\", \"obstacle_left\", \"recover_left\")",
+        "(\"recover_left\", \"obstacle_right\", \"recover_right\")",
+        "(\"recover_left\", \"rotate_clockwise\", \"turn_cw_commit\")",
+        "(\"recover_right\", \"path_clear\", \"recover_right\")",
+        "(\"recover_right\", \"obstacle_front\", \"recover_front\")",
+        "(\"recover_right\", \"obstacle_left\", \"recover_left\")",
+        "(\"recover_right\", \"obstacle_right\", \"recover_right\")",
+        "(\"recover_right\", \"rotate_counterclockwise\", \"turn_ccw_commit\")",
+        "(\"turn_cw_commit\", \"path_clear\", \"turn_cw_commit\")",
+        "(\"turn_cw_commit\", \"obstacle_front\", \"recover_front\")",
+        "(\"turn_cw_commit\", \"obstacle_left\", \"recover_left\")",
+        "(\"turn_cw_commit\", \"obstacle_right\", \"recover_right\")",
+        "(\"turn_cw_commit\", \"rotate_clockwise\", \"clear_explore\")",
+        "(\"turn_ccw_commit\", \"path_clear\", \"turn_ccw_commit\")",
+        "(\"turn_ccw_commit\", \"obstacle_front\", \"recover_front\")",
+        "(\"turn_ccw_commit\", \"obstacle_left\", \"recover_left\")",
+        "(\"turn_ccw_commit\", \"obstacle_right\", \"recover_right\")",
+        "(\"turn_ccw_commit\", \"rotate_counterclockwise\", \"clear_explore\")"
+      ]
+    }
+  ]
+}

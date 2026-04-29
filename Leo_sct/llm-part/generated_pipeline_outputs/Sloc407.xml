@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model version="0.0" type="FSA" id="Untitled">
+<data>
+	<state id="0" name="sense,ready,front_turn,allow_wander" initial ="False" marked="True" x="100" y="90" />
+	<state id="1" name="sense,ready,last_resort,prefer_forward" initial ="False" marked="True" x="190" y="90" />
+	<state id="2" name="sense,ready,scan_commit,prefer_forward" initial ="False" marked="True" x="280" y="90" />
+	<state id="3" name="sense,ready,front_back,clear_seen" initial ="False" marked="True" x="370" y="90" />
+	<state id="4" name="sense,ready,right_turn,clear_seen" initial ="False" marked="True" x="460" y="90" />
+	<state id="5" name="sense,ready,left_turn,allow_wander" initial ="False" marked="True" x="550" y="90" />
+	<state id="6" name="sense,ready,right_turn,prefer_forward" initial ="False" marked="True" x="640" y="90" />
+	<state id="7" name="sense,ready,last_resort,clear_seen" initial ="False" marked="True" x="100" y="180" />
+	<state id="8" name="sense,ready,front_turn,prefer_forward" initial ="False" marked="True" x="190" y="180" />
+	<state id="9" name="sense,ready,clear,clear_seen" initial ="False" marked="True" x="280" y="180" />
+	<state id="10" name="sense,ready,forward_commit,allow_wander" initial ="False" marked="True" x="370" y="180" />
+	<state id="11" name="sense,ready,clear,allow_wander" initial ="False" marked="True" x="460" y="180" />
+	<state id="12" name="sense,ready,stuck,prefer_forward" initial ="False" marked="True" x="550" y="180" />
+	<state id="13" name="sense,ready,front_back,prefer_forward" initial ="False" marked="True" x="640" y="180" />
+	<state id="14" name="sense,ready,scan_commit,clear_seen" initial ="False" marked="True" x="100" y="270" />
+	<state id="15" name="sense,ready,front_turn,clear_seen" initial ="False" marked="True" x="190" y="270" />
+	<state id="16" name="sense,ready,forward_commit,prefer_forward" initial ="False" marked="True" x="280" y="270" />
+	<state id="17" name="sense,ready,clear,prefer_forward" initial ="True" marked="True" x="370" y="270" />
+	<state id="18" name="sense,ready,last_resort,allow_wander" initial ="False" marked="True" x="460" y="270" />
+	<state id="19" name="sense,ready,front_back,allow_wander" initial ="False" marked="True" x="550" y="270" />
+	<state id="20" name="sense,ready,left_turn,clear_seen" initial ="False" marked="True" x="640" y="270" />
+	<state id="21" name="sense,ready,forward_commit,clear_seen" initial ="False" marked="True" x="100" y="360" />
+	<state id="22" name="sense,ready,scan_commit,allow_wander" initial ="False" marked="True" x="190" y="360" />
+	<state id="23" name="sense,ready,left_turn,prefer_forward" initial ="False" marked="True" x="280" y="360" />
+	<state id="24" name="sense,ready,right_turn,allow_wander" initial ="False" marked="True" x="370" y="360" />
+	<event id="0" name="rotate_clockwise" controllable="True" observable="True"/>
+	<event id="1" name="obstacle_left" controllable="False" observable="True"/>
+	<event id="2" name="random_walk" controllable="True" observable="True"/>
+	<event id="3" name="full_rotate" controllable="True" observable="True"/>
+	<event id="4" name="move_backward" controllable="True" observable="True"/>
+	<event id="5" name="obstacle_right" controllable="False" observable="True"/>
+	<event id="6" name="rotate_counterclockwise" controllable="True" observable="True"/>
+	<event id="7" name="path_clear" controllable="False" observable="True"/>
+	<event id="8" name="move_forward" controllable="True" observable="True"/>
+	<event id="9" name="obstacle_front" controllable="False" observable="True"/>
+	<transition source="0" target="8" event="5"/>
+	<transition source="0" target="0" event="7"/>
+	<transition source="0" target="8" event="1"/>
+	<transition source="0" target="12" event="9"/>
+	<transition source="0" target="11" event="0"/>
+	<transition source="1" target="1" event="1"/>
+	<transition source="1" target="2" event="3"/>
+	<transition source="1" target="7" event="7"/>
+	<transition source="1" target="1" event="9"/>
+	<transition source="1" target="1" event="5"/>
+	<transition source="2" target="23" event="1"/>
+	<transition source="2" target="13" event="9"/>
+	<transition source="2" target="9" event="7"/>
+	<transition source="2" target="6" event="5"/>
+	<transition source="2" target="17" event="8"/>
+	<transition source="3" target="13" event="1"/>
+	<transition source="3" target="19" event="7"/>
+	<transition source="3" target="15" event="4"/>
+	<transition source="3" target="13" event="9"/>
+	<transition source="3" target="13" event="5"/>
+	<transition source="4" target="9" event="6"/>
+	<transition source="4" target="6" event="1"/>
+	<transition source="4" target="13" event="9"/>
+	<transition source="4" target="24" event="7"/>
+	<transition source="4" target="12" event="5"/>
+	<transition source="5" target="12" event="1"/>
+	<transition source="5" target="13" event="9"/>
+	<transition source="5" target="5" event="7"/>
+	<transition source="5" target="23" event="5"/>
+	<transition source="5" target="11" event="0"/>
+	<transition source="6" target="13" event="9"/>
+	<transition source="6" target="4" event="7"/>
+	<transition source="6" target="12" event="5"/>
+	<transition source="6" target="17" event="6"/>
+	<transition source="6" target="6" event="1"/>
+	<transition source="7" target="18" event="7"/>
+	<transition source="7" target="1" event="9"/>
+	<transition source="7" target="14" event="3"/>
+	<transition source="7" target="1" event="5"/>
+	<transition source="7" target="1" event="1"/>
+	<transition source="8" target="15" event="7"/>
+	<transition source="8" target="8" event="5"/>
+	<transition source="8" target="8" event="1"/>
+	<transition source="8" target="17" event="0"/>
+	<transition source="8" target="12" event="9"/>
+	<transition source="9" target="23" event="1"/>
+	<transition source="9" target="13" event="9"/>
+	<transition source="9" target="11" event="7"/>
+	<transition source="9" target="6" event="5"/>
+	<transition source="9" target="16" event="8"/>
+	<transition source="10" target="13" event="9"/>
+	<transition source="10" target="10" event="7"/>
+	<transition source="10" target="23" event="1"/>
+	<transition source="10" target="6" event="5"/>
+	<transition source="11" target="13" event="9"/>
+	<transition source="11" target="6" event="5"/>
+	<transition source="11" target="11" event="7"/>
+	<transition source="11" target="23" event="1"/>
+	<transition source="12" target="17" event="0"/>
+	<transition source="12" target="1" event="9"/>
+	<transition source="12" target="9" event="7"/>
+	<transition source="12" target="1" event="1"/>
+	<transition source="12" target="1" event="5"/>
+	<transition source="13" target="13" event="5"/>
+	<transition source="13" target="13" event="1"/>
+	<transition source="13" target="3" event="7"/>
+	<transition source="13" target="13" event="9"/>
+	<transition source="13" target="8" event="4"/>
+	<transition source="14" target="11" event="7"/>
+	<transition source="14" target="6" event="5"/>
+	<transition source="14" target="17" event="8"/>
+	<transition source="14" target="23" event="1"/>
+	<transition source="14" target="13" event="9"/>
+	<transition source="15" target="8" event="1"/>
+	<transition source="15" target="9" event="0"/>
+	<transition source="15" target="12" event="9"/>
+	<transition source="15" target="0" event="7"/>
+	<transition source="15" target="8" event="5"/>
+	<transition source="16" target="21" event="7"/>
+	<transition source="16" target="6" event="5"/>
+	<transition source="16" target="17" event="8"/>
+	<transition source="16" target="23" event="1"/>
+	<transition source="16" target="13" event="9"/>
+	<transition source="17" target="16" event="8"/>
+	<transition source="17" target="13" event="9"/>
+	<transition source="17" target="23" event="1"/>
+	<transition source="17" target="6" event="5"/>
+	<transition source="17" target="9" event="7"/>
+	<transition source="18" target="1" event="9"/>
+	<transition source="18" target="18" event="7"/>
+	<transition source="18" target="1" event="1"/>
+	<transition source="18" target="1" event="5"/>
+	<transition source="18" target="22" event="3"/>
+	<transition source="19" target="13" event="9"/>
+	<transition source="19" target="13" event="5"/>
+	<transition source="19" target="0" event="4"/>
+	<transition source="19" target="13" event="1"/>
+	<transition source="19" target="19" event="7"/>
+	<transition source="20" target="9" event="0"/>
+	<transition source="20" target="12" event="1"/>
+	<transition source="20" target="13" event="9"/>
+	<transition source="20" target="5" event="7"/>
+	<transition source="20" target="23" event="5"/>
+	<transition source="21" target="17" event="8"/>
+	<transition source="21" target="13" event="9"/>
+	<transition source="21" target="23" event="1"/>
+	<transition source="21" target="10" event="7"/>
+	<transition source="21" target="6" event="5"/>
+	<transition source="22" target="11" event="7"/>
+	<transition source="22" target="23" event="1"/>
+	<transition source="22" target="13" event="9"/>
+	<transition source="22" target="6" event="5"/>
+	<transition source="23" target="13" event="9"/>
+	<transition source="23" target="23" event="5"/>
+	<transition source="23" target="20" event="7"/>
+	<transition source="23" target="17" event="0"/>
+	<transition source="23" target="12" event="1"/>
+	<transition source="24" target="13" event="9"/>
+	<transition source="24" target="24" event="7"/>
+	<transition source="24" target="12" event="5"/>
+	<transition source="24" target="11" event="6"/>
+	<transition source="24" target="6" event="1"/>
+</data>
+</model>

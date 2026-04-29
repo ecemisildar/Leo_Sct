@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model version="0.0" type="FSA" id="Untitled">
+<data>
+	<state id="0" name="percept,motion,obs_right,after_backward" initial ="False" marked="True" x="100" y="90" />
+	<state id="1" name="percept,motion,obs_front,ready" initial ="False" marked="True" x="190" y="90" />
+	<state id="2" name="percept,motion,recover_turn_cw,after_backward" initial ="False" marked="True" x="280" y="90" />
+	<state id="3" name="percept,motion,recover_back,after_backward" initial ="False" marked="True" x="370" y="90" />
+	<state id="4" name="percept,motion,obs_front,after_backward" initial ="False" marked="True" x="460" y="90" />
+	<state id="5" name="percept,motion,obs_front,after_rotate_ccw" initial ="False" marked="True" x="550" y="90" />
+	<state id="6" name="percept,motion,clear,after_full_rotate" initial ="False" marked="True" x="640" y="90" />
+	<state id="7" name="percept,motion,obs_front,after_rotate_cw" initial ="False" marked="True" x="100" y="180" />
+	<state id="8" name="percept,motion,recover_turn_cw_left,ready" initial ="False" marked="True" x="190" y="180" />
+	<state id="9" name="percept,motion,forward_commit,ready" initial ="False" marked="True" x="280" y="180" />
+	<state id="10" name="percept,motion,stuck,ready" initial ="False" marked="True" x="370" y="180" />
+	<state id="11" name="percept,motion,clear,after_backward" initial ="False" marked="True" x="460" y="180" />
+	<state id="12" name="percept,motion,obs_front,after_full_rotate" initial ="False" marked="True" x="550" y="180" />
+	<state id="13" name="percept,motion,clear,after_rotate_ccw" initial ="False" marked="True" x="640" y="180" />
+	<state id="14" name="percept,motion,obs_left,ready" initial ="False" marked="True" x="100" y="270" />
+	<state id="15" name="percept,motion,obs_left,after_rotate_cw" initial ="False" marked="True" x="190" y="270" />
+	<state id="16" name="percept,motion,obs_left,after_rotate_ccw" initial ="False" marked="True" x="280" y="270" />
+	<state id="17" name="percept,motion,obs_left,after_full_rotate" initial ="False" marked="True" x="370" y="270" />
+	<state id="18" name="percept,motion,obs_right,ready" initial ="False" marked="True" x="460" y="270" />
+	<state id="19" name="percept,motion,obs_right,after_rotate_ccw" initial ="False" marked="True" x="550" y="270" />
+	<state id="20" name="percept,motion,last_resort_full_rotate,ready" initial ="False" marked="True" x="640" y="270" />
+	<state id="21" name="percept,motion,obs_right,after_rotate_cw" initial ="False" marked="True" x="100" y="360" />
+	<state id="22" name="percept,motion,clear,ready" initial ="True" marked="True" x="190" y="360" />
+	<state id="23" name="percept,motion,obs_right,after_full_rotate" initial ="False" marked="True" x="280" y="360" />
+	<state id="24" name="percept,motion,recover_back,ready" initial ="False" marked="True" x="370" y="360" />
+	<state id="25" name="percept,motion,last_resort_full_rotate,after_full_rotate" initial ="False" marked="True" x="460" y="360" />
+	<state id="26" name="percept,motion,recover_turn_cw_left,after_rotate_cw" initial ="False" marked="True" x="550" y="360" />
+	<state id="27" name="percept,motion,clear,after_rotate_cw" initial ="False" marked="True" x="640" y="360" />
+	<state id="28" name="percept,motion,stuck,after_backward" initial ="False" marked="True" x="100" y="450" />
+	<state id="29" name="percept,motion,recover_turn_ccw_right,after_rotate_ccw" initial ="False" marked="True" x="190" y="450" />
+	<state id="30" name="percept,motion,recover_turn_ccw_right,ready" initial ="False" marked="True" x="280" y="450" />
+	<state id="31" name="percept,motion,obs_left,after_backward" initial ="False" marked="True" x="370" y="450" />
+	<event id="0" name="full_rotate" controllable="True" observable="True"/>
+	<event id="1" name="rotate_clockwise" controllable="True" observable="True"/>
+	<event id="2" name="move_backward" controllable="True" observable="True"/>
+	<event id="3" name="random_walk" controllable="True" observable="True"/>
+	<event id="4" name="obstacle_front" controllable="False" observable="True"/>
+	<event id="5" name="move_forward" controllable="True" observable="True"/>
+	<event id="6" name="path_clear" controllable="False" observable="True"/>
+	<event id="7" name="rotate_counterclockwise" controllable="True" observable="True"/>
+	<event id="8" name="obstacle_left" controllable="False" observable="True"/>
+	<event id="9" name="obstacle_right" controllable="False" observable="True"/>
+	<transition source="0" target="31" event="8"/>
+	<transition source="0" target="11" event="6"/>
+	<transition source="0" target="0" event="9"/>
+	<transition source="0" target="30" event="7"/>
+	<transition source="0" target="4" event="4"/>
+	<transition source="1" target="3" event="2"/>
+	<transition source="1" target="14" event="8"/>
+	<transition source="1" target="1" event="4"/>
+	<transition source="1" target="18" event="9"/>
+	<transition source="1" target="22" event="6"/>
+	<transition source="2" target="31" event="8"/>
+	<transition source="2" target="28" event="4"/>
+	<transition source="2" target="0" event="9"/>
+	<transition source="2" target="2" event="6"/>
+	<transition source="2" target="22" event="1"/>
+	<transition source="3" target="28" event="4"/>
+	<transition source="3" target="0" event="9"/>
+	<transition source="3" target="3" event="6"/>
+	<transition source="3" target="2" event="2"/>
+	<transition source="3" target="31" event="8"/>
+	<transition source="4" target="31" event="8"/>
+	<transition source="4" target="4" event="4"/>
+	<transition source="4" target="0" event="9"/>
+	<transition source="4" target="11" event="6"/>
+	<transition source="4" target="3" event="2"/>
+	<transition source="5" target="13" event="6"/>
+	<transition source="5" target="24" event="2"/>
+	<transition source="5" target="16" event="8"/>
+	<transition source="5" target="5" event="4"/>
+	<transition source="5" target="19" event="9"/>
+	<transition source="6" target="9" event="5"/>
+	<transition source="6" target="23" event="9"/>
+	<transition source="6" target="6" event="6"/>
+	<transition source="6" target="12" event="4"/>
+	<transition source="6" target="17" event="8"/>
+	<transition source="7" target="15" event="8"/>
+	<transition source="7" target="7" event="4"/>
+	<transition source="7" target="21" event="9"/>
+	<transition source="7" target="27" event="6"/>
+	<transition source="7" target="24" event="2"/>
+	<transition source="8" target="27" event="1"/>
+	<transition source="8" target="14" event="8"/>
+	<transition source="8" target="1" event="4"/>
+	<transition source="8" target="18" event="9"/>
+	<transition source="8" target="8" event="6"/>
+	<transition source="9" target="1" event="4"/>
+	<transition source="9" target="14" event="8"/>
+	<transition source="9" target="22" event="5"/>
+	<transition source="9" target="18" event="9"/>
+	<transition source="9" target="9" event="6"/>
+	<transition source="10" target="14" event="8"/>
+	<transition source="10" target="10" event="4"/>
+	<transition source="10" target="18" event="9"/>
+	<transition source="10" target="22" event="6"/>
+	<transition source="10" target="25" event="0"/>
+	<transition source="11" target="31" event="8"/>
+	<transition source="11" target="9" event="5"/>
+	<transition source="11" target="0" event="9"/>
+	<transition source="11" target="11" event="6"/>
+	<transition source="11" target="4" event="4"/>
+	<transition source="12" target="17" event="8"/>
+	<transition source="12" target="12" event="4"/>
+	<transition source="12" target="23" event="9"/>
+	<transition source="12" target="6" event="6"/>
+	<transition source="12" target="24" event="2"/>
+	<transition source="13" target="13" event="6"/>
+	<transition source="13" target="5" event="4"/>
+	<transition source="13" target="16" event="8"/>
+	<transition source="13" target="9" event="5"/>
+	<transition source="13" target="19" event="9"/>
+	<transition source="14" target="26" event="1"/>
+	<transition source="14" target="14" event="8"/>
+	<transition source="14" target="1" event="4"/>
+	<transition source="14" target="18" event="9"/>
+	<transition source="14" target="22" event="6"/>
+	<transition source="15" target="26" event="1"/>
+	<transition source="15" target="15" event="8"/>
+	<transition source="15" target="7" event="4"/>
+	<transition source="15" target="21" event="9"/>
+	<transition source="15" target="27" event="6"/>
+	<transition source="16" target="8" event="1"/>
+	<transition source="16" target="16" event="8"/>
+	<transition source="16" target="5" event="4"/>
+	<transition source="16" target="19" event="9"/>
+	<transition source="16" target="13" event="6"/>
+	<transition source="17" target="8" event="1"/>
+	<transition source="17" target="17" event="8"/>
+	<transition source="17" target="12" event="4"/>
+	<transition source="17" target="23" event="9"/>
+	<transition source="17" target="6" event="6"/>
+	<transition source="18" target="22" event="6"/>
+	<transition source="18" target="14" event="8"/>
+	<transition source="18" target="18" event="9"/>
+	<transition source="18" target="1" event="4"/>
+	<transition source="18" target="29" event="7"/>
+	<transition source="19" target="5" event="4"/>
+	<transition source="19" target="19" event="9"/>
+	<transition source="19" target="13" event="6"/>
+	<transition source="19" target="16" event="8"/>
+	<transition source="19" target="29" event="7"/>
+	<transition source="20" target="18" event="9"/>
+	<transition source="20" target="20" event="6"/>
+	<transition source="20" target="6" event="0"/>
+	<transition source="20" target="14" event="8"/>
+	<transition source="20" target="1" event="4"/>
+	<transition source="21" target="30" event="7"/>
+	<transition source="21" target="7" event="4"/>
+	<transition source="21" target="15" event="8"/>
+	<transition source="21" target="27" event="6"/>
+	<transition source="21" target="21" event="9"/>
+	<transition source="22" target="9" event="5"/>
+	<transition source="22" target="14" event="8"/>
+	<transition source="22" target="18" event="9"/>
+	<transition source="22" target="22" event="6"/>
+	<transition source="22" target="1" event="4"/>
+	<transition source="23" target="12" event="4"/>
+	<transition source="23" target="17" event="8"/>
+	<transition source="23" target="6" event="6"/>
+	<transition source="23" target="23" event="9"/>
+	<transition source="23" target="30" event="7"/>
+	<transition source="24" target="14" event="8"/>
+	<transition source="24" target="10" event="4"/>
+	<transition source="24" target="18" event="9"/>
+	<transition source="24" target="24" event="6"/>
+	<transition source="24" target="2" event="2"/>
+	<transition source="25" target="6" event="0"/>
+	<transition source="25" target="17" event="8"/>
+	<transition source="25" target="12" event="4"/>
+	<transition source="25" target="23" event="9"/>
+	<transition source="25" target="25" event="6"/>
+	<transition source="26" target="15" event="8"/>
+	<transition source="26" target="7" event="4"/>
+	<transition source="26" target="21" event="9"/>
+	<transition source="26" target="26" event="6"/>
+	<transition source="26" target="27" event="1"/>
+	<transition source="27" target="7" event="4"/>
+	<transition source="27" target="15" event="8"/>
+	<transition source="27" target="9" event="5"/>
+	<transition source="27" target="21" event="9"/>
+	<transition source="27" target="27" event="6"/>
+	<transition source="28" target="28" event="4"/>
+	<transition source="28" target="0" event="9"/>
+	<transition source="28" target="11" event="6"/>
+	<transition source="28" target="20" event="0"/>
+	<transition source="28" target="31" event="8"/>
+	<transition source="29" target="16" event="8"/>
+	<transition source="29" target="29" event="6"/>
+	<transition source="29" target="19" event="9"/>
+	<transition source="29" target="5" event="4"/>
+	<transition source="29" target="13" event="7"/>
+	<transition source="30" target="1" event="4"/>
+	<transition source="30" target="14" event="8"/>
+	<transition source="30" target="30" event="6"/>
+	<transition source="30" target="18" event="9"/>
+	<transition source="30" target="13" event="7"/>
+	<transition source="31" target="4" event="4"/>
+	<transition source="31" target="0" event="9"/>
+	<transition source="31" target="11" event="6"/>
+	<transition source="31" target="8" event="1"/>
+	<transition source="31" target="31" event="8"/>
+</data>
+</model>

@@ -1,0 +1,96 @@
+{
+  "rationale": "The plant models the robot's motion and perception capabilities, separating sensing (uncontrollable events) from motion (controllable events). The specification enforces the always-turn-right recovery policy: move forward only when the path is clear, and rotate clockwise if any obstacle is detected. After recovery, forward progress resumes as soon as the path is clear. No other recovery or exploration actions are enabled, ensuring determinism and safety.",
+  "strategy": [
+    "Separate plant automata for sensing and motion: one for perception, one for actuation.",
+    "Specification automaton binds perception outcomes to allowed actions, enforcing the always-turn-right policy and safe exploration."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Models the robot's perception: detection of obstacles and clear path.",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Models the robot's motion subsystem: forward and clockwise rotation actions.",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1",
+      "purpose": "Exploration policy: move forward when clear, rotate clockwise on any obstacle, resume forward as soon as clear.",
+      "states": [
+        "clear",
+        "recovery"
+      ],
+      "initial_states": [
+        "clear"
+      ],
+      "marked_states": [
+        "clear",
+        "recovery"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear\", \"move_forward\", \"clear\")",
+        "(\"clear\", \"path_clear\", \"clear\")",
+        "(\"clear\", \"obstacle_front\", \"recovery\")",
+        "(\"clear\", \"obstacle_left\", \"recovery\")",
+        "(\"clear\", \"obstacle_right\", \"recovery\")",
+        "(\"recovery\", \"rotate_clockwise\", \"recovery\")",
+        "(\"recovery\", \"path_clear\", \"clear\")",
+        "(\"recovery\", \"obstacle_front\", \"recovery\")",
+        "(\"recovery\", \"obstacle_left\", \"recovery\")",
+        "(\"recovery\", \"obstacle_right\", \"recovery\")"
+      ]
+    }
+  ]
+}

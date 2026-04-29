@@ -1,0 +1,270 @@
+{
+  "rationale": "Use a minimal plant split into sensing and motion capability, then encode the exploration policy in small deterministic specifications. The policy gives clear states a forward-biased action, sends any obstacle observation into a dedicated recovery state, uses backward motion only for front-obstacle escape, uses directed turns for side obstacles, and returns to forward exploration immediately on path_clear. Action states self-loop on path_clear so open-loop pulses are not preempted by non-critical clear readings, while obstacle events can still redirect to safe recovery.",
+  "strategy": [
+    "Separate plant sensing from motion capability so specifications can bind sensor outcomes to exactly one safe controllable action per policy state.",
+    "Use one exploration spec plus one front-recovery spec, one left-recovery spec, one right-recovery spec, and one rare last-resort scan spec to keep recovery conservative but coverage-oriented."
+  ],
+  "G": [
+    {
+      "name": "G1",
+      "purpose": "Local obstacle sensing outcomes available each step",
+      "states": [
+        "sense"
+      ],
+      "initial_states": [
+        "sense"
+      ],
+      "marked_states": [
+        "sense"
+      ],
+      "controllable_events": [],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"sense\", \"path_clear\", \"sense\")",
+        "(\"sense\", \"obstacle_front\", \"sense\")",
+        "(\"sense\", \"obstacle_left\", \"sense\")",
+        "(\"sense\", \"obstacle_right\", \"sense\")"
+      ]
+    },
+    {
+      "name": "G2",
+      "purpose": "Motion command capability for one-shot open-loop pulses and scan action",
+      "states": [
+        "idle"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate",
+        "random_walk",
+        "move_backward"
+      ],
+      "uncontrollable_events": [],
+      "transitions": [
+        "(\"idle\", \"move_forward\", \"idle\")",
+        "(\"idle\", \"rotate_clockwise\", \"idle\")",
+        "(\"idle\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"idle\", \"full_rotate\", \"idle\")",
+        "(\"idle\", \"random_walk\", \"idle\")",
+        "(\"idle\", \"move_backward\", \"idle\")"
+      ]
+    }
+  ],
+  "E": [
+    {
+      "name": "E1_explore",
+      "purpose": "Main exploration policy: bias strongly to forward progress when clear, and route any obstacle observation into dedicated recovery states",
+      "states": [
+        "clear_ready",
+        "forward_commit",
+        "front_recover",
+        "left_recover",
+        "right_recover",
+        "scan_recover"
+      ],
+      "initial_states": [
+        "clear_ready"
+      ],
+      "marked_states": [
+        "clear_ready",
+        "forward_commit",
+        "front_recover",
+        "left_recover",
+        "right_recover",
+        "scan_recover"
+      ],
+      "controllable_events": [
+        "move_forward",
+        "move_backward",
+        "rotate_clockwise",
+        "rotate_counterclockwise",
+        "full_rotate"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"clear_ready\", \"path_clear\", \"forward_commit\")",
+        "(\"clear_ready\", \"obstacle_front\", \"front_recover\")",
+        "(\"clear_ready\", \"obstacle_left\", \"left_recover\")",
+        "(\"clear_ready\", \"obstacle_right\", \"right_recover\")",
+        "(\"forward_commit\", \"move_forward\", \"clear_ready\")",
+        "(\"forward_commit\", \"path_clear\", \"forward_commit\")",
+        "(\"forward_commit\", \"obstacle_front\", \"front_recover\")",
+        "(\"forward_commit\", \"obstacle_left\", \"left_recover\")",
+        "(\"forward_commit\", \"obstacle_right\", \"right_recover\")",
+        "(\"front_recover\", \"path_clear\", \"clear_ready\")",
+        "(\"front_recover\", \"obstacle_front\", \"front_recover\")",
+        "(\"front_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"front_recover\", \"obstacle_right\", \"right_recover\")",
+        "(\"left_recover\", \"path_clear\", \"clear_ready\")",
+        "(\"left_recover\", \"obstacle_front\", \"front_recover\")",
+        "(\"left_recover\", \"obstacle_left\", \"left_recover\")",
+        "(\"left_recover\", \"obstacle_right\", \"scan_recover\")",
+        "(\"right_recover\", \"path_clear\", \"clear_ready\")",
+        "(\"right_recover\", \"obstacle_front\", \"front_recover\")",
+        "(\"right_recover\", \"obstacle_left\", \"scan_recover\")",
+        "(\"right_recover\", \"obstacle_right\", \"right_recover\")",
+        "(\"scan_recover\", \"path_clear\", \"clear_ready\")",
+        "(\"scan_recover\", \"obstacle_front\", \"scan_recover\")",
+        "(\"scan_recover\", \"obstacle_left\", \"scan_recover\")",
+        "(\"scan_recover\", \"obstacle_right\", \"scan_recover\")"
+      ]
+    },
+    {
+      "name": "E2_front_escape",
+      "purpose": "Dedicated front-obstacle recovery: use exactly one brief backward pulse, then return quickly when clear",
+      "states": [
+        "idle",
+        "front_back_commit"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "front_back_commit"
+      ],
+      "controllable_events": [
+        "move_backward"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"front_back_commit\")",
+        "(\"front_back_commit\", \"move_backward\", \"idle\")",
+        "(\"front_back_commit\", \"path_clear\", \"front_back_commit\")",
+        "(\"front_back_commit\", \"obstacle_front\", \"front_back_commit\")",
+        "(\"front_back_commit\", \"obstacle_left\", \"front_back_commit\")",
+        "(\"front_back_commit\", \"obstacle_right\", \"front_back_commit\")"
+      ]
+    },
+    {
+      "name": "E3_left_turn",
+      "purpose": "Dedicated left-obstacle recovery: turn clockwise away from the blocked left side",
+      "states": [
+        "idle",
+        "left_cw_commit"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "left_cw_commit"
+      ],
+      "controllable_events": [
+        "rotate_clockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"left_cw_commit\")",
+        "(\"left_cw_commit\", \"rotate_clockwise\", \"idle\")",
+        "(\"left_cw_commit\", \"path_clear\", \"left_cw_commit\")",
+        "(\"left_cw_commit\", \"obstacle_front\", \"left_cw_commit\")",
+        "(\"left_cw_commit\", \"obstacle_left\", \"left_cw_commit\")",
+        "(\"left_cw_commit\", \"obstacle_right\", \"left_cw_commit\")"
+      ]
+    },
+    {
+      "name": "E4_right_turn",
+      "purpose": "Dedicated right-obstacle recovery: turn counterclockwise away from the blocked right side",
+      "states": [
+        "idle",
+        "right_ccw_commit"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "right_ccw_commit"
+      ],
+      "controllable_events": [
+        "rotate_counterclockwise"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"idle\")",
+        "(\"idle\", \"obstacle_right\", \"right_ccw_commit\")",
+        "(\"right_ccw_commit\", \"rotate_counterclockwise\", \"idle\")",
+        "(\"right_ccw_commit\", \"path_clear\", \"right_ccw_commit\")",
+        "(\"right_ccw_commit\", \"obstacle_front\", \"right_ccw_commit\")",
+        "(\"right_ccw_commit\", \"obstacle_left\", \"right_ccw_commit\")",
+        "(\"right_ccw_commit\", \"obstacle_right\", \"right_ccw_commit\")"
+      ]
+    },
+    {
+      "name": "E5_last_resort_scan",
+      "purpose": "Rare last-resort scan allowed only under persistent mixed blocked conditions",
+      "states": [
+        "idle",
+        "scan_commit"
+      ],
+      "initial_states": [
+        "idle"
+      ],
+      "marked_states": [
+        "idle",
+        "scan_commit"
+      ],
+      "controllable_events": [
+        "full_rotate"
+      ],
+      "uncontrollable_events": [
+        "path_clear",
+        "obstacle_front",
+        "obstacle_left",
+        "obstacle_right"
+      ],
+      "transitions": [
+        "(\"idle\", \"path_clear\", \"idle\")",
+        "(\"idle\", \"obstacle_front\", \"idle\")",
+        "(\"idle\", \"obstacle_left\", \"scan_commit\")",
+        "(\"idle\", \"obstacle_right\", \"scan_commit\")",
+        "(\"scan_commit\", \"full_rotate\", \"idle\")",
+        "(\"scan_commit\", \"path_clear\", \"scan_commit\")",
+        "(\"scan_commit\", \"obstacle_front\", \"scan_commit\")",
+        "(\"scan_commit\", \"obstacle_left\", \"scan_commit\")",
+        "(\"scan_commit\", \"obstacle_right\", \"scan_commit\")"
+      ]
+    }
+  ]
+}
