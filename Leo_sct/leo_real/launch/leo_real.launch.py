@@ -15,6 +15,7 @@ def generate_launch_description():
     spawn_y = LaunchConfiguration("spawn_y")
 
     enable_supervisor = LaunchConfiguration("enable_supervisor")
+    supervisor_yaml_path = LaunchConfiguration("supervisor_yaml_path")
     static_mode = LaunchConfiguration("static")
 
     robot_ns_arg = DeclareLaunchArgument(
@@ -29,6 +30,11 @@ def generate_launch_description():
         "enable_supervisor",
         default_value="false",
         description="Start robot_supervisor enabled (true/false).",
+    )
+    supervisor_yaml_path_arg = DeclareLaunchArgument(
+        "supervisor_yaml_path",
+        default_value="",
+        description="Optional absolute path to an SCT supervisor YAML.",
     )
     static_mode_arg = DeclareLaunchArgument(
         "static",
@@ -70,6 +76,7 @@ def generate_launch_description():
             {"spawn_x": spawn_x},
             {"spawn_y": spawn_y},
             {"enabled": enable_supervisor},
+            {"supervisor_yaml_path": supervisor_yaml_path},
             {"static": static_mode},
         ],
         output="screen",
@@ -112,7 +119,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         robot_ns_arg, spawn_x_arg, spawn_y_arg,
-        enable_supervisor_arg, static_mode_arg,
+        enable_supervisor_arg, supervisor_yaml_path_arg, static_mode_arg,
         group_with_ns,
         group_no_ns,
     ])

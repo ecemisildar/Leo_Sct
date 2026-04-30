@@ -4,8 +4,7 @@ set -euo pipefail
 SESSION="leo_robots"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BEST_RESULTS_DIR="$SCRIPT_DIR/best_results"
-REMOTE_REPO="${REMOTE_REPO:-~/ros_ws/src/Leo_Sct/Leo_sct}"
-REMOTE_BEST_RESULTS_DIR="$REMOTE_REPO/best_results"
+REMOTE_REPO="${REMOTE_REPO:-}"
 
 # Format: "robot_name|user@ip|domain_id|robot_ns"
 ROBOTS=(
@@ -219,6 +218,9 @@ tmux new-session -d -s "$SESSION"
 IDX=0
 for entry in "${SELECTED[@]}"; do
   IFS='|' read -r NAME HOST DID NS <<<"$entry"
+  REMOTE_USER="${HOST%@*}"
+  REMOTE_REPO_FOR_HOST="${REMOTE_REPO:-/home/$REMOTE_USER/ros_ws/src/Leo_Sct/Leo_sct}"
+  REMOTE_BEST_RESULTS_DIR="$REMOTE_REPO_FOR_HOST/best_results"
 
   if [ "$IDX" -ne 0 ]; then
     tmux split-window -t "$SESSION":0 -v
