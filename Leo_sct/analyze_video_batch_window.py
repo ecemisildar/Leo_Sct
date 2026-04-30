@@ -35,6 +35,13 @@ MODEL_LABELS = {
     "gpt54": "GPT-5.4",
 }
 HEATMAP_CMAP = "YlGnBu"
+PLOT_FONT_SIZE = 12
+
+
+def apply_axis_font_size(ax: plt.Axes, font_size: int = PLOT_FONT_SIZE) -> None:
+    ax.xaxis.label.set_size(font_size)
+    ax.yaxis.label.set_size(font_size)
+    ax.tick_params(axis="both", labelsize=font_size)
 
 
 def parse_args() -> argparse.Namespace:
@@ -124,7 +131,12 @@ def trim_video(input_path: Path, output_path: Path, trim_start: float, duration:
     run_command(cmd)
 
 
-def analyze_trimmed_video(trimmed_video: Path, analysis_dir: Path, force: bool) -> None:
+def analyze_trimmed_video(
+    trimmed_video: Path,
+    analysis_dir: Path,
+    force: bool,
+    extra_args: list[str] | None = None,
+) -> None:
     summary_path = analysis_dir / "summary.json"
     if summary_path.exists() and not force:
         return
@@ -138,6 +150,8 @@ def analyze_trimmed_video(trimmed_video: Path, analysis_dir: Path, force: bool) 
         "--output-dir",
         str(analysis_dir),
     ]
+    if extra_args:
+        cmd.extend(extra_args)
     run_command(cmd)
 
 
@@ -295,101 +309,70 @@ def plot_collisions_coverage(
         sharex=True,
     )
 
-    robot_mean = robot_matrix.mean(axis=0)
-    robot_min = robot_matrix.min(axis=0)
-    robot_max = robot_matrix.max(axis=0)
-    obstacle_mean = obstacle_matrix.mean(axis=0)
-    obstacle_min = obstacle_matrix.min(axis=0)
-    obstacle_max = obstacle_matrix.max(axis=0)
-    coverage_mean = coverage_matrix.mean(axis=0)
-    coverage_min = coverage_matrix.min(axis=0)
-    coverage_max = coverage_matrix.max(axis=0)
-
-    ax_robot.fill_between(sample_times, robot_min, robot_max, color="#b8b8b8", alpha=0.10)
-    ax_obstacle.fill_between(sample_times, obstacle_min, obstacle_max, color="#c7c7c7", alpha=0.08)
-    ax_cov.fill_between(sample_times, coverage_min, coverage_max, color="#c8d2c8", alpha=0.16)
-    ax_robot.plot(
+    line_colors = plt.get_cmap("tab10").colors
+    ax_robot.fill_between(
         sample_times,
-        robot_mean,
-        color="#666666",
-        linewidth=1.5,
-        alpha=0.85,
-        label="All",
+        robot_matrix.min(axis=0),
+        robot_matrix.max(axis=0),
+        color="#4c78a8",
+        alpha=0.12,
+        linewidth=0,
     )
-    ax_obstacle.plot(
+    ax_obstacle.fill_between(
         sample_times,
-        obstacle_mean,
-        color="#7a7a7a",
-        linewidth=1.5,
-        alpha=0.85,
-        label="All",
+        obstacle_matrix.min(axis=0),
+        obstacle_matrix.max(axis=0),
+        color="#e45756",
+        alpha=0.12,
+        linewidth=0,
     )
-    ax_cov.plot(
+    ax_cov.fill_between(
         sample_times,
-        coverage_mean,
+        coverage_matrix.min(axis=0),
+        coverage_matrix.max(axis=0),
         color="#6d7f6d",
-        linewidth=1.6,
-        alpha=0.90,
-        label="All",
+        alpha=0.14,
+        linewidth=0,
     )
-
-    for model_name in sorted(per_model_matrices):
-        color = MODEL_COLORS.get(model_name, None)
-        model_label = MODEL_LABELS.get(model_name, model_name)
-        model_robot = per_model_matrices[model_name]["robot"]
-        model_obstacle = per_model_matrices[model_name]["obstacle"]
-        model_coverage = per_model_matrices[model_name]["coverage"]
-
-        model_robot_mean = model_robot.mean(axis=0)
-        model_robot_min = model_robot.min(axis=0)
-        model_robot_max = model_robot.max(axis=0)
-        model_obstacle_mean = model_obstacle.mean(axis=0)
-        model_obstacle_min = model_obstacle.min(axis=0)
-        model_obstacle_max = model_obstacle.max(axis=0)
-        model_coverage_mean = model_coverage.mean(axis=0)
-        model_coverage_min = model_coverage.min(axis=0)
-        model_coverage_max = model_coverage.max(axis=0)
-
-        ax_robot.fill_between(sample_times, model_robot_min, model_robot_max, color=color, alpha=0.12)
-        ax_obstacle.fill_between(sample_times, model_obstacle_min, model_obstacle_max, color=color, alpha=0.07)
-        ax_cov.fill_between(sample_times, model_coverage_min, model_coverage_max, color=color, alpha=0.08)
+    for run_idx in range(robot_matrix.shape[0]):
+        color = line_colors[run_idx % len(line_colors)]
         ax_robot.plot(
             sample_times,
-            model_robot_mean,
+            robot_matrix[run_idx],
             color=color,
-            linewidth=2.3,
-            label=model_label,
+            linewidth=1.4,
+            alpha=0.88,
         )
         ax_obstacle.plot(
             sample_times,
-            model_obstacle_mean,
+            obstacle_matrix[run_idx],
             color=color,
-            linewidth=2.3,
-            label=model_label,
+            linewidth=1.4,
+            alpha=0.88,
         )
         ax_cov.plot(
             sample_times,
-            model_coverage_mean,
+            coverage_matrix[run_idx],
             color=color,
-            linewidth=2.3,
-            label=model_label,
+            linewidth=1.4,
+            alpha=0.88,
         )
 
     ax_robot.set_xlabel("Time (s)")
     ax_obstacle.set_xlabel("Time (s)")
     ax_cov.set_xlabel("Time (s)")
-    ax_robot.set_ylabel("Robot Collisions")
-    ax_obstacle.set_ylabel("Obstacle Collisions")
+    ax_robot.set_ylabel("Robot-robot Collisions")
+    ax_obstacle.set_ylabel("Robot-wall Collisions")
     ax_cov.set_ylabel("Coverage (%)")
     ax_robot.set_xlim(0.0, float(sample_times[-1]))
     ax_robot.set_ylim(bottom=0.0)
     ax_obstacle.set_ylim(bottom=0.0)
     ax_cov.set_ylim(0.0, 100.0)
-    ax_robot.grid(True, linestyle="--", alpha=0.30)
-    ax_obstacle.grid(True, linestyle="--", alpha=0.30)
-    ax_cov.grid(True, linestyle="--", alpha=0.30)
-    ax_robot.legend(loc="upper left", frameon=False)
-
+    for ax in (ax_robot, ax_obstacle, ax_cov):
+        ax.grid(True, linestyle="--", alpha=0.25)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        apply_axis_font_size(ax)
     fig.tight_layout()
     fig.savefig(out_png, dpi=200, bbox_inches="tight")
     plt.close(fig)
@@ -442,9 +425,11 @@ def plot_heatmap(
         image = ax.imshow(grid, cmap=HEATMAP_CMAP, origin="lower", aspect="auto")
         ax.set_xlabel("Arena X cell")
         ax.set_ylabel("Arena Y cell")
-        ax.set_title("Coverage")
+        apply_axis_font_size(ax)
         cbar = fig.colorbar(image, ax=ax)
         cbar.set_label("Visits")
+        cbar.ax.tick_params(labelsize=PLOT_FONT_SIZE)
+        cbar.ax.yaxis.label.set_size(PLOT_FONT_SIZE)
         fig.tight_layout()
         fig.savefig(out_png, dpi=200, bbox_inches="tight")
         plt.close(fig)
@@ -470,10 +455,14 @@ def plot_heatmap(
         image = ax.imshow(grid, cmap=HEATMAP_CMAP, origin="lower", aspect="auto", vmin=0.0, vmax=vmax)
         ax.set_xlabel("Arena X cell")
         ax.set_title(f"{MODEL_LABELS.get(model_name, model_name)}")
+        ax.title.set_size(PLOT_FONT_SIZE)
+        apply_axis_font_size(ax)
     axes[0].set_ylabel("Arena Y cell")
 
     cbar = fig.colorbar(image, ax=axes, shrink=0.92)
     cbar.set_label("Visits")
+    cbar.ax.tick_params(labelsize=PLOT_FONT_SIZE)
+    cbar.ax.yaxis.label.set_size(PLOT_FONT_SIZE)
     fig.savefig(out_png, dpi=200, bbox_inches="tight")
     plt.close(fig)
 

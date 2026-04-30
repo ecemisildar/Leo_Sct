@@ -158,6 +158,14 @@ def parse_args() -> argparse.Namespace:
         default=20,
         help="Reject gray-rectangle candidates that touch the image border within this margin.",
     )
+    parser.add_argument(
+        "--use-video-top-corners",
+        action="store_true",
+        help=(
+            "After gray rectangle detection, force the arena top edge to use the "
+            "cropped video frame's upper-left and upper-right corners."
+        ),
+    )
     parser.add_argument("--arena-width-m", type=float, default=DEFAULT_ARENA_WIDTH_M)
     parser.add_argument("--arena-height-m", type=float, default=DEFAULT_ARENA_HEIGHT_M)
     parser.add_argument("--pixels-per-meter", type=int, default=DEFAULT_PIXELS_PER_METER)
@@ -251,6 +259,19 @@ def order_corners(points: np.ndarray) -> list[tuple[float, float]]:
         (float(top_right[0]), float(top_right[1])),
         (float(bottom_right[0]), float(bottom_right[1])),
         (float(bottom_left[0]), float(bottom_left[1])),
+    ]
+
+
+def force_video_top_corners(
+    arena_corners: list[tuple[float, float]],
+    frame: np.ndarray,
+) -> list[tuple[float, float]]:
+    frame_width = frame.shape[1]
+    return [
+        (0.0, 0.0),
+        (float(frame_width - 1), 0.0),
+        arena_corners[2],
+        arena_corners[3],
     ]
 
 
@@ -932,6 +953,8 @@ def analyze_video(args: argparse.Namespace) -> Path:
             [parse_corner(value) for value in args.arena_corners],
             args,
         )
+    if args.use_video_top_corners:
+        arena_corners = force_video_top_corners(arena_corners, cropped_first_frame)
     matrix, warp_width_px, warp_height_px = build_homography(
         arena_corners,
         args.arena_width_m,
@@ -1257,6 +1280,7 @@ def analyze_video(args: argparse.Namespace) -> Path:
         "crop_top": args.crop_top,
         "crop_bottom": args.crop_bottom,
         "detect_gray_rectangle": bool(args.detect_gray_rectangle),
+        "use_video_top_corners": bool(args.use_video_top_corners),
         "robot_detection_mode": "aruco",
         "aruco_dictionary": DEFAULT_ARUCO_DICT,
         "aruco_ids": DEFAULT_ARUCO_IDS,

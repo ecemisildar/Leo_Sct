@@ -1,0 +1,52 @@
+image_processor:
+  ros__parameters:
+    # Depth-based obstacle detection tuning for RealSense
+    # Conservative real-world profile: detect earlier, clear later.
+    enter_thresh: 0.80
+    exit_thresh: 1.00
+    emergency_thresh: 0.70
+    # Side ROIs: increased to react earlier to walls/objects on left/right.
+    side_enter_thresh: 0.80
+    side_exit_thresh: 1.05
+    left_enter_thresh: 0.80
+    right_enter_thresh: 0.80
+    left_exit_thresh: 1.05
+    right_exit_thresh: 1.05
+
+    # Depth range in meters
+    min_depth: 0.20
+    max_depth: 6.00
+
+    # ROI / robustness tuning (conservative)
+    stride: 1
+    percentile: 0.05
+    near_count_k: 4
+    valid_count_min: 60
+    crop_y0_frac: 0.25
+    crop_y1_frac: 0.55
+    front_gain: 1.40
+
+    # Stability / responsiveness (conservative)
+    hold_ms: 250
+    clear_skip: 1
+    safe_frames_required: 5
+
+    # ArUco tracking tuning
+    aruco_enabled: true
+    aruco_debug: false
+    rgb_topic: "camera/camera/color/image_raw"
+    aruco_dictionary_id: 1  # DICT_4X4_100
+    aruco_target_id: 1
+    # Keep detection "true" briefly through occasional missed frames.
+    aruco_seen_hold_ms: 1500
+    aruco_missed_frames_threshold: 6
+    aruco_min_marker_perimeter_px: 80.0
+    aruco_center_tolerance: 0.18
+    # Side-sensitive steering: classify LEFT/RIGHT earlier.
+    aruco_center_tolerance: 0.16
+    # Improve side-angle/small marker detection robustness.
+    aruco_min_marker_perimeter_rate: 0.015
+    aruco_max_marker_perimeter_rate: 4.0
+    aruco_adaptive_thresh_win_min: 3
+    aruco_adaptive_thresh_win_max: 43
+    aruco_adaptive_thresh_win_step: 4

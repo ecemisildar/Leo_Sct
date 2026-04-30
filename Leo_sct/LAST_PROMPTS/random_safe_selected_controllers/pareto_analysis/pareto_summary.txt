@@ -1,14 +1,21 @@
 Pareto analysis for random_safe_selected_controllers
 Input folder: /home/ecem/ros2_ws/src/Leo_sct/LAST_PROMPTS/random_safe_selected_controllers
-Completed trials analyzed: 10
-Incomplete trials skipped: 1
+Completed datapoints analyzed: 180
+Incomplete datapoints skipped: 0
 Objective: maximize coverage_pct, minimize collisions_total
 
-Pareto-optimal completed trials:
-- trial_8: coverage=55.000, collisions=7, sim=run_20260429_112638
-- trial_3: coverage=58.000, collisions=9, sim=run_20260429_110119
-- trial_2: coverage=59.000, collisions=11, sim=run_20260429_105616
-- trial_10: coverage=61.000, collisions=52, sim=run_20260429_113645
+Controller summaries:
+- gpt-4.1/prompt_1_run_2: n=30, coverage_mean=45.000, coverage_std=7.563, collisions_mean=16.133, collisions_std=10.262, last_time_min=300.088, last_time_max=300.266
+- gpt-4.1/prompt_2_run_4: n=30, coverage_mean=28.367, coverage_std=6.799, collisions_mean=8.067, collisions_std=2.250, last_time_min=300.103, last_time_max=300.156
+- gpt-4.1/prompt_2_run_5: n=30, coverage_mean=25.567, coverage_std=5.846, collisions_mean=3.633, collisions_std=3.038, last_time_min=300.102, last_time_max=300.156
+- gpt-5.4/prompt_1_run_5: n=30, coverage_mean=57.700, coverage_std=6.089, collisions_mean=24.900, collisions_std=12.794, last_time_min=300.103, last_time_max=300.222
+- gpt-5.4/prompt_3_run_1: n=30, coverage_mean=54.167, coverage_std=3.959, collisions_mean=53.267, collisions_std=18.471, last_time_min=300.089, last_time_max=300.238
+- gpt-5.4/prompt_4_run_3: n=30, coverage_mean=61.867, coverage_std=5.506, collisions_mean=57.800, collisions_std=15.296, last_time_min=300.089, last_time_max=300.212
 
-Skipped incomplete trials:
-- trial_11: missing coverage_timeseries.csv, sim=run_20260429_114148
+Pareto-optimal datapoints:
+- gpt-4.1/prompt_2_run_5 trial_8: coverage=40.000, collisions=0, sim=run_20260429_203758
+- gpt-4.1/prompt_1_run_2 trial_12: coverage=53.000, collisions=2, sim=run_20260429_160422
+- gpt-5.4/prompt_1_run_5 trial_18: coverage=65.000, collisions=7, sim=run_20260429_121714
+- gpt-5.4/prompt_1_run_5 trial_14: coverage=69.000, collisions=22, sim=run_20260429_115659
+- gpt-5.4/prompt_4_run_3 trial_23: coverage=71.000, collisions=48, sim=run_20260429_174610
+- gpt-5.4/prompt_4_run_3 trial_10: coverage=73.000, collisions=56, sim=run_20260429_164022

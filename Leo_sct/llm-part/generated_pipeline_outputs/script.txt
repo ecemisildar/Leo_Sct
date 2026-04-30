@@ -1,5 +1,5 @@
 # Auto-generated script
 
-Gloc412 = Sync(G1, G2)
-Kloc412 = Sync(Sync(G1, G2), E1_policy)
-Sloc412 = SupC(Gloc412, Kloc412)
+Gloc422 = Sync(G1_sensor, G2_motion)
+Kloc422 = Sync(Sync(Sync(Sync(G1_sensor, G2_motion), E1_policy_core), E2_clear_mode_alternation), E_constraint)
+Sloc422 = SupC(Gloc422, Kloc422)
