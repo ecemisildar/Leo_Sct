@@ -111,7 +111,7 @@ def _event_entries(
     ordered: List[str] = []
     seen = set()
     for name in list(controllable) + list(uncontrollable):
-        if name in used_events and name not in seen:
+        if name not in seen:
             ordered.append(name)
             seen.add(name)
     for name in used_events:

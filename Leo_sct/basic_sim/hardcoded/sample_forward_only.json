@@ -1,0 +1,10 @@
+{
+  "initial_state": "drive",
+  "new_states": ["drive"],
+  "controllable_events": ["move_forward"],
+  "transitions": [
+    ["drive", "path_clear", "drive"],
+    ["drive", "obstacle_front", "drive"],
+    ["drive", "move_forward", "drive"]
+  ]
+}

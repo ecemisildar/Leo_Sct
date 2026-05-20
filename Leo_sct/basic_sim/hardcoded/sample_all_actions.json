@@ -1,0 +1,51 @@
+{
+  "initial_state": "clear",
+  "new_states": [
+    "clear",
+    "obs_front",
+    "obs_left",
+    "obs_right"
+  ],
+  "controllable_events": [
+    "move_forward",
+    "move_backward",
+    "rotate_clockwise",
+    "rotate_counterclockwise",
+    "full_rotate",
+    "random_walk"
+  ],
+  "transitions": [
+    ["clear", "path_clear", "clear"],
+    ["clear", "obstacle_front", "obs_front"],
+    ["clear", "obstacle_left", "obs_left"],
+    ["clear", "obstacle_right", "obs_right"],
+    ["clear", "move_forward", "clear"],
+    ["clear", "rotate_clockwise", "clear"],
+    ["clear", "rotate_counterclockwise", "clear"],
+    ["clear", "full_rotate", "clear"],
+    ["clear", "random_walk", "clear"],
+
+    ["obs_front", "path_clear", "clear"],
+    ["obs_front", "obstacle_front", "obs_front"],
+    ["obs_front", "obstacle_left", "obs_left"],
+    ["obs_front", "obstacle_right", "obs_right"],
+    ["obs_front", "move_backward", "clear"],
+    ["obs_front", "rotate_clockwise", "clear"],
+    ["obs_front", "rotate_counterclockwise", "clear"],
+    ["obs_front", "full_rotate", "clear"],
+
+    ["obs_left", "path_clear", "clear"],
+    ["obs_left", "obstacle_front", "obs_front"],
+    ["obs_left", "obstacle_left", "obs_left"],
+    ["obs_left", "obstacle_right", "obs_right"],
+    ["obs_left", "move_forward", "clear"],
+    ["obs_left", "rotate_clockwise", "clear"],
+
+    ["obs_right", "path_clear", "clear"],
+    ["obs_right", "obstacle_front", "obs_front"],
+    ["obs_right", "obstacle_left", "obs_left"],
+    ["obs_right", "obstacle_right", "obs_right"],
+    ["obs_right", "move_forward", "clear"],
+    ["obs_right", "rotate_counterclockwise", "clear"]
+  ]
+}
