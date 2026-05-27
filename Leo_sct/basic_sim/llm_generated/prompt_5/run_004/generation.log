@@ -1,0 +1,24 @@
+Writing generation outputs to basic_sim/llm_generated/prompt_5/run_004
+Writing generation log to basic_sim/llm_generated/prompt_5/run_004/generation.log
+Wrote basic_sim/llm_generated/prompt_5/run_004/full_prompt.txt
+Wrote basic_sim/llm_generated/prompt_5/run_004/user_prompt.txt
+Wrote basic_sim/llm_generated/prompt_5/run_004/json/basic_sim_ge.json
+Wrote basic_sim/llm_generated/prompt_5/run_004/json/G.json
+Wrote basic_sim/llm_generated/prompt_5/run_004/json/E.json
+Wrote basic_sim/llm_generated/prompt_5/run_004/xml/G.xml
+Wrote basic_sim/llm_generated/prompt_5/run_004/xml/E.xml
+
+Synthesizing Sloc...
+Wrote basic_sim/llm_generated/prompt_5/run_004/synthesized/Gloc.xml
+Wrote basic_sim/llm_generated/prompt_5/run_004/synthesized/Kloc.xml
+Wrote basic_sim/llm_generated/prompt_5/run_004/synthesized/Sloc.xml
+Wrote basic_sim/llm_generated/prompt_5/run_004/synthesized/Sloc.yaml
+Wrote swarm_basics/config/prompt_5_controller.yaml
+
+Next step:
+  python3 basic_sim/grid_sim.py --automata basic_sim/llm_generated/prompt_5/run_004/synthesized/Sloc.xml --agents 5
+
+Real robot YAML:
+  swarm_basics/config/prompt_5_controller.yaml
+Use it with the ROS launch argument:
+  ros2 launch swarm_basics spawn_multi_robots.launch.py metadata_yaml_path:=swarm_basics/config/prompt_5_controller.yaml

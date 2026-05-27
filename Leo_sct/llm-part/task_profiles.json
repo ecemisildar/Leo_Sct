@@ -21,7 +21,7 @@
       "Do not collide with obstacles or other robots.",
       "Every non-terminal explore state must enable exactly one controllable action.",
       "If obstacle_front occurs, transition to a dedicated recovery state whose only controllable is move_backward, rotate_clockwise, rotate_counterclockwise, or full_rotate.",
-        "States reached by obstacle_left must enable exactly one controllable and it must be rotate_clockwise or full_rotate.",
+      "States reached by obstacle_left must enable exactly one controllable and it must be rotate_clockwise or full_rotate.",
       "States reached by obstacle_right must enable exactly one controllable and it must be rotate_counterclockwise or full_rotate.",
       "No state reached by any obstacle event may enable move_forward or random_walk.",
       "After any obstacle event, the supervisor must pass through an obstacle-recovery state before returning to exploration.",

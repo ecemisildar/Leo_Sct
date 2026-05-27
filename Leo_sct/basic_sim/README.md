@@ -64,7 +64,9 @@ or compact YAML files such as `swarm_basics/config/sup_gpt.yaml`.
 
 ## Sample G/E to Sloc
 
-Generate `user_prompt.txt`, `json/G.json`, `json/E.json`, `xml/G.xml`, `xml/E.xml`, and `synthesized/Sloc.xml` with the LLM:
+Generate `user_prompt.txt`, `json/G.json`, `json/E.json`, `xml/G.xml`,
+`xml/E.xml`, `synthesized/Sloc.xml`, and `synthesized/Sloc.yaml` with the
+LLM:
 
 ```bash
 python3 basic_sim/llm_generate_ge.py \
@@ -106,23 +108,8 @@ python3 basic_sim/llm_generate_ge.py --user-prompt-index 1 --print-prompt --dry-
 
 `--dry-run` does not write `G.json`, `E.json`, `G.xml`, or `E.xml`; it only prints the prompt.
 
-Use `--skip-synthesis` if you want only the generated JSON/XML files and do not want to create `Sloc.xml`.
-
-To let the LLM inspect simulator behavior and revise its answer, add feedback
-rounds. Each round synthesizes the latest answer, runs `grid_sim.py` in text
-mode, saves the initial movement check under `before_feedback_simulation/`, and
-asks the LLM for a corrected full JSON response in a `feedback_round_###/`
-folder only when the task-specific checks find a problem. After the last
-revision, the script also saves one final movement check under
-`final_feedback_simulation/`:
-
-```bash
-python3 basic_sim/llm_generate_ge.py \
-  --user-prompt-index 13 \
-  --feedback-iterations 2 \
-  --feedback-steps 80 \
-  --feedback-agents 5
-```
+Use `--skip-synthesis` if you want only the generated JSON/XML files and do
+not want to create `Sloc.xml` or `Sloc.yaml`.
 
 Generate `Sloc.xml` from the sample plant `G` and spec `E`:
 
@@ -140,6 +127,52 @@ python3 basic_sim/grid_sim.py \
   --automata basic_sim/llm_generated/prompt_1/run_001/synthesized/Sloc.xml \
   --agents 5
 ```
+
+The same run also writes a compact SCT YAML file for the ROS robot supervisor:
+
+```text
+basic_sim/llm_generated/prompt_1/run_001/synthesized/Sloc.yaml
+```
+
+Use that YAML directly in the robot launch file:
+
+```bash
+ros2 launch swarm_basics spawn_multi_robots.launch.py \
+  metadata_yaml_path:=/home/ecem/ros2_ws/src/Leo_sct/basic_sim/llm_generated/prompt_1/run_001/synthesized/Sloc.yaml
+```
+
+To also write the generated controller into `swarm_basics/config/`, pass
+`--robot-config-output`:
+
+```bash
+python3 basic_sim/llm_generate_ge.py \
+  --user-prompt-index 1 \
+  --output-dir basic_sim/llm_generated \
+  --robot-config-output swarm_basics/config/my_generated_controller.yaml
+```
+
+Then launch with:
+
+```bash
+ros2 launch swarm_basics spawn_multi_robots.launch.py \
+  metadata_yaml_path:=/home/ecem/ros2_ws/src/Leo_sct/swarm_basics/config/my_generated_controller.yaml
+```
+
+Or pass it to one supervisor node:
+
+```bash
+ros2 run swarm_basics robot_supervisor \
+  --ros-args -p supervisor_yaml_path:=/home/ecem/ros2_ws/src/Leo_sct/basic_sim/llm_generated/prompt_1/run_001/synthesized/Sloc.yaml
+```
+
+For real robots, keep the generated task limited to events that the current
+`swarm_basics.robot_supervisor` can sense and execute. Supported perception
+events are `path_clear`, `obstacle_front`, `obstacle_left`, and
+`obstacle_right`. Supported actions are `move_forward`, `move_backward`,
+`rotate_clockwise`, `rotate_counterclockwise`, `full_rotate`, and `stop`.
+Generated red-area, blue-area, or object-pushing events are useful in
+`basic_sim`, but the real robot supervisor will need matching sensor callbacks
+and action handlers before those YAML files can drive robots correctly.
 
 The synthesis helper uses Nadzoru from `~/Documents/Nadzoru2` by default. Pass
 `--nadzoru-root /path/to/Nadzoru2` if needed.
