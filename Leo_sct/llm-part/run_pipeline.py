@@ -27,7 +27,6 @@ from typing import Dict, List, Sequence, Set, Tuple
 from collections import defaultdict
 from dataclasses import dataclass
 
-from pathlib import Path
 from ament_index_python.packages import get_package_share_directory
 
 

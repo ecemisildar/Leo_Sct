@@ -123,6 +123,7 @@ class RobotSupervisor(Node):
 
         self.enabled = bool(self.declare_parameter("enabled", False).value)
         self.static_mode = bool(self.declare_parameter("static", False).value)
+        self.enable_aruco = bool(self.declare_parameter("enable_aruco", False).value)
         self.aruco_follower_cmd_timeout_s = float(
             self.declare_parameter("aruco_follower_cmd_timeout_s", 0.5).value
         )
@@ -139,6 +140,7 @@ class RobotSupervisor(Node):
         self.current_mission = "explore"
         self.current_yaml_path = ""
         self._load_initial_sct()
+        self.uses_aruco = self.enable_aruco and self._sct_uses_aruco()
         self._last_printed_sup_states: Optional[Tuple[int, ...]] = None
 
         # -------------------------------
@@ -190,12 +192,17 @@ class RobotSupervisor(Node):
         self.cmd_pub = self.create_publisher(Twist, "cmd_vel", 10)
 
         self.sub_zone = self.create_subscription(String, "detected_zones", self.zone_callback, 10)
-        self.sub_aruco_detected = self.create_subscription(Bool, "aruco_id1_detected", self.aruco_detected_callback, 10)
-        self.sub_aruco_distance = self.create_subscription(Float32, "aruco_id1_distance", self.aruco_distance_callback, 10)
-        self.sub_aruco_offset = self.create_subscription(Float32, "aruco_id1_offset", self.aruco_offset_callback, 10)
-        self.sub_aruco_follower_cmd = self.create_subscription(
-            Twist, "aruco_follower/cmd_vel", self.aruco_follower_cmd_callback, 10
-        )
+        self.sub_aruco_detected = None
+        self.sub_aruco_distance = None
+        self.sub_aruco_offset = None
+        self.sub_aruco_follower_cmd = None
+        if self.uses_aruco:
+            self.sub_aruco_detected = self.create_subscription(Bool, "aruco_id1_detected", self.aruco_detected_callback, 10)
+            self.sub_aruco_distance = self.create_subscription(Float32, "aruco_id1_distance", self.aruco_distance_callback, 10)
+            self.sub_aruco_offset = self.create_subscription(Float32, "aruco_id1_offset", self.aruco_offset_callback, 10)
+            self.sub_aruco_follower_cmd = self.create_subscription(
+                Twist, "aruco_follower/cmd_vel", self.aruco_follower_cmd_callback, 10
+            )
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
 
         # -------------------------------
@@ -283,6 +290,15 @@ class RobotSupervisor(Node):
                 }
         self._install_uncontrollable_callbacks()
 
+    def _sct_uses_aruco(self) -> bool:
+        aruco_events = {
+            "EV_marker_seen",
+            "EV_marker_lost",
+            "EV_marker_close",
+            "EV_move_to_marker",
+        }
+        return any(ev in self.sct.EV for ev in aruco_events)
+
     def _load_initial_sct(self):
         if self.explicit_yaml_path:
             if not os.path.exists(self.explicit_yaml_path):
@@ -325,6 +341,7 @@ class RobotSupervisor(Node):
             return False, f"Failed to load {os.path.basename(config_path)}: {exc}"
         self.current_mission = mission_key
         self.current_yaml_path = config_path
+        self.uses_aruco = self.enable_aruco and self._sct_uses_aruco()
         self._last_printed_sup_states = None
         self.get_logger().info(
             f"Switched mission to '{mission_key}' using {os.path.basename(config_path)}"
@@ -354,7 +371,7 @@ class RobotSupervisor(Node):
             self.cmd_pub.publish(Twist())
             return
         safe_twist = Twist()
-        safe_twist.linear.x = max(0.0, float(twist.linear.x))
+        safe_twist.linear.x = float(twist.linear.x)
         safe_twist.linear.y = float(twist.linear.y)
         safe_twist.linear.z = float(twist.linear.z)
         safe_twist.angular.x = float(twist.angular.x)
@@ -810,9 +827,13 @@ class RobotSupervisor(Node):
 
         self.stop_sent = False
         now = time.time()
-        self.tick_aruco_detected = self.aruco_detected
-        self.tick_aruco_distance_m = self.aruco_distance_m
-        self._log_marker_status()
+        if self.uses_aruco:
+            self.tick_aruco_detected = self.aruco_detected
+            self.tick_aruco_distance_m = self.aruco_distance_m
+            self._log_marker_status()
+        else:
+            self.tick_aruco_detected = False
+            self.tick_aruco_distance_m = float("inf")
 
         # If we’re in the middle of a true full_rotate, keep executing until complete.
         if self.full_rotate_active:

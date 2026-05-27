@@ -17,13 +17,13 @@ find_package(message_filters REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(cv_bridge REQUIRED)
 
-add_executable(image_processor src/image_processor.cpp)
-target_include_directories(image_processor PUBLIC
+add_executable(image_processor_rgb src/image_processor_rgb.cpp)
+target_include_directories(image_processor_rgb PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(image_processor PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(image_processor_rgb PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
-ament_target_dependencies(image_processor
+ament_target_dependencies(image_processor_rgb
   rclcpp
   sensor_msgs
   std_msgs
@@ -34,7 +34,7 @@ ament_target_dependencies(image_processor
 )
 
 
-install(TARGETS image_processor
+install(TARGETS image_processor_rgb
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

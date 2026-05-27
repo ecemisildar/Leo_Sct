@@ -16,6 +16,7 @@ def generate_launch_description():
 
     enable_supervisor = LaunchConfiguration("enable_supervisor")
     supervisor_yaml_path = LaunchConfiguration("supervisor_yaml_path")
+    enable_aruco = LaunchConfiguration("enable_aruco")
     static_mode = LaunchConfiguration("static")
 
     robot_ns_arg = DeclareLaunchArgument(
@@ -35,6 +36,11 @@ def generate_launch_description():
         "supervisor_yaml_path",
         default_value="",
         description="Optional absolute path to an SCT supervisor YAML.",
+    )
+    enable_aruco_arg = DeclareLaunchArgument(
+        "enable_aruco",
+        default_value="false",
+        description="Enable ArUco marker detection/following topics.",
     )
     static_mode_arg = DeclareLaunchArgument(
         "static",
@@ -77,6 +83,7 @@ def generate_launch_description():
             {"spawn_y": spawn_y},
             {"enabled": enable_supervisor},
             {"supervisor_yaml_path": supervisor_yaml_path},
+            {"enable_aruco": enable_aruco},
             {"static": static_mode},
         ],
         output="screen",
@@ -89,6 +96,7 @@ def generate_launch_description():
         name="image_processor",
         parameters=[
             camera_params_file,
+            {"aruco_enabled": enable_aruco},
         ],
         remappings=[
             ("depth_camera/depth_image", "camera/camera/aligned_depth_to_color/image_raw"),
@@ -119,7 +127,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         robot_ns_arg, spawn_x_arg, spawn_y_arg,
-        enable_supervisor_arg, supervisor_yaml_path_arg, static_mode_arg,
+        enable_supervisor_arg, supervisor_yaml_path_arg, enable_aruco_arg, static_mode_arg,
         group_with_ns,
         group_no_ns,
     ])
