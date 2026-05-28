@@ -11,7 +11,20 @@ from pathlib import Path
 
 THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(THIS_DIR))
-DEFAULT_NADZORU_ROOT = Path.home() / "Nadzoru2"
+NADZORU_ROOT_CANDIDATES = (
+    Path.home() / "Nadzoru2",
+    Path.home() / "Documents" / "Nadzoru2",
+)
+
+
+def default_nadzoru_root() -> Path:
+    for candidate in NADZORU_ROOT_CANDIDATES:
+        if (candidate / "machine" / "automaton.py").is_file():
+            return candidate
+    return NADZORU_ROOT_CANDIDATES[0]
+
+
+DEFAULT_NADZORU_ROOT = default_nadzoru_root()
 
 
 def import_nadzoru(nadzoru_root: Path) -> type:
