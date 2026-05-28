@@ -76,8 +76,8 @@ def generate_launch_description():
     # --- Supervisor node (publishes cmd_vel) ---
     supervisor_node = Node(
         package="leo_real",
-        executable="robot_supervisor",
-        name="robot_supervisor",
+        executable="robot_supervisor_rgb",
+        name="robot_supervisor_rgb",
         parameters=[
             {"spawn_x": spawn_x},
             {"spawn_y": spawn_y},
@@ -92,8 +92,8 @@ def generate_launch_description():
     # --- Image processor (reads depth) ---
     image_proc_node = Node(
         package="leo_image",
-        executable="image_processor",
-        name="image_processor",
+        executable="image_processor_rgb",
+        name="image_processor_rgb",
         parameters=[
             camera_params_file,
             {"aruco_enabled": enable_aruco},
