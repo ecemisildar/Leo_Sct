@@ -228,7 +228,7 @@ for entry in "${SELECTED[@]}"; do
   tmux select-layout -t "$SESSION":0 tiled
 
   # Build launch args (robot_ns optional)
-  LAUNCH_ARGS="enable_supervisor:=false"
+  LAUNCH_ARGS="enable_supervisor:=true"
   if [[ -n "$YAML_NAME" ]]; then
     LAUNCH_ARGS="enable_supervisor:=true supervisor_yaml_path:=$REMOTE_BEST_RESULTS_DIR/$YAML_NAME"
   fi
