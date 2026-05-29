@@ -50,3 +50,62 @@ image_processor:
     aruco_adaptive_thresh_win_min: 3
     aruco_adaptive_thresh_win_max: 43
     aruco_adaptive_thresh_win_step: 4
+
+    # RGB color detection tuning. Raise color_min_area_ratio or disable cyan
+    # if background/lighting is incorrectly classified as cyan.
+    green_detection_enabled: true
+    cyan_detection_enabled: true
+    color_min_area_ratio: 0.03
+    color_saturation_min: 80
+    color_value_min: 80
+    green_hue_min: 40
+    green_hue_max: 84
+    cyan_hue_min: 88
+    cyan_hue_max: 105
+
+image_processor_rgb:
+  ros__parameters:
+    enter_thresh: 0.50
+    exit_thresh: 0.90
+    emergency_thresh: 0.40
+    side_enter_thresh: 0.80
+    side_exit_thresh: 0.95
+    left_enter_thresh: 0.80
+    right_enter_thresh: 0.80
+    left_exit_thresh: 0.95
+    right_exit_thresh: 0.95
+    min_depth: 0.20
+    max_depth: 6.00
+    stride: 1
+    percentile: 0.05
+    near_count_k: 4
+    valid_count_min: 60
+    crop_y0_frac: 0.25
+    crop_y1_frac: 0.55
+    front_gain: 1.40
+    hold_ms: 250
+    clear_skip: 1
+    safe_frames_required: 5
+    aruco_enabled: true
+    aruco_debug: false
+    rgb_topic: "camera/camera/color/image_raw"
+    aruco_dictionary_id: 1
+    aruco_target_id: 1
+    aruco_seen_hold_ms: 1500
+    aruco_missed_frames_threshold: 6
+    aruco_min_marker_perimeter_px: 80.0
+    aruco_center_tolerance: 0.16
+    aruco_min_marker_perimeter_rate: 0.015
+    aruco_max_marker_perimeter_rate: 4.0
+    aruco_adaptive_thresh_win_min: 3
+    aruco_adaptive_thresh_win_max: 43
+    aruco_adaptive_thresh_win_step: 4
+    green_detection_enabled: true
+    cyan_detection_enabled: true
+    color_min_area_ratio: 0.03
+    color_saturation_min: 80
+    color_value_min: 80
+    green_hue_min: 40
+    green_hue_max: 84
+    cyan_hue_min: 88
+    cyan_hue_max: 105

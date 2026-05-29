@@ -69,9 +69,15 @@ public:
     safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 5);
 
     rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", rgb_topic_);
+    green_detection_enabled_ = this->declare_parameter<bool>("green_detection_enabled", true);
+    cyan_detection_enabled_ = this->declare_parameter<bool>("cyan_detection_enabled", true);
     color_min_area_ratio_ = this->declare_parameter<double>("color_min_area_ratio", 0.01);
     color_saturation_min_ = this->declare_parameter<int>("color_saturation_min", 50);
     color_value_min_ = this->declare_parameter<int>("color_value_min", 60);
+    green_hue_min_ = this->declare_parameter<int>("green_hue_min", 40);
+    green_hue_max_ = this->declare_parameter<int>("green_hue_max", 85);
+    cyan_hue_min_ = this->declare_parameter<int>("cyan_hue_min", 85);
+    cyan_hue_max_ = this->declare_parameter<int>("cyan_hue_max", 105);
 
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
@@ -226,8 +232,16 @@ private:
     cv::Mat green_mask;
     cv::Mat cyan_mask;
 
-    cv::inRange(hsv, cv::Scalar(40, sat_min, val_min), cv::Scalar(85, 255, 255), green_mask);
-    cv::inRange(hsv, cv::Scalar(85, sat_min, val_min), cv::Scalar(105, 255, 255), cyan_mask);
+    cv::inRange(
+      hsv,
+      cv::Scalar(std::clamp(green_hue_min_, 0, 179), sat_min, val_min),
+      cv::Scalar(std::clamp(green_hue_max_, 0, 179), 255, 255),
+      green_mask);
+    cv::inRange(
+      hsv,
+      cv::Scalar(std::clamp(cyan_hue_min_, 0, 179), sat_min, val_min),
+      cv::Scalar(std::clamp(cyan_hue_max_, 0, 179), 255, 255),
+      cyan_mask);
 
     const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
     cv::morphologyEx(green_mask, green_mask, cv::MORPH_OPEN, kernel);
@@ -237,8 +251,10 @@ private:
     const int green_area_px = cv::countNonZero(green_mask);
     const int cyan_area_px = cv::countNonZero(cyan_mask);
     const double min_area = std::max(1.0, std::clamp(color_min_area_ratio_, 0.0, 1.0) * image_area);
-    const bool green_detected = static_cast<double>(green_area_px) >= min_area;
-    const bool cyan_detected = static_cast<double>(cyan_area_px) >= min_area;
+    const bool green_detected =
+      green_detection_enabled_ && static_cast<double>(green_area_px) >= min_area;
+    const bool cyan_detected =
+      cyan_detection_enabled_ && static_cast<double>(cyan_area_px) >= min_area;
 
     publishColorDetection(green_detected, cyan_detected);
 
@@ -536,9 +552,15 @@ private:
   int safe_frames_{0};
 
   std::string rgb_topic_{"camera/camera/color/image_raw"};
+  bool green_detection_enabled_{true};
+  bool cyan_detection_enabled_{true};
   double color_min_area_ratio_{0.01};
   int color_saturation_min_{50};
   int color_value_min_{60};
+  int green_hue_min_{40};
+  int green_hue_max_{85};
+  int cyan_hue_min_{85};
+  int cyan_hue_max_{105};
 
   bool green_detected_{false};
   bool cyan_detected_{false};
