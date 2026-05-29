@@ -191,7 +191,7 @@ class RobotSupervisor(Node):
         # -------------------------------
         # Only place you encode motion parameters. No “logic” needs event names elsewhere.
         self.action_table: Dict[str, ActionSpec] = {
-            "EV_random_walk": ActionSpec(linear_x=0.0, angular_z=0.0, hold_s=None),  # special handled below
+            # "EV_random_walk": ActionSpec(linear_x=0.0, angular_z=0.0, hold_s=None),  # special handled below
             "EV_move_forward": ActionSpec(linear_x=0.2, angular_z=0.0),
             "EV_move_backward": ActionSpec(linear_x=-0.5, angular_z=0.0, hold_s=self.recovery_back_hold_s),
             "EV_rotate_clockwise": ActionSpec(

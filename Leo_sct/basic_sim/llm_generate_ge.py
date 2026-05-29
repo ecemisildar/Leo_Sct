@@ -20,6 +20,7 @@ DEFAULT_USER_PROMPTS_FILE = BASIC_SIM_DIR / "user_prompts.txt"
 DEFAULT_OUTPUT_DIR = BASIC_SIM_DIR / "llm_generated"
 DEFAULT_REAL_YAML_OUT_DIR = REPO_ROOT / "leo_real" / "config"
 DEFAULT_ROBOT_CONFIG_OUTPUT = DEFAULT_REAL_YAML_OUT_DIR / "sup_gpt.yaml"
+DEFAULT_SAVE_CONFIG_YAML = True
 if str(BASIC_SIM_DIR) not in sys.path:
     sys.path.insert(0, str(BASIC_SIM_DIR))
 if str(LLM_DIR) not in sys.path:
@@ -564,6 +565,15 @@ def safe_label(value: str) -> str:
     return label.strip("_") or "run"
 
 
+def config_yaml_path_for_run(output_dir: Path) -> Path:
+    try:
+        relative = output_dir.resolve().relative_to(DEFAULT_OUTPUT_DIR.resolve())
+        stem = safe_label("_".join(relative.parts))
+    except ValueError:
+        stem = safe_label(f"{output_dir.parent.name}_{output_dir.name}")
+    return DEFAULT_REAL_YAML_OUT_DIR / f"{stem}.yaml"
+
+
 def next_run_dir(parent: Path) -> Path:
     parent.mkdir(parents=True, exist_ok=True)
     run_numbers = []
@@ -604,6 +614,13 @@ def run_one(args: argparse.Namespace, label: str, user_task: str, output_dir: Pa
     current_yaml = None
     if not args.skip_synthesis:
         current_yaml = write_sct_yaml(sloc_xml, sloc_xml.with_suffix(".yaml"), args.nadzoru_root)
+        if args.save_config_yaml:
+            config_run_yaml = write_sct_yaml(
+                sloc_xml,
+                config_yaml_path_for_run(output_dir),
+                args.nadzoru_root,
+            )
+            current_yaml = config_run_yaml
         if args.robot_config_output:
             robot_config_yaml = write_sct_yaml(sloc_xml, args.robot_config_output, args.nadzoru_root)
             current_yaml = robot_config_yaml
@@ -703,6 +720,16 @@ def make_parser() -> argparse.ArgumentParser:
         help=(
             "Also write the synthesized SCT YAML to this path. Relative paths are "
             f"resolved from {REPO_ROOT}. Defaults to {DEFAULT_ROBOT_CONFIG_OUTPUT}."
+        ),
+    )
+    parser.add_argument(
+        "--no-save-config-yaml",
+        dest="save_config_yaml",
+        action="store_false",
+        default=DEFAULT_SAVE_CONFIG_YAML,
+        help=(
+            "Do not save a per-run YAML copy in leo_real/config. By default the "
+            "script writes both synthesized/Sloc.yaml and leo_real/config/<prompt>_<run>.yaml."
         ),
     )
     parser.add_argument("--nadzoru-root", type=Path, default=DEFAULT_NADZORU_ROOT)
