@@ -1,11 +1,11 @@
 We operate a DES-based supervisor for a basic grid simulator. Generate one plant automaton G and one specification automaton E.
 
-Controllable events: move_forward, move_backward, rotate_clockwise, rotate_counterclockwise, full_rotate, stop
-Uncontrollable events: path_clear, obstacle_front, obstacle_left, obstacle_right
+Controllable events: move_forward, move_backward, rotate_clockwise, rotate_counterclockwise, full_rotate, escape_yellow
+Uncontrollable events: path_clear, obstacle_front, obstacle_left, obstacle_right, yellow_detected
 
-User task: Make a controller for a robot whose task is to gather in the green area. The robot should move safely through the bounded environment while avoiding obstacles. When the green area has not been reached, the controller should use go_to_green as the main progress action whenever it is safe to do so. If an obstacle is detected, use short directed recovery actions and then return to go_to_green. When green_detected occurs, the robot has reached the green area and should stay there or use only minimal safe correction.
+User task: Make a controller for a robot whose task is to escape from the yellow area. The robot should move safely through the bounded environment while avoiding obstacles. When yellow_detected occurs, the robot is inside the yellow danger area and should use escape_yellow immediately to leave it. After escaping, the controller should continue safe obstacle-aware movement and avoid returning to the yellow area when possible.
 
-Goal: Design a small grid-world DES model for multiple agents. The plant G should model which perception and motion events can occur. The specification E should constrain motion for obstacle-aware movement while still allowing all six controllable actions somewhere in the automaton.
+Goal: Design a small grid-world DES model for multiple agents. The plant G should model which perception and motion events can occur. The specification E should constrain motion for obstacle-aware movement and make robots escape from a 2x2 yellow danger area while still allowing all seven controllable actions somewhere in the automaton.
 
 State semantics:
 - clear: no obstacle in front/left/right; safe to advance.
@@ -19,11 +19,12 @@ Event semantics:
 - rotate_clockwise: apply clockwise rotation for 0.2 s (one pulse).
 - rotate_counterclockwise: apply counterclockwise rotation for 0.2 s (one pulse).
 - full_rotate: rotate 360 degrees (atomic action; completes a full scan).
-- stop: hold position for one step without translating or rotating; use for deliberate waiting, goal holding, or when no safe movement is available.
+- escape_yellow: move one grid cell away from the yellow area; use immediately after yellow_detected to leave the danger area.
 - path_clear: sensors say forward corridor is clear (no front obstacle).
 - obstacle_front: front sensor region is blocked.
 - obstacle_left: left sensor region is blocked.
 - obstacle_right: right sensor region is blocked.
+- yellow_detected: the agent is inside the 2x2 yellow danger area.
 
 Behaviour guidance:
 - Do NOT introduce any new controllable or uncontrollable events. Use ONLY the provided event lists.
@@ -50,8 +51,11 @@ Behaviour guidance:
 - Do not use move_backward from clear/path_clear states.
 - Use stop only when the robot should intentionally hold position, such as after reaching a goal or when no safe movement is available.
 - Obstacle states should prefer directed rotations or short recovery before returning to clear.
+- The specification E should prioritize escape_yellow immediately after yellow_detected.
+- When yellow_detected occurs, the robot is inside the yellow danger area and should leave it before resuming normal movement.
+- After escape_yellow, return to obstacle-aware movement and avoid re-entering the yellow area when possible.
 
-Return ONLY valid JSON with this exact top-level schema. Each automaton must include the event lists so XML conversion can preserve controllability:
+Return ONLY valid JSON with this exact top-level schema. Each automaton must include the event lists so XML conversion can preserve controllability. The controllable_events and uncontrollable_events fields must exactly repeat the provided event lists above, and every transition event must appear in one of those lists:
 {
   "G": [
     {

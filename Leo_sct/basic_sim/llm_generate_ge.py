@@ -73,8 +73,8 @@ OBJECT_UNCONTROLLABLE = ["detect_object_red"]
 OBJECT_GREEN_UNCONTROLLABLE = ["detect_object_green"]
 GREEN_CONTROLLABLE = ["go_to_green"]
 GREEN_UNCONTROLLABLE = ["green_detected"]
-CYAN_CONTROLLABLE = ["escape_cyan"]
-CYAN_UNCONTROLLABLE = ["cyan_detected"]
+YELLOW_CONTROLLABLE = ["escape_yellow"]
+YELLOW_UNCONTROLLABLE = ["yellow_detected"]
 RED_GOAL = (
     "Design a small grid-world DES model for multiple agents. The plant G should "
     "model which perception and motion events can occur. The specification E "
@@ -118,19 +118,19 @@ GREEN_GOAL = (
     "in a 2x2 green target area while still allowing all seven controllable "
     "actions somewhere in the automaton."
 )
-CYAN_GOAL = (
+YELLOW_GOAL = (
     "Design a small grid-world DES model for multiple agents. The plant G should "
     "model which perception and motion events can occur. The specification E "
     "should constrain motion for obstacle-aware movement and make robots escape "
-    "from a 2x2 cyan danger area while still allowing all seven controllable "
+    "from a 2x2 yellow danger area while still allowing all seven controllable "
     "actions somewhere in the automaton."
 )
-GREEN_CYAN_GOAL = (
+GREEN_YELLOW_GOAL = (
     "Design a small grid-world DES model for multiple agents. The plant G should "
     "model which perception and motion events can occur. The specification E "
     "should constrain motion for obstacle-aware movement, make robots gather in "
     "a 2x2 green target area, and make robots avoid or escape from a separate "
-    "2x2 cyan danger area while still allowing all eight controllable actions "
+    "2x2 yellow danger area while still allowing all eight controllable actions "
     "somewhere in the automaton."
 )
 
@@ -176,10 +176,10 @@ GREEN_TASK_CONSTRAINTS = [
     "When green_detected occurs, the robot has reached the green area and should remain there or use only minimal safe correction.",
 ]
 
-CYAN_TASK_CONSTRAINTS = [
-    "The specification E should prioritize escape_cyan immediately after cyan_detected.",
-    "When cyan_detected occurs, the robot is inside the cyan danger area and should leave it before resuming normal movement.",
-    "After escape_cyan, return to obstacle-aware movement and avoid re-entering the cyan area when possible.",
+YELLOW_TASK_CONSTRAINTS = [
+    "The specification E should prioritize escape_yellow immediately after yellow_detected.",
+    "When yellow_detected occurs, the robot is inside the yellow danger area and should leave it before resuming normal movement.",
+    "After escape_yellow, return to obstacle-aware movement and avoid re-entering the yellow area when possible.",
 ]
 
 RANDOM_WALK_PROMPT_REPLACEMENTS = {
@@ -391,11 +391,11 @@ def is_green_task(user_task: str | None) -> bool:
     return "go_to_green" in task or "green_detected" in task or "green area" in task
 
 
-def is_cyan_task(user_task: str | None) -> bool:
+def is_yellow_task(user_task: str | None) -> bool:
     if not user_task:
         return False
     task = user_task.lower()
-    return "escape_cyan" in task or "cyan_detected" in task or "cyan area" in task
+    return "escape_yellow" in task or "yellow_detected" in task or "yellow area" in task
 
 
 def is_object_task(user_task: str | None) -> bool:
@@ -436,7 +436,7 @@ def build_basic_prompt(user_task: str | None, include_examples: bool) -> str:
     red_task = is_red_task(user_task)
     blue_task = is_blue_task(user_task)
     green_task = is_green_task(user_task)
-    cyan_task = is_cyan_task(user_task)
+    yellow_task = is_yellow_task(user_task)
     object_task = is_object_task(user_task)
     state_semantics, event_semantics = merge_prompt_semantics(None, None)
     event_semantics.pop("random_walk", None)
@@ -493,21 +493,21 @@ def build_basic_prompt(user_task: str | None, include_examples: bool) -> str:
             ),
         })
 
-    if cyan_task:
-        controllable += CYAN_CONTROLLABLE
-        uncontrollable += CYAN_UNCONTROLLABLE
-        goal = CYAN_GOAL
-        constraints += CYAN_TASK_CONSTRAINTS
+    if yellow_task:
+        controllable += YELLOW_CONTROLLABLE
+        uncontrollable += YELLOW_UNCONTROLLABLE
+        goal = YELLOW_GOAL
+        constraints += YELLOW_TASK_CONSTRAINTS
         event_semantics.update({
-            "cyan_detected": "the agent is inside the 2x2 cyan danger area.",
-            "escape_cyan": (
-                "move one grid cell away from the cyan area; use immediately after "
-                "cyan_detected to leave the danger area."
+            "yellow_detected": "the agent is inside the 2x2 yellow danger area.",
+            "escape_yellow": (
+                "move one grid cell away from the yellow area; use immediately after "
+                "yellow_detected to leave the danger area."
             ),
         })
 
-    if green_task and cyan_task:
-        goal = GREEN_CYAN_GOAL
+    if green_task and yellow_task:
+        goal = GREEN_YELLOW_GOAL
 
     if object_task:
         controllable += OBJECT_CONTROLLABLE
@@ -641,7 +641,7 @@ def warn_for_real_robot_events(yaml_payload: dict, yaml_path: Path) -> None:
         "EV_go_to_red",
         "EV_escape_blue",
         "EV_go_to_green",
-        "EV_escape_cyan",
+        "EV_escape_yellow",
         "EV_push",
     }
     supported_uncontrollables = {
@@ -652,7 +652,7 @@ def warn_for_real_robot_events(yaml_payload: dict, yaml_path: Path) -> None:
         "EV_red_detected",
         "EV_blue_detected",
         "EV_green_detected",
-        "EV_cyan_detected",
+        "EV_yellow_detected",
         "EV_detect_object_green",
     }
     events = list(yaml_payload["events"])
