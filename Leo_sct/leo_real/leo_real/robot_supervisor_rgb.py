@@ -251,6 +251,11 @@ class RobotSupervisor(Node):
     def _load_sct_from_yaml(self, config_path: str):
         self.sct = SCT(config_path)
         self.ev_name_by_id = {ev_id: ev_name for ev_name, ev_id in self.sct.EV.items()}
+        self.enabled_color_tokens = set()
+        if "EV_green_detected" in self.sct.EV:
+            self.enabled_color_tokens.add("GREEN")
+        if "EV_cyan_detected" in self.sct.EV:
+            self.enabled_color_tokens.add("CYAN")
         for ev_id in self.sct.EV.values():
             if ev_id not in self.sct.callback:
                 self.sct.callback[ev_id] = {
@@ -348,7 +353,7 @@ class RobotSupervisor(Node):
             return
         self.last_zone_update = now
 
-        tokens = self._parse_zone_tokens(msg.data)
+        tokens = self._filter_zone_tokens_for_current_sct(self._parse_zone_tokens(msg.data))
         self.perception_tokens = tokens
 
         obstacle_tokens = tokens & {"LEFT", "RIGHT", "CORNER"}
@@ -392,6 +397,17 @@ class RobotSupervisor(Node):
         if tokens - {"CLEAR"}:
             tokens.discard("CLEAR")
         return tokens
+
+    def _filter_zone_tokens_for_current_sct(self, tokens: set[str]) -> set[str]:
+        filtered = set(tokens)
+        for color in ("GREEN", "CYAN"):
+            if color in filtered and color not in getattr(self, "enabled_color_tokens", set()):
+                filtered.discard(color)
+        if not filtered:
+            return {"CLEAR"}
+        if filtered - {"CLEAR"}:
+            filtered.discard("CLEAR")
+        return filtered
 
     # -------------------------------
     # SCT input check functions (uncontrollables)

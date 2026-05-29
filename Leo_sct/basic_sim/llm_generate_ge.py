@@ -71,6 +71,11 @@ BLUE_CONTROLLABLE = ["escape_blue"]
 BLUE_UNCONTROLLABLE = ["blue_detected"]
 OBJECT_CONTROLLABLE = ["push"]
 OBJECT_UNCONTROLLABLE = ["detect_object_red"]
+OBJECT_GREEN_UNCONTROLLABLE = ["detect_object_green"]
+GREEN_CONTROLLABLE = ["go_to_green"]
+GREEN_UNCONTROLLABLE = ["green_detected"]
+CYAN_CONTROLLABLE = ["escape_cyan"]
+CYAN_UNCONTROLLABLE = ["cyan_detected"]
 RED_GOAL = (
     "Design a small grid-world DES model for multiple agents. The plant G should "
     "model which perception and motion events can occur. The specification E "
@@ -100,6 +105,35 @@ OBJECT_GOAL = (
     "four 1-cell objects into a 2x2 red target area while still allowing all "
     "eight controllable actions somewhere in the automaton."
 )
+OBJECT_GREEN_GOAL = (
+    "Design a small grid-world DES model for multiple agents. The plant G should "
+    "model which perception and motion events can occur. The specification E "
+    "should constrain motion for obstacle-aware movement and make robots push "
+    "four 1-cell objects into a 2x2 green target area while still allowing all "
+    "eight controllable actions somewhere in the automaton."
+)
+GREEN_GOAL = (
+    "Design a small grid-world DES model for multiple agents. The plant G should "
+    "model which perception and motion events can occur. The specification E "
+    "should constrain motion for obstacle-aware movement and make robots gather "
+    "in a 2x2 green target area while still allowing all seven controllable "
+    "actions somewhere in the automaton."
+)
+CYAN_GOAL = (
+    "Design a small grid-world DES model for multiple agents. The plant G should "
+    "model which perception and motion events can occur. The specification E "
+    "should constrain motion for obstacle-aware movement and make robots escape "
+    "from a 2x2 cyan danger area while still allowing all seven controllable "
+    "actions somewhere in the automaton."
+)
+GREEN_CYAN_GOAL = (
+    "Design a small grid-world DES model for multiple agents. The plant G should "
+    "model which perception and motion events can occur. The specification E "
+    "should constrain motion for obstacle-aware movement, make robots gather in "
+    "a 2x2 green target area, and make robots avoid or escape from a separate "
+    "2x2 cyan danger area while still allowing all eight controllable actions "
+    "somewhere in the automaton."
+)
 
 BASIC_SIM_CONSTRAINTS = [
     "Return exactly one plant automaton in G and exactly one specification automaton in E.",
@@ -128,6 +162,25 @@ OBJECT_TASK_CONSTRAINTS = [
     "For object-pushing tasks, do not stop just because red_detected occurs; stop only after detect_object_red.",
     "Movable objects are not obstacles for sensing: if an object is ahead, push should remain available rather than switching to obstacle recovery.",
     "Obstacle recovery should remain brief and should return to object pushing as soon as safely possible.",
+]
+
+OBJECT_GREEN_TASK_CONSTRAINTS = [
+    "The specification E should use push as the main progress action for moving objects toward the green area.",
+    "When detect_object_green occurs, all movable objects are in the green area and the robot should stop or hold position.",
+    "For object-pushing tasks, do not stop just because green_detected occurs; stop only after detect_object_green.",
+    "Movable objects are not obstacles for sensing: if an object is ahead, push should remain available rather than switching to obstacle recovery.",
+    "Obstacle recovery should remain brief and should return to object pushing as soon as safely possible.",
+]
+
+GREEN_TASK_CONSTRAINTS = [
+    "The specification E should prioritize go_to_green when the robot is not in the green area.",
+    "When green_detected occurs, the robot has reached the green area and should remain there or use only minimal safe correction.",
+]
+
+CYAN_TASK_CONSTRAINTS = [
+    "The specification E should prioritize escape_cyan immediately after cyan_detected.",
+    "When cyan_detected occurs, the robot is inside the cyan danger area and should leave it before resuming normal movement.",
+    "After escape_cyan, return to obstacle-aware movement and avoid re-entering the cyan area when possible.",
 ]
 
 RANDOM_WALK_PROMPT_REPLACEMENTS = {
@@ -214,7 +267,9 @@ def build_pipeline_prompt(
 
     lines.append(
         "Return ONLY valid JSON with this exact top-level schema. Each automaton must include "
-        "the event lists so XML conversion can preserve controllability:"
+        "the event lists so XML conversion can preserve controllability. The "
+        "controllable_events and uncontrollable_events fields must exactly repeat the "
+        "provided event lists above, and every transition event must appear in one of those lists:"
     )
     lines.append(
         "{\n"
@@ -252,7 +307,33 @@ def _normalize_pipeline_payload(payload: dict) -> dict:
                 raise SystemExit(f"{section_name} entries must be JSON objects.")
             if not isinstance(automaton.get("transitions"), list):
                 raise SystemExit(f"{section_name} entries must contain a transitions list.")
+            _complete_event_lists(automaton)
     return payload
+
+
+def _transition_event_names(transitions: list[object]) -> list[str]:
+    event_names: list[str] = []
+    for transition in transitions:
+        if isinstance(transition, (list, tuple)) and len(transition) == 3:
+            event_names.append(str(transition[1]))
+            continue
+        if isinstance(transition, str):
+            match = re.search(r'\("[^"]+",\s*"([^"]+)",\s*"[^"]+"\)', transition.strip())
+            if match:
+                event_names.append(match.group(1))
+    return event_names
+
+
+def _complete_event_lists(automaton: dict) -> None:
+    controllable = list(automaton.get("controllable_events") or [])
+    uncontrollable = list(automaton.get("uncontrollable_events") or [])
+    listed = set(controllable) | set(uncontrollable)
+    missing = [event for event in _transition_event_names(automaton["transitions"]) if event not in listed]
+    for event in missing:
+        if event not in uncontrollable:
+            uncontrollable.append(event)
+    automaton["controllable_events"] = controllable
+    automaton["uncontrollable_events"] = uncontrollable
 
 
 def _write_automaton_xml(automaton: dict, output_path: Path) -> None:
@@ -304,11 +385,30 @@ def is_blue_task(user_task: str | None) -> bool:
     return "escape_blue" in task or "blue_detected" in task or "blue area" in task
 
 
+def is_green_task(user_task: str | None) -> bool:
+    if not user_task:
+        return False
+    task = user_task.lower()
+    return "go_to_green" in task or "green_detected" in task or "green area" in task
+
+
+def is_cyan_task(user_task: str | None) -> bool:
+    if not user_task:
+        return False
+    task = user_task.lower()
+    return "escape_cyan" in task or "cyan_detected" in task or "cyan area" in task
+
+
 def is_object_task(user_task: str | None) -> bool:
     if not user_task:
         return False
     task = user_task.lower()
-    return "push" in task or "detect_object_red" in task or "object" in task
+    return (
+        "push" in task
+        or "detect_object_red" in task
+        or "detect_object_green" in task
+        or "object" in task
+    )
 
 class Tee:
     def __init__(self, *streams) -> None:
@@ -336,6 +436,8 @@ def resolve_repo_path(path: Path | str | None) -> Path | None:
 def build_basic_prompt(user_task: str | None, include_examples: bool) -> str:
     red_task = is_red_task(user_task)
     blue_task = is_blue_task(user_task)
+    green_task = is_green_task(user_task)
+    cyan_task = is_cyan_task(user_task)
     object_task = is_object_task(user_task)
     state_semantics, event_semantics = merge_prompt_semantics(None, None)
     event_semantics.pop("random_walk", None)
@@ -378,13 +480,49 @@ def build_basic_prompt(user_task: str | None, include_examples: bool) -> str:
     if red_task and blue_task:
         goal = RED_BLUE_GOAL
 
+    if green_task:
+        controllable += GREEN_CONTROLLABLE
+        uncontrollable += GREEN_UNCONTROLLABLE
+        goal = GREEN_GOAL
+        if not object_task:
+            constraints += GREEN_TASK_CONSTRAINTS
+        event_semantics.update({
+            "green_detected": "the agent is inside the 2x2 green gathering area.",
+            "go_to_green": (
+                "move one grid cell toward the nearest green-area cell; if already in "
+                "the green area, remain in place."
+            ),
+        })
+
+    if cyan_task:
+        controllable += CYAN_CONTROLLABLE
+        uncontrollable += CYAN_UNCONTROLLABLE
+        goal = CYAN_GOAL
+        constraints += CYAN_TASK_CONSTRAINTS
+        event_semantics.update({
+            "cyan_detected": "the agent is inside the 2x2 cyan danger area.",
+            "escape_cyan": (
+                "move one grid cell away from the cyan area; use immediately after "
+                "cyan_detected to leave the danger area."
+            ),
+        })
+
+    if green_task and cyan_task:
+        goal = GREEN_CYAN_GOAL
+
     if object_task:
         controllable += OBJECT_CONTROLLABLE
-        uncontrollable += OBJECT_UNCONTROLLABLE
-        goal = OBJECT_GOAL
-        constraints += OBJECT_TASK_CONSTRAINTS
+        if green_task:
+            uncontrollable += OBJECT_GREEN_UNCONTROLLABLE
+            goal = OBJECT_GREEN_GOAL
+            constraints += OBJECT_GREEN_TASK_CONSTRAINTS
+        else:
+            uncontrollable += OBJECT_UNCONTROLLABLE
+            goal = OBJECT_GOAL
+            constraints += OBJECT_TASK_CONSTRAINTS
         event_semantics.update({
             "detect_object_red": "all four movable 1-cell objects are inside the 2x2 red area.",
+            "detect_object_green": "all four movable 1-cell objects are inside the 2x2 green area.",
             "push": (
                 "move toward a movable object; if an object is directly in front, push it "
                 "one cell forward in the robot's heading and step into its previous cell; "
@@ -504,6 +642,8 @@ def warn_for_real_robot_events(yaml_payload: dict, yaml_path: Path) -> None:
         "EV_random_walk",
         "EV_go_to_red",
         "EV_escape_blue",
+        "EV_go_to_green",
+        "EV_escape_cyan",
         "EV_push",
     }
     supported_uncontrollables = {
@@ -513,6 +653,9 @@ def warn_for_real_robot_events(yaml_payload: dict, yaml_path: Path) -> None:
         "EV_obstacle_right",
         "EV_red_detected",
         "EV_blue_detected",
+        "EV_green_detected",
+        "EV_cyan_detected",
+        "EV_detect_object_green",
     }
     events = list(yaml_payload["events"])
     controllability = list(yaml_payload["ev_controllable"])
