@@ -285,7 +285,7 @@ private:
     if (show_debug_) {
       cv::Mat color_vis = bgr.clone();
       color_vis.setTo(cv::Scalar(0, 255, 0), green_mask);
-      color_vis.setTo(cv::Scalar(255, 255, 0), cyan_mask);
+      color_vis.setTo(cv::Scalar(160, 250, 255), cyan_mask);
       cv::imshow("Color detection (debug)", color_vis);
       cv::waitKey(1);
     }

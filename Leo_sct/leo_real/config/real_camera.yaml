@@ -64,11 +64,12 @@ image_processor:
     green_value_min: 55
     green_hue_min: 38
     green_hue_max: 86
-    cyan_min_area_ratio: 0.05
-    cyan_saturation_min: 100
-    cyan_value_min: 90
-    cyan_hue_min: 88
-    cyan_hue_max: 105
+    # The "cyan" supervisor event is detected from the pastel yellow #FFFAA0 target.
+    cyan_min_area_ratio: 0.03
+    cyan_saturation_min: 60
+    cyan_value_min: 150
+    cyan_hue_min: 24
+    cyan_hue_max: 34
 
 image_processor_rgb:
   ros__parameters:
@@ -118,8 +119,9 @@ image_processor_rgb:
     green_value_min: 55
     green_hue_min: 38
     green_hue_max: 86
-    cyan_min_area_ratio: 0.05
-    cyan_saturation_min: 100
-    cyan_value_min: 90
-    cyan_hue_min: 88
-    cyan_hue_max: 105
+    # The "cyan" supervisor event is detected from the pastel yellow #FFFAA0 target.
+    cyan_min_area_ratio: 0.03
+    cyan_saturation_min: 60
+    cyan_value_min: 150
+    cyan_hue_min: 24
+    cyan_hue_max: 34
