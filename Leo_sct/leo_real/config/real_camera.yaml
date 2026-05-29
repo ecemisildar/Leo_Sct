@@ -51,10 +51,10 @@ image_processor:
     aruco_adaptive_thresh_win_max: 43
     aruco_adaptive_thresh_win_step: 4
 
-    # RGB color detection tuning. Raise color_min_area_ratio or disable cyan
-    # if background/lighting is incorrectly classified as cyan.
+    # RGB color detection tuning. Raise color_min_area_ratio or disable yellow
+    # if background/lighting is incorrectly classified as yellow.
     green_detection_enabled: true
-    cyan_detection_enabled: true
+    yellow_detection_enabled: true
     color_detect_hold_ms: 800
     color_debug_log: false
     color_min_area_ratio: 0.01
@@ -67,12 +67,12 @@ image_processor:
     green_value_min: 50
     green_hue_min: 36
     green_hue_max: 88
-    # The "cyan" supervisor event is detected from the pastel yellow #FFFAA0 target.
-    cyan_min_area_ratio: 0.02
-    cyan_saturation_min: 25
-    cyan_value_min: 125
-    cyan_hue_min: 18
-    cyan_hue_max: 42
+    # The "yellow" supervisor event is detected from the pastel yellow #FFFAA0 target.
+    yellow_min_area_ratio: 0.003
+    yellow_saturation_min: 20
+    yellow_value_min: 100
+    yellow_hue_min: 15
+    yellow_hue_max: 45
 
 image_processor_rgb:
   ros__parameters:
@@ -112,9 +112,9 @@ image_processor_rgb:
     aruco_adaptive_thresh_win_max: 43
     aruco_adaptive_thresh_win_step: 4
     green_detection_enabled: true
-    cyan_detection_enabled: true
-    color_detect_hold_ms: 800
-    color_debug_log: false
+    yellow_detection_enabled: true
+    color_detect_hold_ms: 100
+    color_debug_log: true
     color_min_area_ratio: 0.01
     color_saturation_min: 50
     color_value_min: 60
@@ -125,9 +125,9 @@ image_processor_rgb:
     green_value_min: 50
     green_hue_min: 36
     green_hue_max: 88
-    # The "cyan" supervisor event is detected from the pastel yellow #FFFAA0 target.
-    cyan_min_area_ratio: 0.02
-    cyan_saturation_min: 25
-    cyan_value_min: 125
-    cyan_hue_min: 18
-    cyan_hue_max: 42
+    # The "yellow" supervisor event is detected from the pastel yellow #FFFAA0 target.
+    yellow_min_area_ratio: 0.02
+    yellow_saturation_min: 25
+    yellow_value_min: 125
+    yellow_hue_min: 18
+    yellow_hue_max: 42

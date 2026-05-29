@@ -206,7 +206,7 @@ class RobotSupervisor(Node):
             ),
             "EV_stop": ActionSpec(linear_x=0.0, angular_z=0.0),
             "EV_go_to_green": ActionSpec(linear_x=0.16, angular_z=0.0),
-            "EV_escape_cyan": ActionSpec(linear_x=-0.2, angular_z=0.6, hold_s=self.recovery_back_hold_s),
+            "EV_escape_yellow": ActionSpec(linear_x=-0.2, angular_z=0.6, hold_s=self.recovery_back_hold_s),
             # full_rotate is executed as an atomic rotation using odom; target is full_rotate_target_rad (≤ π here).
             "EV_full_rotate": ActionSpec(linear_x=0.0, angular_z=self.full_rotate_omega, is_full_rotate=True),
         }
@@ -254,8 +254,8 @@ class RobotSupervisor(Node):
         self.enabled_color_tokens = set()
         if "EV_green_detected" in self.sct.EV:
             self.enabled_color_tokens.add("GREEN")
-        if "EV_cyan_detected" in self.sct.EV:
-            self.enabled_color_tokens.add("CYAN")
+        if "EV_yellow_detected" in self.sct.EV:
+            self.enabled_color_tokens.add("yellow")
         for ev_id in self.sct.EV.values():
             if ev_id not in self.sct.callback:
                 self.sct.callback[ev_id] = {
@@ -378,10 +378,10 @@ class RobotSupervisor(Node):
             "OBSTACLE_RIGHT": "RIGHT",
             "GREEN_DETECTED": "GREEN",
             "GREEN_AREA": "GREEN",
-            "CYAN_DETECTED": "CYAN",
-            "CYAN_AREA": "CYAN",
+            "yellow_DETECTED": "yellow",
+            "yellow_AREA": "yellow",
         }
-        valid = {"CLEAR", "LEFT", "RIGHT", "CORNER", "GREEN", "CYAN"}
+        valid = {"CLEAR", "LEFT", "RIGHT", "CORNER", "GREEN", "yellow"}
         raw_tokens = re.split(r"[\s,;/|]+", str(text).strip().upper())
         tokens = set()
         for raw in raw_tokens:
@@ -400,7 +400,7 @@ class RobotSupervisor(Node):
 
     def _filter_zone_tokens_for_current_sct(self, tokens: set[str]) -> set[str]:
         filtered = set(tokens)
-        for color in ("GREEN", "CYAN"):
+        for color in ("GREEN", "yellow"):
             if color in filtered and color not in getattr(self, "enabled_color_tokens", set()):
                 filtered.discard(color)
         if not filtered:
@@ -437,8 +437,8 @@ class RobotSupervisor(Node):
     def green_detected_check(self, sup_data):
         return "GREEN" in self.perception_tokens
 
-    def cyan_detected_check(self, sup_data):
-        return "CYAN" in self.perception_tokens
+    def yellow_detected_check(self, sup_data):
+        return "yellow" in self.perception_tokens
 
 
     def _install_uncontrollable_callbacks(self):
@@ -453,7 +453,7 @@ class RobotSupervisor(Node):
         add("obstacle_left", self.left_check)
         add("obstacle_right", self.right_check)
         add("green_detected", self.green_detected_check)
-        add("cyan_detected", self.cyan_detected_check)
+        add("yellow_detected", self.yellow_detected_check)
 
     # -------------------------------
     # Enable service
