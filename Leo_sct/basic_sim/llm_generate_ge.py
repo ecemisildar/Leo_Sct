@@ -142,6 +142,8 @@ BASIC_SIM_CONSTRAINTS = [
     "Do not use move_backward from clear/path_clear states.",
     "Use stop only when the robot should intentionally hold position, such as after reaching a goal or when no safe movement is available.",
     "Obstacle states should prefer directed rotations or short recovery before returning to clear.",
+    "Obstacle detection has priority over color detection: color events such as red_detected, green_detected, blue_detected, or yellow_detected should only be triggered from clear/path-clear decision states.",
+    "Do not let color-detected events transition directly out of obs_front, obs_left, obs_right, recovery, scan, or commit states; those states must handle obstacle events first.",
 ]
 
 RED_TASK_CONSTRAINTS = [
