@@ -66,6 +66,7 @@ public:
     hold_ms_ = this->declare_parameter<int>("hold_ms", 250);
     show_debug_ = this->declare_parameter<bool>("show_debug", false);
     color_debug_log_ = this->declare_parameter<bool>("color_debug_log", false);
+    ignore_color_for_zones_ = this->declare_parameter<bool>("ignore_color_for_zones", true);
     clear_skip_ = this->declare_parameter<int>("clear_skip", 3);
     safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 5);
 
@@ -266,6 +267,7 @@ private:
     const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
     cv::morphologyEx(green_mask, green_mask, cv::MORPH_OPEN, kernel);
     cv::morphologyEx(yellow_mask, yellow_mask, cv::MORPH_OPEN, kernel);
+    updateColorZoneIgnoreMask(bgr.size(), green_roi, green_mask, color_roi, yellow_mask);
 
     const double green_image_area = static_cast<double>(hsv_green_roi.rows * hsv_green_roi.cols);
     const double yellow_image_area = static_cast<double>(hsv_color_roi.rows * hsv_color_roi.cols);
@@ -322,6 +324,24 @@ private:
     const int y1 = static_cast<int>(std::round(std::clamp(y1_frac, 0.01, 1.0) * image.rows));
     const int top = std::min(y0, image.rows - 1);
     return cv::Rect(0, top, image.cols, std::max(1, std::min(y1, image.rows) - top));
+  }
+
+  void updateColorZoneIgnoreMask(
+    const cv::Size & image_size,
+    const cv::Rect & green_roi,
+    const cv::Mat & green_mask,
+    const cv::Rect & yellow_roi,
+    const cv::Mat & yellow_mask)
+  {
+    color_zone_ignore_mask_ = cv::Mat::zeros(image_size, CV_8UC1);
+    if (green_detection_enabled_) {
+      green_mask.copyTo(color_zone_ignore_mask_(green_roi), green_mask);
+    }
+    if (yellow_detection_enabled_) {
+      yellow_mask.copyTo(color_zone_ignore_mask_(yellow_roi), yellow_mask);
+    }
+    const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
+    cv::dilate(color_zone_ignore_mask_, color_zone_ignore_mask_, kernel);
   }
 
   void publishColorDetection(bool green_detected, bool yellow_detected)
@@ -414,15 +434,30 @@ private:
       std::max({left_enter_thresh_, left_exit_thresh_, side_enter_thresh_, side_exit_thresh_}));
     const float right_near_thr = static_cast<float>(
       std::max({right_enter_thresh_, right_exit_thresh_, side_enter_thresh_, side_exit_thresh_}));
-    zs.left = roiStats(depth, left, percentile_, stride_, left_near_thr);
-    zs.front = roiStats(depth, front, percentile_, stride_, front_near_thr);
-    zs.right = roiStats(depth, right, percentile_, stride_, right_near_thr);
+
+    cv::Mat zone_ignore_mask;
+    if (ignore_color_for_zones_ && !color_zone_ignore_mask_.empty()) {
+      if (color_zone_ignore_mask_.size() == depth.size()) {
+        zone_ignore_mask = color_zone_ignore_mask_;
+      } else {
+        cv::resize(color_zone_ignore_mask_, zone_ignore_mask, depth.size(), 0.0, 0.0, cv::INTER_NEAREST);
+      }
+    }
+
+    zs.left = roiStats(depth, left, percentile_, stride_, left_near_thr, zone_ignore_mask);
+    zs.front = roiStats(depth, front, percentile_, stride_, front_near_thr, zone_ignore_mask);
+    zs.right = roiStats(depth, right, percentile_, stride_, right_near_thr, zone_ignore_mask);
 
     return zs;
   }
 
   RoiStats roiStats(
-    const cv::Mat & depth, const cv::Rect & roi, double percentile, int stride, float near_thresh)
+    const cv::Mat & depth,
+    const cv::Rect & roi,
+    double percentile,
+    int stride,
+    float near_thresh,
+    const cv::Mat & ignore_mask)
   {
     std::vector<float> vals;
     const int st = std::max(1, stride);
@@ -436,7 +471,11 @@ private:
 
     for (int y = roi.y; y < roi.y + roi.height; y += st) {
       const float * row = depth.ptr<float>(y);
+      const uchar * ignore_row = ignore_mask.empty() ? nullptr : ignore_mask.ptr<uchar>(y);
       for (int x = roi.x; x < roi.x + roi.width; x += st) {
+        if (ignore_row != nullptr && ignore_row[x] != 0) {
+          continue;
+        }
         float d = row[x];
         if (std::isfinite(d) && d > min_d && d < max_d) {
           valid_cnt++;
@@ -603,6 +642,7 @@ private:
   int hold_ms_{250};
   bool show_debug_{false};
   bool color_debug_log_{false};
+  bool ignore_color_for_zones_{true};
   int clear_skip_{1};
   int clear_skip_counter_{0};
 
@@ -630,6 +670,7 @@ private:
   double color_roi_y1_frac_{1.0};
   double green_crop_y0_frac_{0.0};
   double green_crop_y1_frac_{1.0};
+  cv::Mat color_zone_ignore_mask_;
 
   bool green_detected_{false};
   bool yellow_detected_{false};
