@@ -72,6 +72,7 @@ public:
     rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", rgb_topic_);
     green_detection_enabled_ = this->declare_parameter<bool>("green_detection_enabled", true);
     cyan_detection_enabled_ = this->declare_parameter<bool>("cyan_detection_enabled", true);
+    color_detect_hold_ms_ = this->declare_parameter<int>("color_detect_hold_ms", 800);
     color_min_area_ratio_ = this->declare_parameter<double>("color_min_area_ratio", 0.01);
     color_saturation_min_ = this->declare_parameter<int>("color_saturation_min", 50);
     color_value_min_ = this->declare_parameter<int>("color_value_min", 60);
@@ -99,6 +100,8 @@ public:
     last_state_ = "CLEAR";
     last_non_clear_zone_ = "CORNER";
     last_non_clear_time_ = now;
+    last_green_seen_time_ = now - rclcpp::Duration::from_seconds(3600.0);
+    last_cyan_seen_time_ = now - rclcpp::Duration::from_seconds(3600.0);
   }
 
 private:
@@ -263,19 +266,32 @@ private:
       std::max(1.0, std::clamp(green_min_area_ratio_, 0.0, 1.0) * image_area);
     const double cyan_min_area =
       std::max(1.0, std::clamp(cyan_min_area_ratio_, 0.0, 1.0) * image_area);
-    const bool green_detected =
+    const bool green_seen =
       green_detection_enabled_ && static_cast<double>(green_area_px) >= green_min_area;
-    const bool cyan_detected =
+    const bool cyan_seen =
       cyan_detection_enabled_ && static_cast<double>(cyan_area_px) >= cyan_min_area;
+    const auto now = clock_->now();
+    if (green_seen) {
+      last_green_seen_time_ = now;
+    }
+    if (cyan_seen) {
+      last_cyan_seen_time_ = now;
+    }
+    const auto hold = rclcpp::Duration::from_nanoseconds(
+      static_cast<int64_t>(std::max(0, color_detect_hold_ms_)) * 1000000LL);
+    const bool green_detected = green_detection_enabled_ && (now - last_green_seen_time_) <= hold;
+    const bool cyan_detected = cyan_detection_enabled_ && (now - last_cyan_seen_time_) <= hold;
 
     if (color_debug_log_) {
       RCLCPP_INFO_THROTTLE(
         this->get_logger(), *this->get_clock(), 1000,
-        "color mask ratios green=%.4f/%0.4f cyan=%.4f/%0.4f detected green=%s cyan=%s",
+        "color mask ratios green=%.4f/%0.4f cyan=%.4f/%0.4f seen green=%s cyan=%s held green=%s cyan=%s",
         static_cast<double>(green_area_px) / std::max(1.0, image_area),
         std::clamp(green_min_area_ratio_, 0.0, 1.0),
         static_cast<double>(cyan_area_px) / std::max(1.0, image_area),
         std::clamp(cyan_min_area_ratio_, 0.0, 1.0),
+        green_seen ? "true" : "false",
+        cyan_seen ? "true" : "false",
         green_detected ? "true" : "false",
         cyan_detected ? "true" : "false");
     }
@@ -579,6 +595,7 @@ private:
   std::string rgb_topic_{"camera/camera/color/image_raw"};
   bool green_detection_enabled_{true};
   bool cyan_detection_enabled_{true};
+  int color_detect_hold_ms_{800};
   double color_min_area_ratio_{0.01};
   int color_saturation_min_{50};
   int color_value_min_{60};
@@ -595,6 +612,8 @@ private:
 
   bool green_detected_{false};
   bool cyan_detected_{false};
+  rclcpp::Time last_green_seen_time_;
+  rclcpp::Time last_cyan_seen_time_;
   std::string current_zone_{"CLEAR"};
 
   std::string last_state_{"CLEAR"};

@@ -55,6 +55,7 @@ image_processor:
     # if background/lighting is incorrectly classified as cyan.
     green_detection_enabled: true
     cyan_detection_enabled: true
+    color_detect_hold_ms: 800
     color_debug_log: false
     color_min_area_ratio: 0.01
     color_saturation_min: 50
@@ -65,11 +66,11 @@ image_processor:
     green_hue_min: 38
     green_hue_max: 86
     # The "cyan" supervisor event is detected from the pastel yellow #FFFAA0 target.
-    cyan_min_area_ratio: 0.03
-    cyan_saturation_min: 60
-    cyan_value_min: 150
-    cyan_hue_min: 24
-    cyan_hue_max: 34
+    cyan_min_area_ratio: 0.01
+    cyan_saturation_min: 25
+    cyan_value_min: 110
+    cyan_hue_min: 18
+    cyan_hue_max: 40
 
 image_processor_rgb:
   ros__parameters:
@@ -110,6 +111,7 @@ image_processor_rgb:
     aruco_adaptive_thresh_win_step: 4
     green_detection_enabled: true
     cyan_detection_enabled: true
+    color_detect_hold_ms: 800
     color_debug_log: false
     color_min_area_ratio: 0.01
     color_saturation_min: 50
@@ -120,8 +122,8 @@ image_processor_rgb:
     green_hue_min: 38
     green_hue_max: 86
     # The "cyan" supervisor event is detected from the pastel yellow #FFFAA0 target.
-    cyan_min_area_ratio: 0.03
-    cyan_saturation_min: 60
-    cyan_value_min: 150
-    cyan_hue_min: 24
-    cyan_hue_max: 34
+    cyan_min_area_ratio: 0.01
+    cyan_saturation_min: 25
+    cyan_value_min: 110
+    cyan_hue_min: 18
+    cyan_hue_max: 40
