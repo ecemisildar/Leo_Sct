@@ -86,6 +86,8 @@ public:
     green_hue_max_ = this->declare_parameter<int>("green_hue_max", 85);
     cyan_hue_min_ = this->declare_parameter<int>("cyan_hue_min", 85);
     cyan_hue_max_ = this->declare_parameter<int>("cyan_hue_max", 105);
+    color_roi_y0_frac_ = this->declare_parameter<double>("color_roi_y0_frac", 0.0);
+    color_roi_y1_frac_ = this->declare_parameter<double>("color_roi_y1_frac", 1.0);
 
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
@@ -236,6 +238,16 @@ private:
 
     cv::Mat hsv;
     cv::cvtColor(bgr, hsv, cv::COLOR_BGR2HSV);
+    const int color_y0 = static_cast<int>(
+      std::round(std::clamp(color_roi_y0_frac_, 0.0, 0.99) * hsv.rows));
+    const int color_y1 = static_cast<int>(
+      std::round(std::clamp(color_roi_y1_frac_, 0.01, 1.0) * hsv.rows));
+    const cv::Rect color_roi(
+      0,
+      std::min(color_y0, hsv.rows - 1),
+      hsv.cols,
+      std::max(1, std::min(color_y1, hsv.rows) - std::min(color_y0, hsv.rows - 1)));
+    const cv::Mat hsv_roi = hsv(color_roi);
 
     const int green_sat_min = std::clamp(green_saturation_min_, 0, 255);
     const int cyan_sat_min = std::clamp(cyan_saturation_min_, 0, 255);
@@ -245,12 +257,12 @@ private:
     cv::Mat cyan_mask;
 
     cv::inRange(
-      hsv,
+      hsv_roi,
       cv::Scalar(std::clamp(green_hue_min_, 0, 179), green_sat_min, green_val_min),
       cv::Scalar(std::clamp(green_hue_max_, 0, 179), 255, 255),
       green_mask);
     cv::inRange(
-      hsv,
+      hsv_roi,
       cv::Scalar(std::clamp(cyan_hue_min_, 0, 179), cyan_sat_min, cyan_val_min),
       cv::Scalar(std::clamp(cyan_hue_max_, 0, 179), 255, 255),
       cyan_mask);
@@ -259,7 +271,7 @@ private:
     cv::morphologyEx(green_mask, green_mask, cv::MORPH_OPEN, kernel);
     cv::morphologyEx(cyan_mask, cyan_mask, cv::MORPH_OPEN, kernel);
 
-    const double image_area = static_cast<double>(bgr.rows * bgr.cols);
+    const double image_area = static_cast<double>(hsv_roi.rows * hsv_roi.cols);
     const int green_area_px = cv::countNonZero(green_mask);
     const int cyan_area_px = cv::countNonZero(cyan_mask);
     const double green_min_area =
@@ -300,8 +312,8 @@ private:
 
     if (show_debug_) {
       cv::Mat color_vis = bgr.clone();
-      color_vis.setTo(cv::Scalar(0, 255, 0), green_mask);
-      color_vis.setTo(cv::Scalar(160, 250, 255), cyan_mask);
+      color_vis(color_roi).setTo(cv::Scalar(0, 255, 0), green_mask);
+      color_vis(color_roi).setTo(cv::Scalar(160, 250, 255), cyan_mask);
       cv::imshow("Color detection (debug)", color_vis);
       cv::waitKey(1);
     }
@@ -609,6 +621,8 @@ private:
   int green_hue_max_{85};
   int cyan_hue_min_{85};
   int cyan_hue_max_{105};
+  double color_roi_y0_frac_{0.0};
+  double color_roi_y1_frac_{1.0};
 
   bool green_detected_{false};
   bool cyan_detected_{false};
