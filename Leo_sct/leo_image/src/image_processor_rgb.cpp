@@ -376,26 +376,16 @@ private:
 
   std::string detectedZoneMessage(const std::string & obstacle_zone) const
   {
-    std::vector<std::string> tokens;
     if (obstacle_zone == "LEFT" || obstacle_zone == "RIGHT" || obstacle_zone == "CORNER") {
-      tokens.push_back(obstacle_zone);
+      return obstacle_zone;
     }
     if (green_detected_) {
-      tokens.push_back("GREEN");
+      return "GREEN";
     }
     if (yellow_detected_) {
-      tokens.push_back("yellow");
+      return "yellow";
     }
-    if (tokens.empty()) {
-      return "CLEAR";
-    }
-
-    std::string out = tokens.front();
-    for (size_t i = 1; i < tokens.size(); ++i) {
-      out += ",";
-      out += tokens[i];
-    }
-    return out;
+    return "CLEAR";
   }
 
   ZoneStats computeZoneStats(const cv::Mat & depth)
