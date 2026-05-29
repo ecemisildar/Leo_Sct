@@ -65,6 +65,7 @@ public:
 
     hold_ms_ = this->declare_parameter<int>("hold_ms", 250);
     show_debug_ = this->declare_parameter<bool>("show_debug", false);
+    color_debug_log_ = this->declare_parameter<bool>("color_debug_log", false);
     clear_skip_ = this->declare_parameter<int>("clear_skip", 3);
     safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 5);
 
@@ -74,6 +75,12 @@ public:
     color_min_area_ratio_ = this->declare_parameter<double>("color_min_area_ratio", 0.01);
     color_saturation_min_ = this->declare_parameter<int>("color_saturation_min", 50);
     color_value_min_ = this->declare_parameter<int>("color_value_min", 60);
+    green_min_area_ratio_ = this->declare_parameter<double>("green_min_area_ratio", color_min_area_ratio_);
+    cyan_min_area_ratio_ = this->declare_parameter<double>("cyan_min_area_ratio", color_min_area_ratio_);
+    green_saturation_min_ = this->declare_parameter<int>("green_saturation_min", color_saturation_min_);
+    cyan_saturation_min_ = this->declare_parameter<int>("cyan_saturation_min", color_saturation_min_);
+    green_value_min_ = this->declare_parameter<int>("green_value_min", color_value_min_);
+    cyan_value_min_ = this->declare_parameter<int>("cyan_value_min", color_value_min_);
     green_hue_min_ = this->declare_parameter<int>("green_hue_min", 40);
     green_hue_max_ = this->declare_parameter<int>("green_hue_max", 85);
     cyan_hue_min_ = this->declare_parameter<int>("cyan_hue_min", 85);
@@ -227,19 +234,21 @@ private:
     cv::Mat hsv;
     cv::cvtColor(bgr, hsv, cv::COLOR_BGR2HSV);
 
-    const int sat_min = std::clamp(color_saturation_min_, 0, 255);
-    const int val_min = std::clamp(color_value_min_, 0, 255);
+    const int green_sat_min = std::clamp(green_saturation_min_, 0, 255);
+    const int cyan_sat_min = std::clamp(cyan_saturation_min_, 0, 255);
+    const int green_val_min = std::clamp(green_value_min_, 0, 255);
+    const int cyan_val_min = std::clamp(cyan_value_min_, 0, 255);
     cv::Mat green_mask;
     cv::Mat cyan_mask;
 
     cv::inRange(
       hsv,
-      cv::Scalar(std::clamp(green_hue_min_, 0, 179), sat_min, val_min),
+      cv::Scalar(std::clamp(green_hue_min_, 0, 179), green_sat_min, green_val_min),
       cv::Scalar(std::clamp(green_hue_max_, 0, 179), 255, 255),
       green_mask);
     cv::inRange(
       hsv,
-      cv::Scalar(std::clamp(cyan_hue_min_, 0, 179), sat_min, val_min),
+      cv::Scalar(std::clamp(cyan_hue_min_, 0, 179), cyan_sat_min, cyan_val_min),
       cv::Scalar(std::clamp(cyan_hue_max_, 0, 179), 255, 255),
       cyan_mask);
 
@@ -250,11 +259,26 @@ private:
     const double image_area = static_cast<double>(bgr.rows * bgr.cols);
     const int green_area_px = cv::countNonZero(green_mask);
     const int cyan_area_px = cv::countNonZero(cyan_mask);
-    const double min_area = std::max(1.0, std::clamp(color_min_area_ratio_, 0.0, 1.0) * image_area);
+    const double green_min_area =
+      std::max(1.0, std::clamp(green_min_area_ratio_, 0.0, 1.0) * image_area);
+    const double cyan_min_area =
+      std::max(1.0, std::clamp(cyan_min_area_ratio_, 0.0, 1.0) * image_area);
     const bool green_detected =
-      green_detection_enabled_ && static_cast<double>(green_area_px) >= min_area;
+      green_detection_enabled_ && static_cast<double>(green_area_px) >= green_min_area;
     const bool cyan_detected =
-      cyan_detection_enabled_ && static_cast<double>(cyan_area_px) >= min_area;
+      cyan_detection_enabled_ && static_cast<double>(cyan_area_px) >= cyan_min_area;
+
+    if (color_debug_log_) {
+      RCLCPP_INFO_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "color mask ratios green=%.4f/%0.4f cyan=%.4f/%0.4f detected green=%s cyan=%s",
+        static_cast<double>(green_area_px) / std::max(1.0, image_area),
+        std::clamp(green_min_area_ratio_, 0.0, 1.0),
+        static_cast<double>(cyan_area_px) / std::max(1.0, image_area),
+        std::clamp(cyan_min_area_ratio_, 0.0, 1.0),
+        green_detected ? "true" : "false",
+        cyan_detected ? "true" : "false");
+    }
 
     publishColorDetection(green_detected, cyan_detected);
 
@@ -545,6 +569,7 @@ private:
 
   int hold_ms_{250};
   bool show_debug_{false};
+  bool color_debug_log_{false};
   int clear_skip_{1};
   int clear_skip_counter_{0};
 
@@ -557,6 +582,12 @@ private:
   double color_min_area_ratio_{0.01};
   int color_saturation_min_{50};
   int color_value_min_{60};
+  double green_min_area_ratio_{0.01};
+  double cyan_min_area_ratio_{0.01};
+  int green_saturation_min_{50};
+  int cyan_saturation_min_{50};
+  int green_value_min_{60};
+  int cyan_value_min_{60};
   int green_hue_min_{40};
   int green_hue_max_{85};
   int cyan_hue_min_{85};
