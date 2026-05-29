@@ -88,6 +88,8 @@ public:
     yellow_hue_max_ = this->declare_parameter<int>("yellow_hue_max", 42);
     color_roi_y0_frac_ = this->declare_parameter<double>("color_roi_y0_frac", 0.0);
     color_roi_y1_frac_ = this->declare_parameter<double>("color_roi_y1_frac", 1.0);
+    green_crop_y0_frac_ = this->declare_parameter<double>("green_crop_y0_frac", color_roi_y0_frac_);
+    green_crop_y1_frac_ = this->declare_parameter<double>("green_crop_y1_frac", color_roi_y1_frac_);
 
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
@@ -238,16 +240,10 @@ private:
 
     cv::Mat hsv;
     cv::cvtColor(bgr, hsv, cv::COLOR_BGR2HSV);
-    const int color_y0 = static_cast<int>(
-      std::round(std::clamp(color_roi_y0_frac_, 0.0, 0.99) * hsv.rows));
-    const int color_y1 = static_cast<int>(
-      std::round(std::clamp(color_roi_y1_frac_, 0.01, 1.0) * hsv.rows));
-    const cv::Rect color_roi(
-      0,
-      std::min(color_y0, hsv.rows - 1),
-      hsv.cols,
-      std::max(1, std::min(color_y1, hsv.rows) - std::min(color_y0, hsv.rows - 1)));
-    const cv::Mat hsv_roi = hsv(color_roi);
+    const cv::Rect color_roi = verticalImageRoi(hsv, color_roi_y0_frac_, color_roi_y1_frac_);
+    const cv::Rect green_roi = verticalImageRoi(hsv, green_crop_y0_frac_, green_crop_y1_frac_);
+    const cv::Mat hsv_color_roi = hsv(color_roi);
+    const cv::Mat hsv_green_roi = hsv(green_roi);
 
     const int green_sat_min = std::clamp(green_saturation_min_, 0, 255);
     const int yellow_sat_min = std::clamp(yellow_saturation_min_, 0, 255);
@@ -257,12 +253,12 @@ private:
     cv::Mat yellow_mask;
 
     cv::inRange(
-      hsv_roi,
+      hsv_green_roi,
       cv::Scalar(std::clamp(green_hue_min_, 0, 179), green_sat_min, green_val_min),
       cv::Scalar(std::clamp(green_hue_max_, 0, 179), 255, 255),
       green_mask);
     cv::inRange(
-      hsv_roi,
+      hsv_color_roi,
       cv::Scalar(std::clamp(yellow_hue_min_, 0, 179), yellow_sat_min, yellow_val_min),
       cv::Scalar(std::clamp(yellow_hue_max_, 0, 179), 255, 255),
       yellow_mask);
@@ -271,13 +267,14 @@ private:
     cv::morphologyEx(green_mask, green_mask, cv::MORPH_OPEN, kernel);
     cv::morphologyEx(yellow_mask, yellow_mask, cv::MORPH_OPEN, kernel);
 
-    const double image_area = static_cast<double>(hsv_roi.rows * hsv_roi.cols);
+    const double green_image_area = static_cast<double>(hsv_green_roi.rows * hsv_green_roi.cols);
+    const double yellow_image_area = static_cast<double>(hsv_color_roi.rows * hsv_color_roi.cols);
     const int green_area_px = cv::countNonZero(green_mask);
     const int yellow_area_px = cv::countNonZero(yellow_mask);
     const double green_min_area =
-      std::max(1.0, std::clamp(green_min_area_ratio_, 0.0, 1.0) * image_area);
+      std::max(1.0, std::clamp(green_min_area_ratio_, 0.0, 1.0) * green_image_area);
     const double yellow_min_area =
-      std::max(1.0, std::clamp(yellow_min_area_ratio_, 0.0, 1.0) * image_area);
+      std::max(1.0, std::clamp(yellow_min_area_ratio_, 0.0, 1.0) * yellow_image_area);
     const bool green_seen =
       green_detection_enabled_ && static_cast<double>(green_area_px) >= green_min_area;
     const bool yellow_seen =
@@ -298,9 +295,9 @@ private:
       RCLCPP_INFO_THROTTLE(
         this->get_logger(), *this->get_clock(), 1000,
         "color mask ratios green=%.4f/%0.4f yellow=%.4f/%0.4f seen green=%s yellow=%s held green=%s yellow=%s",
-        static_cast<double>(green_area_px) / std::max(1.0, image_area),
+        static_cast<double>(green_area_px) / std::max(1.0, green_image_area),
         std::clamp(green_min_area_ratio_, 0.0, 1.0),
-        static_cast<double>(yellow_area_px) / std::max(1.0, image_area),
+        static_cast<double>(yellow_area_px) / std::max(1.0, yellow_image_area),
         std::clamp(yellow_min_area_ratio_, 0.0, 1.0),
         green_seen ? "true" : "false",
         yellow_seen ? "true" : "false",
@@ -312,11 +309,19 @@ private:
 
     if (show_debug_) {
       cv::Mat color_vis = bgr.clone();
-      color_vis(color_roi).setTo(cv::Scalar(0, 255, 0), green_mask);
+      color_vis(green_roi).setTo(cv::Scalar(0, 255, 0), green_mask);
       color_vis(color_roi).setTo(cv::Scalar(160, 250, 255), yellow_mask);
       cv::imshow("Color detection (debug)", color_vis);
       cv::waitKey(1);
     }
+  }
+
+  cv::Rect verticalImageRoi(const cv::Mat & image, double y0_frac, double y1_frac) const
+  {
+    const int y0 = static_cast<int>(std::round(std::clamp(y0_frac, 0.0, 0.99) * image.rows));
+    const int y1 = static_cast<int>(std::round(std::clamp(y1_frac, 0.01, 1.0) * image.rows));
+    const int top = std::min(y0, image.rows - 1);
+    return cv::Rect(0, top, image.cols, std::max(1, std::min(y1, image.rows) - top));
   }
 
   void publishColorDetection(bool green_detected, bool yellow_detected)
@@ -623,6 +628,8 @@ private:
   int yellow_hue_max_{105};
   double color_roi_y0_frac_{0.0};
   double color_roi_y1_frac_{1.0};
+  double green_crop_y0_frac_{0.0};
+  double green_crop_y1_frac_{1.0};
 
   bool green_detected_{false};
   bool yellow_detected_{false};
