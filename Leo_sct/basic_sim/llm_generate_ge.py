@@ -48,7 +48,6 @@ DEFAULT_CONTROLLABLE = [
     "rotate_clockwise",
     "rotate_counterclockwise",
     "full_rotate",
-    "stop",
 ]
 
 DEFAULT_UNCONTROLLABLE = [
@@ -638,7 +637,6 @@ def warn_for_real_robot_events(yaml_payload: dict, yaml_path: Path) -> None:
         "EV_rotate_clockwise",
         "EV_rotate_counterclockwise",
         "EV_full_rotate",
-        "EV_stop",
         "EV_random_walk",
         "EV_go_to_red",
         "EV_escape_blue",
