@@ -11,6 +11,7 @@ class SCT:
         self.input_buffer = None # Clear content after timestep
         self.last_events = [0] * len(self.EV)
         self.last_triggered_events = []
+        self.preferred_controllable_event = None
 
 
     def read_supervisor(self, filename):
@@ -125,6 +126,13 @@ class SCT:
         actives = self.get_active_controllable_events()
         
         if not all(v == 0 for v in actives):
+            if (
+                self.preferred_controllable_event is not None
+                and 0 <= self.preferred_controllable_event < self.num_events
+                and actives[self.preferred_controllable_event]
+            ):
+                return True, self.preferred_controllable_event
+
             randomPos = random.randint(0,1000000000) % actives.count(1)
             for i in range(0, self.num_events):
                 if not randomPos and actives[i]:
