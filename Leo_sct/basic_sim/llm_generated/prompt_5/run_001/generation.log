@@ -1,0 +1,27 @@
+Writing generation outputs to /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001
+Writing generation log to /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/generation.log
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/full_prompt.txt
+Parsing transitions as string tuples.
+Parsing transitions as string tuples.
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/user_prompt.txt
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/json/basic_sim_ge.json
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/json/G.json
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/json/E.json
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/xml/G.xml
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/xml/E.xml
+
+Synthesizing Sloc...
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/synthesized/Gloc.xml
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/synthesized/Kloc.xml
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/synthesized/Sloc.xml
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/synthesized/Sloc.yaml
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/leo_real/config/prompt_5_run_001.yaml
+Wrote /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/leo_real/config/sup_gpt.yaml
+
+Next step:
+  python3 basic_sim/grid_sim.py --automata /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/basic_sim/llm_generated/prompt_5/run_001/synthesized/Sloc.xml --agents 5
+
+Real robot YAML:
+  /home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/leo_real/config/sup_gpt.yaml
+Use it with the ROS launch argument:
+  ros2 launch leo_real leo_real.launch.py supervisor_yaml_path:=/home/ecem/ros2_real_ws/src/Leo_sct_real/Leo_sct/leo_real/config/sup_gpt.yaml

@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <limits>
 #include <string>
 #include <vector>
@@ -73,6 +74,7 @@ public:
     image_view_enabled_ = this->declare_parameter<bool>("image_view_enabled", false);
     color_debug_log_ = this->declare_parameter<bool>("color_debug_log", false);
     ignore_color_for_zones_ = this->declare_parameter<bool>("ignore_color_for_zones", true);
+    supervisor_yaml_path_ = this->declare_parameter<std::string>("supervisor_yaml_path", "");
     clear_skip_ = this->declare_parameter<int>("clear_skip", 3);
     safe_frames_required_ = this->declare_parameter<int>("safe_frames_required", 5);
 
@@ -102,6 +104,7 @@ public:
     color_roi_y1_frac_ = this->declare_parameter<double>("color_roi_y1_frac", 1.0);
     green_crop_y0_frac_ = this->declare_parameter<double>("green_crop_y0_frac", color_roi_y0_frac_);
     green_crop_y1_frac_ = this->declare_parameter<double>("green_crop_y1_frac", color_roi_y1_frac_);
+    applySupervisorColorMode();
 
     auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
     depth_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
@@ -453,6 +456,36 @@ private:
     }
   }
 
+  void applySupervisorColorMode()
+  {
+    if (supervisor_yaml_path_.empty()) {
+      return;
+    }
+
+    std::ifstream file(supervisor_yaml_path_);
+    if (!file.is_open()) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Could not read supervisor YAML for color mode: %s",
+        supervisor_yaml_path_.c_str());
+      return;
+    }
+
+    const std::string content(
+      (std::istreambuf_iterator<char>(file)),
+      std::istreambuf_iterator<char>());
+    const bool supervisor_uses_color =
+      content.find("EV_green_detected") != std::string::npos ||
+      content.find("EV_purple_detected") != std::string::npos;
+
+    if (!supervisor_uses_color && ignore_color_for_zones_) {
+      ignore_color_for_zones_ = false;
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Supervisor has no color detection events; colored regions will be treated as depth obstacles.");
+    }
+  }
+
   std::string detectedZoneMessage(const std::string & obstacle_zone) const
   {
     if (obstacle_zone == "LEFT" || obstacle_zone == "RIGHT" || obstacle_zone == "CORNER") {
@@ -755,6 +788,7 @@ private:
   bool image_view_enabled_{false};
   bool color_debug_log_{false};
   bool ignore_color_for_zones_{true};
+  std::string supervisor_yaml_path_;
   int clear_skip_{1};
   int clear_skip_counter_{0};
 
