@@ -40,6 +40,7 @@ public:
     green_detected_pub_ = this->create_publisher<std_msgs::msg::Bool>("green_detected", 10);
     yellow_detected_pub_ = this->create_publisher<std_msgs::msg::Bool>("yellow_detected", 10);
     detected_color_pub_ = this->create_publisher<std_msgs::msg::String>("detected_color", 10);
+    image_view_pub_ = this->create_publisher<sensor_msgs::msg::Image>("rgb_camera_live", 10);
 
     enter_thresh_ = this->declare_parameter<double>("enter_thresh", 0.60);
     exit_thresh_ = this->declare_parameter<double>("exit_thresh", 0.80);
@@ -320,9 +321,10 @@ private:
       color_vis(color_roi).setTo(cv::Scalar(160, 250, 255), yellow_mask);
       cv::imshow("Color detection (debug)", color_vis);
       cv::waitKey(1);
-    } else if (image_view_enabled_) {
-      cv::imshow("RGB camera (live)", bgr);
-      cv::waitKey(1);
+    }
+    if (image_view_enabled_) {
+      auto view_msg = cv_bridge::CvImage(rgb_msg->header, "bgr8", bgr).toImageMsg();
+      image_view_pub_->publish(*view_msg);
     }
   }
 
@@ -611,6 +613,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr green_detected_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr yellow_detected_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr detected_color_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_view_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
   rclcpp::Clock::SharedPtr clock_;
