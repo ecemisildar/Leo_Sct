@@ -74,6 +74,8 @@ public:
     green_detection_enabled_ = this->declare_parameter<bool>("green_detection_enabled", true);
     yellow_detection_enabled_ = this->declare_parameter<bool>("yellow_detection_enabled", true);
     color_detect_hold_ms_ = this->declare_parameter<int>("color_detect_hold_ms", 800);
+    green_detect_hold_ms_ = this->declare_parameter<int>("green_detect_hold_ms", color_detect_hold_ms_);
+    yellow_detect_hold_ms_ = this->declare_parameter<int>("yellow_detect_hold_ms", color_detect_hold_ms_);
     color_min_area_ratio_ = this->declare_parameter<double>("color_min_area_ratio", 0.01);
     color_saturation_min_ = this->declare_parameter<int>("color_saturation_min", 50);
     color_value_min_ = this->declare_parameter<int>("color_value_min", 60);
@@ -288,10 +290,12 @@ private:
     if (yellow_seen) {
       last_yellow_seen_time_ = now;
     }
-    const auto hold = rclcpp::Duration::from_nanoseconds(
-      static_cast<int64_t>(std::max(0, color_detect_hold_ms_)) * 1000000LL);
-    const bool green_detected = green_detection_enabled_ && (now - last_green_seen_time_) <= hold;
-    const bool yellow_detected = yellow_detection_enabled_ && (now - last_yellow_seen_time_) <= hold;
+    const auto green_hold = rclcpp::Duration::from_nanoseconds(
+      static_cast<int64_t>(std::max(0, green_detect_hold_ms_)) * 1000000LL);
+    const auto yellow_hold = rclcpp::Duration::from_nanoseconds(
+      static_cast<int64_t>(std::max(0, yellow_detect_hold_ms_)) * 1000000LL);
+    const bool green_detected = green_detection_enabled_ && (now - last_green_seen_time_) <= green_hold;
+    const bool yellow_detected = yellow_detection_enabled_ && (now - last_yellow_seen_time_) <= yellow_hold;
 
     if (color_debug_log_) {
       RCLCPP_INFO_THROTTLE(
@@ -643,6 +647,8 @@ private:
   bool green_detection_enabled_{true};
   bool yellow_detection_enabled_{true};
   int color_detect_hold_ms_{800};
+  int green_detect_hold_ms_{800};
+  int yellow_detect_hold_ms_{800};
   double color_min_area_ratio_{0.01};
   int color_saturation_min_{50};
   int color_value_min_{60};
