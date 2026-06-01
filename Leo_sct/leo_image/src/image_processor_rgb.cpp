@@ -65,6 +65,7 @@ public:
 
     hold_ms_ = this->declare_parameter<int>("hold_ms", 250);
     show_debug_ = this->declare_parameter<bool>("show_debug", false);
+    image_view_enabled_ = this->declare_parameter<bool>("image_view_enabled", false);
     color_debug_log_ = this->declare_parameter<bool>("color_debug_log", false);
     ignore_color_for_zones_ = this->declare_parameter<bool>("ignore_color_for_zones", true);
     clear_skip_ = this->declare_parameter<int>("clear_skip", 3);
@@ -318,6 +319,9 @@ private:
       color_vis(green_roi).setTo(cv::Scalar(0, 255, 0), green_mask);
       color_vis(color_roi).setTo(cv::Scalar(160, 250, 255), yellow_mask);
       cv::imshow("Color detection (debug)", color_vis);
+      cv::waitKey(1);
+    } else if (image_view_enabled_) {
+      cv::imshow("RGB camera (live)", bgr);
       cv::waitKey(1);
     }
   }
@@ -635,6 +639,7 @@ private:
 
   int hold_ms_{250};
   bool show_debug_{false};
+  bool image_view_enabled_{false};
   bool color_debug_log_{false};
   bool ignore_color_for_zones_{true};
   int clear_skip_{1};

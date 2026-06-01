@@ -121,6 +121,9 @@ class RobotSupervisor(Node):
 
         self.enabled = bool(self.declare_parameter("enabled", False).value)
         self.static_mode = bool(self.declare_parameter("static", False).value)
+        self.routine_logging_enabled = bool(
+            self.declare_parameter("routine_logging_enabled", False).value
+        )
         
 
         # -------------------------------
@@ -140,6 +143,7 @@ class RobotSupervisor(Node):
         self.perception_tokens = {"CLEAR"}
         self.last_zone_update = 0.0
         self.last_logged_zone = "CLEAR"
+        self.green_logged_active = False
     
 
         # Odom / yaw tracking for full-rotate
@@ -211,6 +215,10 @@ class RobotSupervisor(Node):
             "EV_full_rotate": ActionSpec(linear_x=0.0, angular_z=self.full_rotate_omega, is_full_rotate=True),
         }
 
+    def _routine_info(self, message: str):
+        if self.routine_logging_enabled:
+            self.get_logger().info(message)
+
     def _canonical_mission_name(self, mission: str) -> str:
         key = str(mission or "").strip().lower().replace("-", "_").replace(" ", "_")
         if key != "explore":
@@ -275,7 +283,7 @@ class RobotSupervisor(Node):
             config_path = self.explicit_yaml_path
             self._load_sct_from_yaml(config_path)
             self.current_yaml_path = config_path
-            self.get_logger().info(
+            self._routine_info(
                 f"Loaded initial mission '{self.current_mission}' from explicit YAML {os.path.basename(config_path)}"
             )
             return
@@ -289,7 +297,7 @@ class RobotSupervisor(Node):
         config_path = paths[0]
         self._load_sct_from_yaml(config_path)
         self.current_yaml_path = config_path
-        self.get_logger().info(
+        self._routine_info(
             f"Loaded initial mission '{self.current_mission}' from {os.path.basename(config_path)}"
         )
 
@@ -308,7 +316,7 @@ class RobotSupervisor(Node):
         self.current_mission = mission_key
         self.current_yaml_path = config_path
         self._last_printed_sup_states = None
-        self.get_logger().info(
+        self._routine_info(
             f"Switched mission to '{mission_key}' using {os.path.basename(config_path)}"
         )
         return True, os.path.basename(config_path)
@@ -363,10 +371,10 @@ class RobotSupervisor(Node):
         else:
             self.obstacle_zones = ["CLEAR"]
 
-        zone_text = ",".join(sorted(tokens))
-        if zone_text != self.last_logged_zone:
-            self.get_logger().info(f"Detected zones changed to {zone_text}")
-            self.last_logged_zone = zone_text
+        green_active = "GREEN" in tokens
+        if green_active and not self.green_logged_active:
+            self.get_logger().info("Green detected")
+        self.green_logged_active = green_active
 
    
     def _parse_zone_tokens(self, text: str) -> set[str]:
@@ -544,7 +552,7 @@ class RobotSupervisor(Node):
         twist.linear.x = 0.0
         twist.angular.z = omega
         self.active_twist = twist
-        self.get_logger().info(
+        self._routine_info(
             "Starting FULL ROTATE "
             f"(omega={omega:.3f}, have_odom={self.have_odom}, "
             f"target_rad={self.full_rotate_target_rad:.3f}, timeout_s={self.full_rotate_timeout_s:.3f})"
@@ -558,14 +566,14 @@ class RobotSupervisor(Node):
         now = time.time()
         if (now - self.full_rotate_started_at) > self.full_rotate_timeout_s:
             # timeout safety
-            self.get_logger().info("FULL ROTATE completed by timeout")
+            self._routine_info("FULL ROTATE completed by timeout")
             return True
 
         if not self.have_odom or self.full_rotate_using_timed_fallback:
             # timed fallback uses motion_until
             done = now >= self.motion_until
             if done:
-                self.get_logger().info("FULL ROTATE completed by timed fallback")
+                self._routine_info("FULL ROTATE completed by timed fallback")
             return done
 
         # integrate yaw delta each tick (and keep publishing until done)
@@ -584,7 +592,7 @@ class RobotSupervisor(Node):
             dur = min(remaining / omega, self.full_rotate_timeout_s)
             self.motion_until = now + dur
             self.full_rotate_using_timed_fallback = True
-            self.get_logger().info(
+            self._routine_info(
                 "FULL ROTATE switching to timed fallback "
                 f"(accum_rad={self.full_rotate_accum:.3f}, remaining_rad={remaining:.3f}, "
                 f"stall_count={self.full_rotate_stall_count}, fallback_s={dur:.3f})"
@@ -592,7 +600,7 @@ class RobotSupervisor(Node):
 
         done = self.full_rotate_accum >= self.full_rotate_target_rad
         if done:
-            self.get_logger().info(
+            self._routine_info(
                 f"FULL ROTATE completed by odom (accum_rad={self.full_rotate_accum:.3f})"
             )
         return done
@@ -655,7 +663,7 @@ class RobotSupervisor(Node):
         if ev_name in ("EV_rotate_clockwise", "EV_rotate_counterclockwise"):
             now = time.time()
             if (now - self.last_rotate_90_completed_at) < self.rotate_90_retrigger_block_s:
-                self.get_logger().info("rotate_90 blocked by recent completion; stopping this tick")
+                self._routine_info("rotate_90 blocked by recent completion; stopping this tick")
                 self.active_event = None
                 self.motion_until = 0.0
                 self._publish_stop()
@@ -667,14 +675,14 @@ class RobotSupervisor(Node):
         if spec.is_full_rotate:
             now = time.time()
             if (now - self.last_full_rotate_completed_at) < self.full_rotate_retrigger_block_s:
-                self.get_logger().info("full_rotate blocked by recent completion; stopping this tick")
+                self._routine_info("full_rotate blocked by recent completion; stopping this tick")
                 self.active_event = None
                 self.motion_until = 0.0
                 self._publish_stop()
                 return
             # Cooldown: prevent repeated "scan in place" when we're stuck in obs_front
             if now < self.block_full_rotate_until:
-                self.get_logger().info("full_rotate blocked by cooldown; stopping this tick")
+                self._routine_info("full_rotate blocked by cooldown; stopping this tick")
                 self.active_event = None
                 self.motion_until = 0.0
                 self._publish_stop()
@@ -712,7 +720,7 @@ class RobotSupervisor(Node):
 
         # If we’re in the middle of a true full_rotate, keep executing until complete.
         if self.full_rotate_active:
-            self.get_logger().info(
+            self._routine_info(
                 "FULL ROTATE active "
                 f"(accum_rad={self.full_rotate_accum:.3f}, "
                 f"timed_fallback={self.full_rotate_using_timed_fallback}, "
@@ -724,7 +732,7 @@ class RobotSupervisor(Node):
                 self.full_rotate_active = False
                 self.last_full_rotate_completed_at = now
                 self._enter_post_turn_settle(now)
-                self.get_logger().info(
+                self._routine_info(
                     "FULL ROTATE stopped; supervisor will select next event next tick"
                 )
             return
@@ -762,7 +770,7 @@ class RobotSupervisor(Node):
             self._publish_stop()
             return
 
-        self.get_logger().info(f"Selected controllable event: {ev_name}")
+        self._routine_info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
 
 
