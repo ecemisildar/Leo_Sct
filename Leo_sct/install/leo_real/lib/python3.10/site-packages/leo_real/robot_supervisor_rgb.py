@@ -171,6 +171,8 @@ class RobotSupervisor(Node):
         self.active_event: Optional[str] = None
         self.active_twist = Twist()
         self.motion_until = 0.0
+        self.last_perception_signature: Optional[Tuple[Tuple[str, ...], Tuple[str, ...]]] = None
+        self.last_selected_controllable_id: Optional[int] = None
 
         # Full-rotate mode bookkeeping
         self.full_rotate_active = False
@@ -235,6 +237,9 @@ class RobotSupervisor(Node):
     def _routine_info(self, message: str):
         if self.routine_logging_enabled:
             self.get_logger().info(message)
+
+    def _perception_signature(self) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
+        return (tuple(sorted(self.perception_tokens)), tuple(self.obstacle_zones))
 
     def _log_triggered_events(self):
         event_ids = getattr(self.sct, "last_triggered_events", [])
@@ -828,6 +833,11 @@ class RobotSupervisor(Node):
         # Otherwise: pick next event from SCT
         self.active_event = None
         self.sct.input_buffer = []
+        perception_signature = self._perception_signature()
+        if perception_signature == self.last_perception_signature:
+            self.sct.preferred_controllable_event = self.last_selected_controllable_id
+        else:
+            self.sct.preferred_controllable_event = None
         ce_exists, ce = self.sct.run_step()
         self._log_triggered_events()
         self._print_current_state()
@@ -841,6 +851,8 @@ class RobotSupervisor(Node):
             self._publish_stop()
             return
 
+        self.last_perception_signature = perception_signature
+        self.last_selected_controllable_id = int(ce)
         self._routine_info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
 
