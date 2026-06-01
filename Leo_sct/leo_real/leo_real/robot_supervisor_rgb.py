@@ -179,7 +179,6 @@ class RobotSupervisor(Node):
         self.motion_until = 0.0
         self.last_perception_signature: Optional[Tuple[Tuple[str, ...], Tuple[str, ...]]] = None
         self.last_selected_controllable_id: Optional[int] = None
-        self.last_executed_controllable: Optional[str] = None
 
         # Full-rotate mode bookkeeping
         self.full_rotate_active = False
@@ -777,14 +776,6 @@ class RobotSupervisor(Node):
             return
 
         # Normal pulse action
-        if ev_name == "EV_move_backward":
-            if self.last_executed_controllable == "EV_move_backward":
-                self.get_logger().info("EV_move_backward blocked because it was already executed last")
-                self.active_event = None
-                self.motion_until = 0.0
-                self._publish_stop()
-                return
-
         twist = Twist()
         twist.linear.x = float(spec.linear_x)
         twist.angular.z = float(spec.angular_z)
@@ -796,7 +787,6 @@ class RobotSupervisor(Node):
         self.active_event = ev_name
         self.active_twist = twist
         self.motion_until = time.time() + hold
-        self.last_executed_controllable = ev_name
         self._publish_cmd(self.active_twist)
 
     # -------------------------------
