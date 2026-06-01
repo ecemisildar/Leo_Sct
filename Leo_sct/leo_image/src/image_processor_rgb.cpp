@@ -278,18 +278,19 @@ private:
     const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
     cv::morphologyEx(green_mask, green_mask, cv::MORPH_OPEN, kernel);
     cv::morphologyEx(yellow_mask, yellow_mask, cv::MORPH_OPEN, kernel);
+    cv::morphologyEx(green_mask, green_mask, cv::MORPH_CLOSE, kernel);
     updateColorZoneIgnoreMask(bgr.size(), green_roi, green_mask, color_roi, yellow_mask);
 
     const double green_image_area = static_cast<double>(hsv_green_roi.rows * hsv_green_roi.cols);
     const double yellow_image_area = static_cast<double>(hsv_color_roi.rows * hsv_color_roi.cols);
-    const int green_area_px = cv::countNonZero(green_mask);
     const int yellow_area_px = cv::countNonZero(yellow_mask);
+    const int green_largest_blob_px = largestBlobArea(green_mask);
     const double green_min_area =
       std::max(1.0, std::clamp(green_min_area_ratio_, 0.0, 1.0) * green_image_area);
     const double yellow_min_area =
       std::max(1.0, std::clamp(yellow_min_area_ratio_, 0.0, 1.0) * yellow_image_area);
     const bool green_seen =
-      green_detection_enabled_ && static_cast<double>(green_area_px) >= green_min_area;
+      green_detection_enabled_ && static_cast<double>(green_largest_blob_px) >= green_min_area;
     const bool yellow_seen =
       yellow_detection_enabled_ && static_cast<double>(yellow_area_px) >= yellow_min_area;
     publishGreenCenterOffset(green_mask, green_roi, green_seen, bgr.cols);
@@ -312,7 +313,7 @@ private:
       RCLCPP_INFO_THROTTLE(
         this->get_logger(), *this->get_clock(), 1000,
         "color mask ratios green=%.4f/%0.4f yellow=%.4f/%0.4f seen green=%s yellow=%s held green=%s yellow=%s",
-        static_cast<double>(green_area_px) / std::max(1.0, green_image_area),
+        static_cast<double>(green_largest_blob_px) / std::max(1.0, green_image_area),
         std::clamp(green_min_area_ratio_, 0.0, 1.0),
         static_cast<double>(yellow_area_px) / std::max(1.0, yellow_image_area),
         std::clamp(yellow_min_area_ratio_, 0.0, 1.0),
@@ -561,6 +562,20 @@ private:
 
     std::nth_element(vals.begin(), vals.begin() + k, vals.end());
     return {vals[k], near_cnt, valid_cnt};
+  }
+
+  int largestBlobArea(const cv::Mat & mask) const
+  {
+    cv::Mat labels;
+    cv::Mat stats;
+    cv::Mat centroids;
+    const int components =
+      cv::connectedComponentsWithStats(mask, labels, stats, centroids, 8, CV_32S);
+    int largest = 0;
+    for (int i = 1; i < components; ++i) {
+      largest = std::max(largest, stats.at<int>(i, cv::CC_STAT_AREA));
+    }
+    return largest;
   }
 
   bool zoneIsObstacle(const RoiStats & rs, double thresh) const
