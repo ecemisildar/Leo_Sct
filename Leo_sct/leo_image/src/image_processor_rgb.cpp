@@ -306,7 +306,7 @@ private:
       static_cast<int64_t>(std::max(0, yellow_detect_hold_ms_)) * 1000000LL);
     const bool green_detected = green_detection_enabled_ && (now - last_green_seen_time_) <= green_hold;
     const bool yellow_detected = yellow_detection_enabled_ && (now - last_yellow_seen_time_) <= yellow_hold;
-    saveGreenDetectionImageIfNeeded(bgr, green_detected, now);
+    saveGreenDetectionImageIfNeeded(bgr, green_roi, green_detected, now);
 
     if (color_debug_log_) {
       RCLCPP_INFO_THROTTLE(
@@ -413,6 +413,7 @@ private:
 
   void saveGreenDetectionImageIfNeeded(
     const cv::Mat & bgr,
+    const cv::Rect & green_roi,
     bool green_detected,
     const rclcpp::Time & now)
   {
@@ -435,7 +436,8 @@ private:
       const int64_t stamp_ms = now.nanoseconds() / 1000000LL;
       const std::string path =
         green_image_save_dir_ + "/green_detected_" + std::to_string(stamp_ms) + ".jpg";
-      if (cv::imwrite(path, bgr)) {
+      const cv::Mat cropped = bgr(green_roi).clone();
+      if (cv::imwrite(path, cropped)) {
         RCLCPP_INFO(this->get_logger(), "Saved green detection image: %s", path.c_str());
         green_snapshot_armed_ = false;
       } else {

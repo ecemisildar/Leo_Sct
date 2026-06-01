@@ -771,8 +771,19 @@ CMakeFiles/image_processor_rgb.dir/src/image_processor_rgb.cpp.o: /home/ecem/ros
   /opt/ros/humble/include/cv_bridge/cv_bridge/cv_bridge_export.h \
   /usr/include/opencv4/opencv2/highgui.hpp \
   /usr/include/opencv4/opencv2/imgcodecs.hpp \
-  /usr/include/opencv4/opencv2/videoio.hpp
+  /usr/include/opencv4/opencv2/videoio.hpp \
+  /usr/include/c++/11/filesystem \
+  /usr/include/c++/11/bits/fs_fwd.h \
+  /usr/include/c++/11/bits/fs_path.h \
+  /usr/include/c++/11/bits/fs_dir.h \
+  /usr/include/c++/11/bits/fs_ops.h
 
+
+/usr/include/c++/11/bits/fs_ops.h:
+
+/usr/include/c++/11/bits/fs_path.h:
+
+/usr/include/c++/11/filesystem:
 
 /usr/include/opencv4/opencv2/videoio.hpp:
 
@@ -950,6 +961,8 @@ CMakeFiles/image_processor_rgb.dir/src/image_processor_rgb.cpp.o: /home/ecem/ros
 
 /opt/ros/humble/include/rclcpp/rclcpp/create_subscription.hpp:
 
+/usr/include/c++/11/bits/fs_fwd.h:
+
 /opt/ros/humble/include/rclcpp/rclcpp/create_service.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_parameters_interface_traits.hpp:
@@ -987,6 +1000,8 @@ CMakeFiles/image_processor_rgb.dir/src/image_processor_rgb.cpp.o: /home/ecem/ros
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_logging_interface.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_clock_interface.hpp:
+
+/usr/include/c++/11/bits/fs_dir.h:
 
 /opt/ros/humble/include/rclcpp/rclcpp/generic_subscription.hpp:
 
