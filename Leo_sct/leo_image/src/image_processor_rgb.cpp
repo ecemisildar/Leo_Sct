@@ -18,12 +18,14 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 class DepthZoneDetector : public rclcpp::Node
 {
@@ -80,6 +82,9 @@ public:
     color_detect_hold_ms_ = this->declare_parameter<int>("color_detect_hold_ms", 800);
     green_detect_hold_ms_ = this->declare_parameter<int>("green_detect_hold_ms", color_detect_hold_ms_);
     yellow_detect_hold_ms_ = this->declare_parameter<int>("yellow_detect_hold_ms", color_detect_hold_ms_);
+    save_green_images_ = this->declare_parameter<bool>("save_green_images", true);
+    green_image_save_dir_ =
+      this->declare_parameter<std::string>("green_image_save_dir", green_image_save_dir_);
     color_min_area_ratio_ = this->declare_parameter<double>("color_min_area_ratio", 0.01);
     color_saturation_min_ = this->declare_parameter<int>("color_saturation_min", 50);
     color_value_min_ = this->declare_parameter<int>("color_value_min", 60);
@@ -301,6 +306,7 @@ private:
       static_cast<int64_t>(std::max(0, yellow_detect_hold_ms_)) * 1000000LL);
     const bool green_detected = green_detection_enabled_ && (now - last_green_seen_time_) <= green_hold;
     const bool yellow_detected = yellow_detection_enabled_ && (now - last_yellow_seen_time_) <= yellow_hold;
+    saveGreenDetectionImageIfNeeded(bgr, green_detected, now);
 
     if (color_debug_log_) {
       RCLCPP_INFO_THROTTLE(
@@ -403,6 +409,41 @@ private:
       msg.data = static_cast<float>(std::clamp((cx - image_center) / half_width, -1.0, 1.0));
     }
     green_center_offset_pub_->publish(msg);
+  }
+
+  void saveGreenDetectionImageIfNeeded(
+    const cv::Mat & bgr,
+    bool green_detected,
+    const rclcpp::Time & now)
+  {
+    if (!save_green_images_) {
+      green_snapshot_armed_ = !green_detected;
+      return;
+    }
+
+    if (!green_detected) {
+      green_snapshot_armed_ = true;
+      return;
+    }
+
+    if (!green_snapshot_armed_) {
+      return;
+    }
+
+    try {
+      std::filesystem::create_directories(green_image_save_dir_);
+      const int64_t stamp_ms = now.nanoseconds() / 1000000LL;
+      const std::string path =
+        green_image_save_dir_ + "/green_detected_" + std::to_string(stamp_ms) + ".jpg";
+      if (cv::imwrite(path, bgr)) {
+        RCLCPP_INFO(this->get_logger(), "Saved green detection image: %s", path.c_str());
+        green_snapshot_armed_ = false;
+      } else {
+        RCLCPP_WARN(this->get_logger(), "Failed to save green detection image: %s", path.c_str());
+      }
+    } catch (const std::exception & e) {
+      RCLCPP_WARN(this->get_logger(), "Failed to save green detection image: %s", e.what());
+    }
   }
 
   std::string detectedZoneMessage(const std::string & obstacle_zone) const
@@ -679,6 +720,9 @@ private:
   int color_detect_hold_ms_{800};
   int green_detect_hold_ms_{800};
   int yellow_detect_hold_ms_{800};
+  bool save_green_images_{true};
+  bool green_snapshot_armed_{true};
+  std::string green_image_save_dir_{"/tmp/leo_green_detections"};
   double color_min_area_ratio_{0.01};
   int color_saturation_min_{50};
   int color_value_min_{60};

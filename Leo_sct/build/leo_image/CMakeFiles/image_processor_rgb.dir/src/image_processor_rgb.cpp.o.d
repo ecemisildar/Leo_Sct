@@ -703,4 +703,6 @@ CMakeFiles/image_processor_rgb.dir/src/image_processor_rgb.cpp.o: \
  /opt/ros/humble/include/cv_bridge/cv_bridge/cv_bridge_export.h \
  /usr/include/opencv4/opencv2/highgui.hpp \
  /usr/include/opencv4/opencv2/imgcodecs.hpp \
- /usr/include/opencv4/opencv2/videoio.hpp
+ /usr/include/opencv4/opencv2/videoio.hpp /usr/include/c++/11/filesystem \
+ /usr/include/c++/11/bits/fs_fwd.h /usr/include/c++/11/bits/fs_path.h \
+ /usr/include/c++/11/bits/fs_dir.h /usr/include/c++/11/bits/fs_ops.h
