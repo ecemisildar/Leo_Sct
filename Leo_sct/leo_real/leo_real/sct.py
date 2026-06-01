@@ -10,6 +10,7 @@ class SCT:
         self.callback = {}
         self.input_buffer = None # Clear content after timestep
         self.last_events = [0] * len(self.EV)
+        self.last_triggered_events = []
 
 
     def read_supervisor(self, filename):
@@ -46,6 +47,7 @@ class SCT:
 
     def run_step(self):
         # self.input_buffer = [] # clear buffer
+        self.last_triggered_events = []
         self.update_input()
 
         # Get all uncontrollable events
@@ -54,6 +56,7 @@ class SCT:
         # Apply all the uncontrollable events
         while uce:
             event = uce.pop(0)
+            self.last_triggered_events.append(event)
             self.make_transition(event)
             self.exec_callback(event)
 
@@ -61,6 +64,7 @@ class SCT:
 
         # Apply the chosen controllable event
         if ce_exists:
+            self.last_triggered_events.append(ce)
             self.make_transition(ce)
             self.exec_callback(ce)
 
@@ -199,12 +203,14 @@ class SCTPub(SCT):
     def run_step(self):
         self.input_buffer = [] # clear buffer
         self.input_buffer_pub = []
+        self.last_triggered_events = []
         self.update_input()
 
         # Apply all public uncontrollable events
         public_uce = self.input_buffer_pub
         while public_uce:
             event = public_uce.pop(0)
+            self.last_triggered_events.append(event)
             self.make_transition(event)
             self.exec_callback(event)
 
@@ -212,6 +218,7 @@ class SCTPub(SCT):
         uce = self.input_buffer
         while uce:
             event = uce.pop(0)
+            self.last_triggered_events.append(event)
             self.make_transition(event)
             self.exec_callback(event)
 
@@ -219,6 +226,7 @@ class SCTPub(SCT):
 
         # Apply the chosen controllable event
         if ce_exists:
+            self.last_triggered_events.append(ce)
             self.make_transition(ce)
             self.exec_callback(ce)
 

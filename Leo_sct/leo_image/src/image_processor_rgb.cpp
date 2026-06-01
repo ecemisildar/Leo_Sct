@@ -41,6 +41,8 @@ public:
     yellow_detected_pub_ = this->create_publisher<std_msgs::msg::Bool>("yellow_detected", 10);
     detected_color_pub_ = this->create_publisher<std_msgs::msg::String>("detected_color", 10);
     image_view_pub_ = this->create_publisher<sensor_msgs::msg::Image>("rgb_camera_live", 10);
+    green_center_offset_pub_ =
+      this->create_publisher<std_msgs::msg::Float32>("green_center_offset", 10);
 
     enter_thresh_ = this->declare_parameter<double>("enter_thresh", 0.60);
     exit_thresh_ = this->declare_parameter<double>("exit_thresh", 0.80);
@@ -285,6 +287,7 @@ private:
       green_detection_enabled_ && static_cast<double>(green_area_px) >= green_min_area;
     const bool yellow_seen =
       yellow_detection_enabled_ && static_cast<double>(yellow_area_px) >= yellow_min_area;
+    publishGreenCenterOffset(green_mask, green_roi, green_seen, bgr.cols);
     const auto now = clock_->now();
     if (green_seen) {
       last_green_seen_time_ = now;
@@ -382,6 +385,24 @@ private:
     std_msgs::msg::String zones_msg;
     zones_msg.data = detectedZoneMessage(current_zone_);
     zones_pub_->publish(zones_msg);
+  }
+
+  void publishGreenCenterOffset(
+    const cv::Mat & green_mask,
+    const cv::Rect & green_roi,
+    bool green_seen,
+    int image_width)
+  {
+    std_msgs::msg::Float32 msg;
+    msg.data = std::numeric_limits<float>::quiet_NaN();
+    const auto moments = cv::moments(green_mask, true);
+    if (green_seen && moments.m00 > 0.0 && image_width > 1) {
+      const double cx = green_roi.x + (moments.m10 / moments.m00);
+      const double image_center = 0.5 * static_cast<double>(image_width - 1);
+      const double half_width = std::max(1.0, image_center);
+      msg.data = static_cast<float>(std::clamp((cx - image_center) / half_width, -1.0, 1.0));
+    }
+    green_center_offset_pub_->publish(msg);
   }
 
   std::string detectedZoneMessage(const std::string & obstacle_zone) const
@@ -614,6 +635,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr yellow_detected_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr detected_color_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_view_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr green_center_offset_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr rgb_sub_;
   rclcpp::Clock::SharedPtr clock_;

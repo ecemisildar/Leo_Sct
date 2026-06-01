@@ -85,6 +85,10 @@ def generate_launch_description():
             {"supervisor_yaml_path": supervisor_yaml_path},
             {"enable_aruco": enable_aruco},
             {"static": static_mode},
+            {"green_centering_gain": 0.8},
+            {"green_centering_max_angular": 0.45},
+            {"green_centering_deadband": 0.08},
+            {"green_offset_timeout_s": 0.5},
         ],
         output="screen",
     )

@@ -11,7 +11,7 @@ import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import Twist
-from std_msgs.msg import String
+from std_msgs.msg import Float32, String
 from std_srvs.srv import SetBool
 from nav_msgs.msg import Odometry
 
@@ -113,6 +113,18 @@ class RobotSupervisor(Node):
         self.zone_update_min_dt = float(
             self.declare_parameter("zone_update_min_dt", 0.1).value
         )
+        self.green_centering_gain = float(
+            self.declare_parameter("green_centering_gain", 0.8).value
+        )
+        self.green_centering_max_angular = abs(
+            float(self.declare_parameter("green_centering_max_angular", 0.45).value)
+        )
+        self.green_centering_deadband = abs(
+            float(self.declare_parameter("green_centering_deadband", 0.08).value)
+        )
+        self.green_offset_timeout_s = float(
+            self.declare_parameter("green_offset_timeout_s", 0.5).value
+        )
 
         # Random seed (per-robot namespace)
         self.ns = self.get_namespace().strip("/") or "root"
@@ -144,6 +156,8 @@ class RobotSupervisor(Node):
         self.last_zone_update = 0.0
         self.last_logged_zone = "CLEAR"
         self.green_logged_active = False
+        self.green_center_offset: Optional[float] = None
+        self.green_center_offset_time = 0.0
     
 
         # Odom / yaw tracking for full-rotate
@@ -176,6 +190,9 @@ class RobotSupervisor(Node):
         self.cmd_pub = self.create_publisher(Twist, "cmd_vel", 10)
 
         self.sub_zone = self.create_subscription(String, "detected_zones", self.zone_callback, 10)
+        self.sub_green_center_offset = self.create_subscription(
+            Float32, "green_center_offset", self.green_center_offset_callback, 10
+        )
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
 
         # -------------------------------
@@ -218,6 +235,16 @@ class RobotSupervisor(Node):
     def _routine_info(self, message: str):
         if self.routine_logging_enabled:
             self.get_logger().info(message)
+
+    def _log_triggered_events(self):
+        event_ids = getattr(self.sct, "last_triggered_events", [])
+        if not event_ids:
+            return
+        event_names = [
+            self.ev_name_by_id.get(int(ev_id), f"EV_{int(ev_id)}")
+            for ev_id in event_ids
+        ]
+        self.get_logger().info(f"Triggered events: {', '.join(event_names)}")
 
     def _canonical_mission_name(self, mission: str) -> str:
         key = str(mission or "").strip().lower().replace("-", "_").replace(" ", "_")
@@ -354,6 +381,15 @@ class RobotSupervisor(Node):
     def odom_callback(self, msg: Odometry):
         self.have_odom = True
         self.yaw = _yaw_from_quat(msg.pose.pose.orientation)
+
+    def green_center_offset_callback(self, msg: Float32):
+        value = float(msg.data)
+        if math.isfinite(value):
+            self.green_center_offset = max(-1.0, min(1.0, value))
+            self.green_center_offset_time = time.time()
+        else:
+            self.green_center_offset = None
+            self.green_center_offset_time = 0.0
 
     def zone_callback(self, msg: String):
         now = time.time()
@@ -636,6 +672,22 @@ class RobotSupervisor(Node):
         self.rotate_90_prev_yaw = self.yaw
 
         return self.rotate_90_accum >= self.rotate_90_target_rad
+
+    def _green_centering_angular_z(self) -> float:
+        if self.green_center_offset is None:
+            return 0.0
+        if (time.time() - self.green_center_offset_time) > self.green_offset_timeout_s:
+            return 0.0
+
+        offset = self.green_center_offset
+        if abs(offset) < self.green_centering_deadband:
+            return 0.0
+
+        angular_z = -self.green_centering_gain * offset
+        return max(
+            -self.green_centering_max_angular,
+            min(self.green_centering_max_angular, angular_z),
+        )
     
     
 
@@ -695,6 +747,8 @@ class RobotSupervisor(Node):
         twist = Twist()
         twist.linear.x = float(spec.linear_x)
         twist.angular.z = float(spec.angular_z)
+        if ev_name == "EV_go_to_green":
+            twist.angular.z = self._green_centering_angular_z()
 
         hold = self.motion_hold_duration if spec.hold_s is None else float(spec.hold_s)
 
@@ -759,6 +813,7 @@ class RobotSupervisor(Node):
         self.active_event = None
         self.sct.input_buffer = []
         ce_exists, ce = self.sct.run_step()
+        self._log_triggered_events()
         self._print_current_state()
         if not ce_exists:
             # No controllable enabled -> stop
