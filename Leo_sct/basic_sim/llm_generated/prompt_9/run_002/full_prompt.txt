@@ -1,0 +1,80 @@
+We operate a DES-based supervisor for a basic grid simulator. Generate one plant automaton G and one specification automaton E.
+
+Controllable events: move_forward, move_backward, rotate_clockwise, rotate_counterclockwise, full_rotate, escape_purple
+Uncontrollable events: path_clear, obstacle_front, obstacle_left, obstacle_right, purple_detected
+
+User task: Make a controller for a robot whose task is to escape from the purple area. The robot should move safely through the bounded environment while avoiding obstacles. When purple_detected occurs, the robot is inside the purple danger area and should use escape_purple immediately to leave it. After escaping, the controller should continue safe obstacle-aware movement and avoid returning to the purple area when possible.
+
+Goal: Design a small grid-world DES model for multiple agents. The plant G should model which perception and motion events can occur. The specification E should constrain motion for obstacle-aware movement and make robots escape from a 2x2 purple danger area while still allowing all seven controllable actions somewhere in the automaton.
+
+State semantics:
+- clear: no obstacle in front/left/right; safe to advance.
+- obs_front: obstacle detected in front region; forward is unsafe.
+- obs_left: obstacle close on left; left turn is unsafe; right turn may be preferred.
+- obs_right: obstacle close on right; right turn is unsafe; left turn may be preferred.
+
+Event semantics:
+- move_forward: apply forward motion for 0.2 s (one pulse).
+- move_backward: apply backward motion for 0.2 s (one pulse).
+- rotate_clockwise: apply clockwise rotation for 0.2 s (one pulse).
+- rotate_counterclockwise: apply counterclockwise rotation for 0.2 s (one pulse).
+- full_rotate: rotate 360 degrees (atomic action; completes a full scan).
+- escape_purple: move one grid cell away from the purple area; use immediately after purple_detected to leave the danger area.
+- path_clear: sensors say forward corridor is clear (no front obstacle).
+- obstacle_front: front sensor region is blocked.
+- obstacle_left: left sensor region is blocked.
+- obstacle_right: right sensor region is blocked.
+- purple_detected: the agent is inside the 2x2 purple danger area.
+
+Behaviour guidance:
+- Do NOT introduce any new controllable or uncontrollable events. Use ONLY the provided event lists.
+- Do NOT invent sensor events beyond the given uncontrollable list (e.g., no 'battery_low', etc.).
+- All transitions must be formatted exactly as: ("state", "event", "next").
+- Determinism required: for each (state, event) pair, specify EXACTLY ONE next state. No duplicates.
+- No epsilon transitions. Every transition must be labeled by one event from the lists.
+- For EVERY state, include an outgoing transition for ALL uncontrollable events (total w.r.t. uncontrollables).
+- For EVERY non-terminal state, include at least ONE controllable transition (otherwise the robot may stall).
+- Avoid enabling multiple controllable actions in the same state (runtime may choose randomly among them).
+- Exception: obs_front may enable BOTH move_backward and full_rotate if you strongly need it.
+- Runtime semantics: uncontrollable events are processed BEFORE a controllable action each step.
+- Never allow move_forward from obs_front (obstacle_front).
+- After obstacle_front, do NOT return directly to move_forward; pass through a recovery/escape step (e.g., move_backward and/or rotate/full_rotate).
+- Avoid oscillations: do NOT enable both rotate_clockwise and rotate_counterclockwise as controllables in the same state.
+- Keep the behavior consistent: obs_left should prefer rotate_clockwise OR a clear escape policy; obs_right should prefer rotate_counterclockwise (or vice versa), but do not alternate rapidly.
+- Commit/scan/recovery states must be ONE-SHOT on their primary controllable action: the primary controllable must transition OUT to a decision/perception state (e.g., clear), NOT self-loop.
+- Examples (illustrative only): forward_commit: move_forward->clear; rotate_commit_cw: rotate_clockwise->clear; rotate_commit_ccw: rotate_counterclockwise->clear; scan_full: full_rotate->clear; recover_back: move_backward->scan_full or ->clear.
+- Do NOT create infinite controllable loops like full_rotate->scan_full, move_backward->recover_back, or move_forward->forward_commit.
+- Return exactly one plant automaton in G and exactly one specification automaton in E.
+- Keep the automata small enough to inspect manually.
+- The plant G may be permissive, but it must include all provided events.
+- The specification E should make move_backward reachable only from front-obstacle recovery states.
+- Do not use move_backward from clear/path_clear states.
+- Use stop only when the robot should intentionally hold position, such as after reaching a goal or when no safe movement is available.
+- Obstacle states should prefer directed rotations or short recovery before returning to clear.
+- Obstacle detection has priority over color detection: color events such as red_detected, green_detected, blue_detected, or purple_detected should only be triggered from clear/path-clear decision states.
+- Do not let color-detected events transition directly out of obs_front, obs_left, obs_right, recovery, scan, or commit states; those states must handle obstacle events first.
+- The specification E should prioritize escape_purple immediately after purple_detected.
+- When purple_detected occurs, the robot is inside the purple danger area and should leave it before resuming normal movement.
+- After escape_purple, return to obstacle-aware movement and avoid re-entering the purple area when possible.
+
+Return ONLY valid JSON with this exact top-level schema. Each automaton must include the event lists so XML conversion can preserve controllability. The controllable_events and uncontrollable_events fields must exactly repeat the provided event lists above, and every transition event must appear in one of those lists:
+{
+  "G": [
+    {
+      "rationale": "<short plant reasoning>",
+      "new_states": ["state_names"],
+      "controllable_events": ["..."],
+      "uncontrollable_events": ["..."],
+      "transitions": ["(\"state\", \"event\", \"next\")"]
+    }
+  ],
+  "E": [
+    {
+      "rationale": "<short spec reasoning>",
+      "new_states": ["state_names"],
+      "controllable_events": ["..."],
+      "uncontrollable_events": ["..."],
+      "transitions": ["(\"state\", \"event\", \"next\")"]
+    }
+  ]
+}
