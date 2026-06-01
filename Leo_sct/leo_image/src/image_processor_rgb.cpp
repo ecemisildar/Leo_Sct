@@ -285,12 +285,16 @@ private:
     const double purple_image_area = static_cast<double>(hsv_color_roi.rows * hsv_color_roi.cols);
     const int purple_area_px = cv::countNonZero(purple_mask);
     const int green_largest_blob_px = largestBlobArea(green_mask);
+    const cv::Rect green_largest_blob_box = largestBlobBoundingBox(green_mask);
     const double green_min_area =
       std::max(1.0, std::clamp(green_min_area_ratio_, 0.0, 1.0) * green_image_area);
     const double purple_min_area =
       std::max(1.0, std::clamp(purple_min_area_ratio_, 0.0, 1.0) * purple_image_area);
     const bool green_seen =
-      green_detection_enabled_ && static_cast<double>(green_largest_blob_px) >= green_min_area;
+      green_detection_enabled_ &&
+      static_cast<double>(green_largest_blob_px) >= green_min_area &&
+      green_largest_blob_box.width >= 12 &&
+      green_largest_blob_box.height >= 12;
     const bool purple_seen =
       purple_detection_enabled_ && static_cast<double>(purple_area_px) >= purple_min_area;
     publishGreenCenterOffset(green_mask, green_roi, green_seen, bgr.cols);
@@ -307,7 +311,9 @@ private:
       static_cast<int64_t>(std::max(0, purple_detect_hold_ms_)) * 1000000LL);
     const bool green_detected = green_detection_enabled_ && (now - last_green_seen_time_) <= green_hold;
     const bool purple_detected = purple_detection_enabled_ && (now - last_purple_seen_time_) <= purple_hold;
-    saveGreenDetectionImageIfNeeded(bgr, green_roi, green_detected, now);
+    publishColorDetection(green_detected, purple_detected);
+    const bool green_zone_published = detectedZoneMessage(current_zone_) == "GREEN";
+    saveGreenDetectionImageIfNeeded(bgr, green_roi, green_seen && green_zone_published, now);
 
     if (color_debug_log_) {
       RCLCPP_INFO_THROTTLE(
@@ -322,8 +328,6 @@ private:
         green_detected ? "true" : "false",
         purple_detected ? "true" : "false");
     }
-
-    publishColorDetection(green_detected, purple_detected);
 
     if (show_debug_) {
       cv::Mat color_vis = bgr.clone();
@@ -576,6 +580,32 @@ private:
       largest = std::max(largest, stats.at<int>(i, cv::CC_STAT_AREA));
     }
     return largest;
+  }
+
+  cv::Rect largestBlobBoundingBox(const cv::Mat & mask) const
+  {
+    cv::Mat labels;
+    cv::Mat stats;
+    cv::Mat centroids;
+    const int components =
+      cv::connectedComponentsWithStats(mask, labels, stats, centroids, 8, CV_32S);
+    int best = 0;
+    int largest = 0;
+    for (int i = 1; i < components; ++i) {
+      const int area = stats.at<int>(i, cv::CC_STAT_AREA);
+      if (area > largest) {
+        largest = area;
+        best = i;
+      }
+    }
+    if (best == 0) {
+      return cv::Rect();
+    }
+    return cv::Rect(
+      stats.at<int>(best, cv::CC_STAT_LEFT),
+      stats.at<int>(best, cv::CC_STAT_TOP),
+      stats.at<int>(best, cv::CC_STAT_WIDTH),
+      stats.at<int>(best, cv::CC_STAT_HEIGHT));
   }
 
   bool zoneIsObstacle(const RoiStats & rs, double thresh) const
