@@ -457,6 +457,8 @@ class RobotSupervisor(Node):
     # SCT input check functions (uncontrollables)
     # -------------------------------
     def clear_path_check(self, sup_data):
+        if "GREEN" in self.perception_tokens:
+            return False
         depth_obstacles = {"LEFT", "RIGHT", "CORNER"}
         return not any(zone in depth_obstacles for zone in self.obstacle_zones)
 
@@ -688,6 +690,15 @@ class RobotSupervisor(Node):
             -self.green_centering_max_angular,
             min(self.green_centering_max_angular, angular_z),
         )
+
+    def _hold_green_centered(self):
+        twist = Twist()
+        twist.linear.x = 0.0
+        twist.angular.z = self._green_centering_angular_z()
+        self.active_event = "EV_go_to_green"
+        self.active_twist = twist
+        self.motion_until = time.time() + self.motion_hold_duration
+        self._publish_cmd(self.active_twist)
     
     
 
@@ -802,6 +813,11 @@ class RobotSupervisor(Node):
 
         if now < self.turn_settle_until:
             self._publish_stop()
+            return
+
+        if "GREEN" in self.perception_tokens:
+            self.get_logger().info("Triggered events: EV_green_detected, EV_go_to_green")
+            self._hold_green_centered()
             return
 
         # Normal pulse-hold: keep publishing until hold expires
