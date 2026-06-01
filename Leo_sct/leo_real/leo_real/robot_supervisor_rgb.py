@@ -89,6 +89,7 @@ class RobotSupervisor(Node):
         self.recovery_back_hold_s = float(
             self.declare_parameter("recovery_back_hold_s", 0.35).value
         )
+        self.move_backward_cooldown_s = 30.0
 
         # 90-degree rotate settings
         self.rotate_90_target_rad = min(
@@ -179,6 +180,7 @@ class RobotSupervisor(Node):
         self.motion_until = 0.0
         self.last_perception_signature: Optional[Tuple[Tuple[str, ...], Tuple[str, ...]]] = None
         self.last_selected_controllable_id: Optional[int] = None
+        self.last_move_backward_at = -float("inf")
 
         # Full-rotate mode bookkeeping
         self.full_rotate_active = False
@@ -776,6 +778,16 @@ class RobotSupervisor(Node):
             return
 
         # Normal pulse action
+        if ev_name == "EV_move_backward":
+            now = time.time()
+            if (now - self.last_move_backward_at) < self.move_backward_cooldown_s:
+                self.get_logger().info("EV_move_backward blocked by 30s cooldown")
+                self.active_event = None
+                self.motion_until = 0.0
+                self._publish_stop()
+                return
+            self.last_move_backward_at = now
+
         twist = Twist()
         twist.linear.x = float(spec.linear_x)
         twist.angular.z = float(spec.angular_z)
