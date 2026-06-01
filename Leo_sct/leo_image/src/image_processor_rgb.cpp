@@ -2,11 +2,11 @@
 //
 // Depth obstacle zones.
 // Publishes:
-// - std_msgs/String on "detected_zones" with tokens: LEFT, RIGHT, CORNER, CLEAR, GREEN, yellow
+// - std_msgs/String on "detected_zones" with tokens: LEFT, RIGHT, CORNER, CLEAR, GREEN, purple
 // - std_msgs/Float32 on "front_obstacle_distance" with front ROI near distance in meters
 // - std_msgs/Bool on "green_detected"
-// - std_msgs/Bool on "yellow_detected"
-// - std_msgs/String on "detected_color" with one of: GREEN, yellow, BOTH, NONE
+// - std_msgs/Bool on "purple_detected"
+// - std_msgs/String on "detected_color" with one of: GREEN, purple, BOTH, NONE
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -40,7 +40,7 @@ public:
     front_obstacle_distance_pub_ =
       this->create_publisher<std_msgs::msg::Float32>("front_obstacle_distance", 10);
     green_detected_pub_ = this->create_publisher<std_msgs::msg::Bool>("green_detected", 10);
-    yellow_detected_pub_ = this->create_publisher<std_msgs::msg::Bool>("yellow_detected", 10);
+    purple_detected_pub_ = this->create_publisher<std_msgs::msg::Bool>("purple_detected", 10);
     detected_color_pub_ = this->create_publisher<std_msgs::msg::String>("detected_color", 10);
     image_view_pub_ = this->create_publisher<sensor_msgs::msg::Image>("rgb_camera_live", 10);
     green_center_offset_pub_ =
@@ -78,10 +78,10 @@ public:
 
     rgb_topic_ = this->declare_parameter<std::string>("rgb_topic", rgb_topic_);
     green_detection_enabled_ = this->declare_parameter<bool>("green_detection_enabled", true);
-    yellow_detection_enabled_ = this->declare_parameter<bool>("yellow_detection_enabled", true);
+    purple_detection_enabled_ = this->declare_parameter<bool>("purple_detection_enabled", true);
     color_detect_hold_ms_ = this->declare_parameter<int>("color_detect_hold_ms", 800);
     green_detect_hold_ms_ = this->declare_parameter<int>("green_detect_hold_ms", color_detect_hold_ms_);
-    yellow_detect_hold_ms_ = this->declare_parameter<int>("yellow_detect_hold_ms", color_detect_hold_ms_);
+    purple_detect_hold_ms_ = this->declare_parameter<int>("purple_detect_hold_ms", color_detect_hold_ms_);
     save_green_images_ = this->declare_parameter<bool>("save_green_images", true);
     green_image_save_dir_ =
       this->declare_parameter<std::string>("green_image_save_dir", green_image_save_dir_);
@@ -89,15 +89,15 @@ public:
     color_saturation_min_ = this->declare_parameter<int>("color_saturation_min", 50);
     color_value_min_ = this->declare_parameter<int>("color_value_min", 60);
     green_min_area_ratio_ = this->declare_parameter<double>("green_min_area_ratio", color_min_area_ratio_);
-    yellow_min_area_ratio_ = this->declare_parameter<double>("yellow_min_area_ratio", color_min_area_ratio_);
+    purple_min_area_ratio_ = this->declare_parameter<double>("purple_min_area_ratio", color_min_area_ratio_);
     green_saturation_min_ = this->declare_parameter<int>("green_saturation_min", color_saturation_min_);
-    yellow_saturation_min_ = this->declare_parameter<int>("yellow_saturation_min", color_saturation_min_);
+    purple_saturation_min_ = this->declare_parameter<int>("purple_saturation_min", color_saturation_min_);
     green_value_min_ = this->declare_parameter<int>("green_value_min", color_value_min_);
-    yellow_value_min_ = this->declare_parameter<int>("yellow_value_min", color_value_min_);
+    purple_value_min_ = this->declare_parameter<int>("purple_value_min", color_value_min_);
     green_hue_min_ = this->declare_parameter<int>("green_hue_min", 40);
     green_hue_max_ = this->declare_parameter<int>("green_hue_max", 85);
-    yellow_hue_min_ = this->declare_parameter<int>("yellow_hue_min", 18);
-    yellow_hue_max_ = this->declare_parameter<int>("yellow_hue_max", 42);
+    purple_hue_min_ = this->declare_parameter<int>("purple_hue_min", 125);
+    purple_hue_max_ = this->declare_parameter<int>("purple_hue_max", 165);
     color_roi_y0_frac_ = this->declare_parameter<double>("color_roi_y0_frac", 0.0);
     color_roi_y1_frac_ = this->declare_parameter<double>("color_roi_y1_frac", 1.0);
     green_crop_y0_frac_ = this->declare_parameter<double>("green_crop_y0_frac", color_roi_y0_frac_);
@@ -117,7 +117,7 @@ public:
     last_non_clear_zone_ = "CORNER";
     last_non_clear_time_ = now;
     last_green_seen_time_ = now - rclcpp::Duration::from_seconds(3600.0);
-    last_yellow_seen_time_ = now - rclcpp::Duration::from_seconds(3600.0);
+    last_purple_seen_time_ = now - rclcpp::Duration::from_seconds(3600.0);
   }
 
 private:
@@ -258,11 +258,11 @@ private:
     const cv::Mat hsv_green_roi = hsv(green_roi);
 
     const int green_sat_min = std::clamp(green_saturation_min_, 0, 255);
-    const int yellow_sat_min = std::clamp(yellow_saturation_min_, 0, 255);
+    const int purple_sat_min = std::clamp(purple_saturation_min_, 0, 255);
     const int green_val_min = std::clamp(green_value_min_, 0, 255);
-    const int yellow_val_min = std::clamp(yellow_value_min_, 0, 255);
+    const int purple_val_min = std::clamp(purple_value_min_, 0, 255);
     cv::Mat green_mask;
-    cv::Mat yellow_mask;
+    cv::Mat purple_mask;
 
     cv::inRange(
       hsv_green_roi,
@@ -271,64 +271,64 @@ private:
       green_mask);
     cv::inRange(
       hsv_color_roi,
-      cv::Scalar(std::clamp(yellow_hue_min_, 0, 179), yellow_sat_min, yellow_val_min),
-      cv::Scalar(std::clamp(yellow_hue_max_, 0, 179), 255, 255),
-      yellow_mask);
+      cv::Scalar(std::clamp(purple_hue_min_, 0, 179), purple_sat_min, purple_val_min),
+      cv::Scalar(std::clamp(purple_hue_max_, 0, 179), 255, 255),
+      purple_mask);
 
     const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
     cv::morphologyEx(green_mask, green_mask, cv::MORPH_OPEN, kernel);
-    cv::morphologyEx(yellow_mask, yellow_mask, cv::MORPH_OPEN, kernel);
+    cv::morphologyEx(purple_mask, purple_mask, cv::MORPH_OPEN, kernel);
     cv::morphologyEx(green_mask, green_mask, cv::MORPH_CLOSE, kernel);
-    updateColorZoneIgnoreMask(bgr.size(), green_roi, green_mask, color_roi, yellow_mask);
+    updateColorZoneIgnoreMask(bgr.size(), green_roi, green_mask, color_roi, purple_mask);
 
     const double green_image_area = static_cast<double>(hsv_green_roi.rows * hsv_green_roi.cols);
-    const double yellow_image_area = static_cast<double>(hsv_color_roi.rows * hsv_color_roi.cols);
-    const int yellow_area_px = cv::countNonZero(yellow_mask);
+    const double purple_image_area = static_cast<double>(hsv_color_roi.rows * hsv_color_roi.cols);
+    const int purple_area_px = cv::countNonZero(purple_mask);
     const int green_largest_blob_px = largestBlobArea(green_mask);
     const double green_min_area =
       std::max(1.0, std::clamp(green_min_area_ratio_, 0.0, 1.0) * green_image_area);
-    const double yellow_min_area =
-      std::max(1.0, std::clamp(yellow_min_area_ratio_, 0.0, 1.0) * yellow_image_area);
+    const double purple_min_area =
+      std::max(1.0, std::clamp(purple_min_area_ratio_, 0.0, 1.0) * purple_image_area);
     const bool green_seen =
       green_detection_enabled_ && static_cast<double>(green_largest_blob_px) >= green_min_area;
-    const bool yellow_seen =
-      yellow_detection_enabled_ && static_cast<double>(yellow_area_px) >= yellow_min_area;
+    const bool purple_seen =
+      purple_detection_enabled_ && static_cast<double>(purple_area_px) >= purple_min_area;
     publishGreenCenterOffset(green_mask, green_roi, green_seen, bgr.cols);
     const auto now = clock_->now();
     if (green_seen) {
       last_green_seen_time_ = now;
     }
-    if (yellow_seen) {
-      last_yellow_seen_time_ = now;
+    if (purple_seen) {
+      last_purple_seen_time_ = now;
     }
     const auto green_hold = rclcpp::Duration::from_nanoseconds(
       static_cast<int64_t>(std::max(0, green_detect_hold_ms_)) * 1000000LL);
-    const auto yellow_hold = rclcpp::Duration::from_nanoseconds(
-      static_cast<int64_t>(std::max(0, yellow_detect_hold_ms_)) * 1000000LL);
+    const auto purple_hold = rclcpp::Duration::from_nanoseconds(
+      static_cast<int64_t>(std::max(0, purple_detect_hold_ms_)) * 1000000LL);
     const bool green_detected = green_detection_enabled_ && (now - last_green_seen_time_) <= green_hold;
-    const bool yellow_detected = yellow_detection_enabled_ && (now - last_yellow_seen_time_) <= yellow_hold;
+    const bool purple_detected = purple_detection_enabled_ && (now - last_purple_seen_time_) <= purple_hold;
     saveGreenDetectionImageIfNeeded(bgr, green_roi, green_detected, now);
 
     if (color_debug_log_) {
       RCLCPP_INFO_THROTTLE(
         this->get_logger(), *this->get_clock(), 1000,
-        "color mask ratios green=%.4f/%0.4f yellow=%.4f/%0.4f seen green=%s yellow=%s held green=%s yellow=%s",
+        "color mask ratios green=%.4f/%0.4f purple=%.4f/%0.4f seen green=%s purple=%s held green=%s purple=%s",
         static_cast<double>(green_largest_blob_px) / std::max(1.0, green_image_area),
         std::clamp(green_min_area_ratio_, 0.0, 1.0),
-        static_cast<double>(yellow_area_px) / std::max(1.0, yellow_image_area),
-        std::clamp(yellow_min_area_ratio_, 0.0, 1.0),
+        static_cast<double>(purple_area_px) / std::max(1.0, purple_image_area),
+        std::clamp(purple_min_area_ratio_, 0.0, 1.0),
         green_seen ? "true" : "false",
-        yellow_seen ? "true" : "false",
+        purple_seen ? "true" : "false",
         green_detected ? "true" : "false",
-        yellow_detected ? "true" : "false");
+        purple_detected ? "true" : "false");
     }
 
-    publishColorDetection(green_detected, yellow_detected);
+    publishColorDetection(green_detected, purple_detected);
 
     if (show_debug_) {
       cv::Mat color_vis = bgr.clone();
       color_vis(green_roi).setTo(cv::Scalar(0, 255, 0), green_mask);
-      color_vis(color_roi).setTo(cv::Scalar(160, 250, 255), yellow_mask);
+      color_vis(color_roi).setTo(cv::Scalar(255, 0, 255), purple_mask);
       cv::imshow("Color detection (debug)", color_vis);
       cv::waitKey(1);
     }
@@ -350,40 +350,40 @@ private:
     const cv::Size & image_size,
     const cv::Rect & green_roi,
     const cv::Mat & green_mask,
-    const cv::Rect & yellow_roi,
-    const cv::Mat & yellow_mask)
+    const cv::Rect & purple_roi,
+    const cv::Mat & purple_mask)
   {
     color_zone_ignore_mask_ = cv::Mat::zeros(image_size, CV_8UC1);
     if (green_detection_enabled_) {
       green_mask.copyTo(color_zone_ignore_mask_(green_roi), green_mask);
     }
-    if (yellow_detection_enabled_) {
-      yellow_mask.copyTo(color_zone_ignore_mask_(yellow_roi), yellow_mask);
+    if (purple_detection_enabled_) {
+      purple_mask.copyTo(color_zone_ignore_mask_(purple_roi), purple_mask);
     }
     const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
     cv::dilate(color_zone_ignore_mask_, color_zone_ignore_mask_, kernel);
   }
 
-  void publishColorDetection(bool green_detected, bool yellow_detected)
+  void publishColorDetection(bool green_detected, bool purple_detected)
   {
     green_detected_ = green_detected;
-    yellow_detected_ = yellow_detected;
+    purple_detected_ = purple_detected;
 
     std_msgs::msg::Bool green_msg;
     green_msg.data = green_detected;
     green_detected_pub_->publish(green_msg);
 
-    std_msgs::msg::Bool yellow_msg;
-    yellow_msg.data = yellow_detected;
-    yellow_detected_pub_->publish(yellow_msg);
+    std_msgs::msg::Bool purple_msg;
+    purple_msg.data = purple_detected;
+    purple_detected_pub_->publish(purple_msg);
 
     std_msgs::msg::String color_msg;
-    if (green_detected && yellow_detected) {
+    if (green_detected && purple_detected) {
       color_msg.data = "BOTH";
     } else if (green_detected) {
       color_msg.data = "GREEN";
-    } else if (yellow_detected) {
-      color_msg.data = "yellow";
+    } else if (purple_detected) {
+      color_msg.data = "purple";
     } else {
       color_msg.data = "NONE";
     }
@@ -457,8 +457,8 @@ private:
     if (green_detected_) {
       return "GREEN";
     }
-    if (yellow_detected_) {
-      return "yellow";
+    if (purple_detected_) {
+      return "purple";
     }
     return "CLEAR";
   }
@@ -690,7 +690,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr zones_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr front_obstacle_distance_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr green_detected_pub_;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr yellow_detected_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr purple_detected_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr detected_color_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_view_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr green_center_offset_pub_;
@@ -733,10 +733,10 @@ private:
 
   std::string rgb_topic_{"camera/camera/color/image_raw"};
   bool green_detection_enabled_{true};
-  bool yellow_detection_enabled_{true};
+  bool purple_detection_enabled_{true};
   int color_detect_hold_ms_{800};
   int green_detect_hold_ms_{800};
-  int yellow_detect_hold_ms_{800};
+  int purple_detect_hold_ms_{800};
   bool save_green_images_{true};
   bool green_snapshot_armed_{true};
   std::string green_image_save_dir_{"/tmp/leo_green_detections"};
@@ -744,15 +744,15 @@ private:
   int color_saturation_min_{50};
   int color_value_min_{60};
   double green_min_area_ratio_{0.01};
-  double yellow_min_area_ratio_{0.01};
+  double purple_min_area_ratio_{0.01};
   int green_saturation_min_{50};
-  int yellow_saturation_min_{50};
+  int purple_saturation_min_{50};
   int green_value_min_{60};
-  int yellow_value_min_{60};
+  int purple_value_min_{60};
   int green_hue_min_{40};
   int green_hue_max_{85};
-  int yellow_hue_min_{85};
-  int yellow_hue_max_{105};
+  int purple_hue_min_{125};
+  int purple_hue_max_{165};
   double color_roi_y0_frac_{0.0};
   double color_roi_y1_frac_{1.0};
   double green_crop_y0_frac_{0.0};
@@ -760,9 +760,9 @@ private:
   cv::Mat color_zone_ignore_mask_;
 
   bool green_detected_{false};
-  bool yellow_detected_{false};
+  bool purple_detected_{false};
   rclcpp::Time last_green_seen_time_;
-  rclcpp::Time last_yellow_seen_time_;
+  rclcpp::Time last_purple_seen_time_;
   std::string current_zone_{"CLEAR"};
 
   std::string last_state_{"CLEAR"};

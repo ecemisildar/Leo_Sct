@@ -51,13 +51,13 @@
 #     aruco_adaptive_thresh_win_max: 43
 #     aruco_adaptive_thresh_win_step: 4
 
-#     # RGB color detection tuning. Raise color_min_area_ratio or disable yellow
-#     # if background/lighting is incorrectly classified as yellow.
+#     # RGB color detection tuning. Raise color_min_area_ratio or disable purple
+#     # if background/lighting is incorrectly classified as purple.
 #     green_detection_enabled: true
-#     yellow_detection_enabled: true
+#     purple_detection_enabled: true
 #     color_detect_hold_ms: 800
 #     green_detect_hold_ms: 1500
-#     yellow_detect_hold_ms: 800
+#     purple_detect_hold_ms: 800
 #     image_view_enabled: true
 #     save_green_images: true
 #     green_image_save_dir: "/tmp/leo_green_detections"
@@ -72,12 +72,11 @@
 #     green_value_min: 50
 #     green_hue_min: 36
 #     green_hue_max: 88
-#     # The "yellow" supervisor event is detected from the pastel yellow #FFFAA0 target.
-#     yellow_min_area_ratio: 0.003
-#     yellow_saturation_min: 20
-#     yellow_value_min: 100
-#     yellow_hue_min: 15
-#     yellow_hue_max: 45
+#     purple_min_area_ratio: 0.02
+#     purple_saturation_min: 40
+#     purple_value_min: 40
+#     purple_hue_min: 125
+#     purple_hue_max: 165
 
 image_processor_rgb:
   ros__parameters:
@@ -105,10 +104,10 @@ image_processor_rgb:
     ignore_color_for_zones: true
     rgb_topic: "camera/camera/color/image_raw"
     green_detection_enabled: true
-    yellow_detection_enabled: true
+    purple_detection_enabled: true
     color_detect_hold_ms: 100
     green_detect_hold_ms: 1500
-    yellow_detect_hold_ms: 100
+    purple_detect_hold_ms: 100
     image_view_enabled: true
     save_green_images: true
     green_image_save_dir: "/tmp/leo_green_detections"
@@ -125,9 +124,8 @@ image_processor_rgb:
     green_value_min: 60
     green_hue_min: 35
     green_hue_max: 85
-    # The "yellow" supervisor event is detected from the pastel yellow #FFFAA0 target.
-    yellow_min_area_ratio: 0.02
-    yellow_saturation_min: 25
-    yellow_value_min: 125
-    yellow_hue_min: 15
-    yellow_hue_max: 32
+    purple_min_area_ratio: 0.02
+    purple_saturation_min: 40
+    purple_value_min: 40
+    purple_hue_min: 125
+    purple_hue_max: 165

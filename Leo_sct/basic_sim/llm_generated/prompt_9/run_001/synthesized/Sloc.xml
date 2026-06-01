@@ -9,19 +9,19 @@
 	<state id="5" name="rotate_commit_cw,cw_do" initial ="False" marked="True" x="550" y="90" />
 	<state id="6" name="obs_front,front_blocked" initial ="False" marked="True" x="640" y="90" />
 	<state id="7" name="scan_full,scan_do" initial ="False" marked="True" x="100" y="180" />
-	<state id="8" name="yellow_area,yellow_in" initial ="False" marked="True" x="190" y="180" />
+	<state id="8" name="purple_area,purple_in" initial ="False" marked="True" x="190" y="180" />
 	<state id="9" name="recover_back,back_do" initial ="False" marked="True" x="280" y="180" />
 	<state id="10" name="clear,safe" initial ="True" marked="True" x="370" y="180" />
 	<event id="0" name="rotate_counterclockwise" controllable="True" observable="True"/>
 	<event id="1" name="obstacle_front" controllable="False" observable="True"/>
 	<event id="2" name="move_forward" controllable="True" observable="True"/>
-	<event id="3" name="yellow_detected" controllable="False" observable="True"/>
+	<event id="3" name="purple_detected" controllable="False" observable="True"/>
 	<event id="4" name="obstacle_right" controllable="False" observable="True"/>
 	<event id="5" name="obstacle_left" controllable="False" observable="True"/>
 	<event id="6" name="path_clear" controllable="False" observable="True"/>
 	<event id="7" name="rotate_clockwise" controllable="True" observable="True"/>
 	<event id="8" name="move_backward" controllable="True" observable="True"/>
-	<event id="9" name="escape_yellow" controllable="True" observable="True"/>
+	<event id="9" name="escape_purple" controllable="True" observable="True"/>
 	<event id="10" name="full_rotate" controllable="True" observable="True"/>
 	<transition source="0" target="3" event="4"/>
 	<transition source="0" target="4" event="5"/>

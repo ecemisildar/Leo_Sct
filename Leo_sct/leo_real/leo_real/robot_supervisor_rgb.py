@@ -125,6 +125,12 @@ class RobotSupervisor(Node):
         self.green_offset_timeout_s = float(
             self.declare_parameter("green_offset_timeout_s", 0.5).value
         )
+        self.green_follow_linear_x = float(
+            self.declare_parameter("green_follow_linear_x", 0.06).value
+        )
+        self.green_follow_centered_deadband = abs(
+            float(self.declare_parameter("green_follow_centered_deadband", 0.18).value)
+        )
 
         # Random seed (per-robot namespace)
         self.ns = self.get_namespace().strip("/") or "root"
@@ -229,7 +235,7 @@ class RobotSupervisor(Node):
             ),
             "EV_stop": ActionSpec(linear_x=0.0, angular_z=0.0),
             "EV_go_to_green": ActionSpec(linear_x=0.16, angular_z=0.0),
-            "EV_escape_yellow": ActionSpec(linear_x=-0.2, angular_z=0.6, hold_s=self.recovery_back_hold_s),
+            "EV_escape_purple": ActionSpec(linear_x=-0.2, angular_z=0.6, hold_s=self.recovery_back_hold_s),
             # full_rotate is executed as an atomic rotation using odom; target is full_rotate_target_rad (≤ π here).
             "EV_full_rotate": ActionSpec(linear_x=0.0, angular_z=self.full_rotate_omega, is_full_rotate=True),
         }
@@ -294,8 +300,8 @@ class RobotSupervisor(Node):
         self.enabled_color_tokens = set()
         if "EV_green_detected" in self.sct.EV:
             self.enabled_color_tokens.add("GREEN")
-        if "EV_yellow_detected" in self.sct.EV:
-            self.enabled_color_tokens.add("yellow")
+        if "EV_purple_detected" in self.sct.EV:
+            self.enabled_color_tokens.add("purple")
         for ev_id in self.sct.EV.values():
             if ev_id not in self.sct.callback:
                 self.sct.callback[ev_id] = {
@@ -427,10 +433,11 @@ class RobotSupervisor(Node):
             "OBSTACLE_RIGHT": "RIGHT",
             "GREEN_DETECTED": "GREEN",
             "GREEN_AREA": "GREEN",
-            "yellow_DETECTED": "yellow",
-            "yellow_AREA": "yellow",
+            "PURPLE": "purple",
+            "PURPLE_DETECTED": "purple",
+            "PURPLE_AREA": "purple",
         }
-        valid = {"CLEAR", "LEFT", "RIGHT", "CORNER", "GREEN", "yellow"}
+        valid = {"CLEAR", "LEFT", "RIGHT", "CORNER", "GREEN", "purple"}
         raw_tokens = re.split(r"[\s,;/|]+", str(text).strip().upper())
         tokens = set()
         for raw in raw_tokens:
@@ -449,7 +456,7 @@ class RobotSupervisor(Node):
 
     def _filter_zone_tokens_for_current_sct(self, tokens: set[str]) -> set[str]:
         filtered = set(tokens)
-        for color in ("GREEN", "yellow"):
+        for color in ("GREEN", "purple"):
             if color in filtered and color not in getattr(self, "enabled_color_tokens", set()):
                 filtered.discard(color)
         if not filtered:
@@ -488,8 +495,8 @@ class RobotSupervisor(Node):
     def green_detected_check(self, sup_data):
         return "GREEN" in self.perception_tokens
 
-    def yellow_detected_check(self, sup_data):
-        return "yellow" in self.perception_tokens
+    def purple_detected_check(self, sup_data):
+        return "purple" in self.perception_tokens
 
 
     def _install_uncontrollable_callbacks(self):
@@ -504,7 +511,7 @@ class RobotSupervisor(Node):
         add("obstacle_left", self.left_check)
         add("obstacle_right", self.right_check)
         add("green_detected", self.green_detected_check)
-        add("yellow_detected", self.yellow_detected_check)
+        add("purple_detected", self.purple_detected_check)
 
     # -------------------------------
     # Enable service
@@ -696,9 +703,18 @@ class RobotSupervisor(Node):
             min(self.green_centering_max_angular, angular_z),
         )
 
+    def _green_follow_linear_x(self) -> float:
+        if self.green_center_offset is None:
+            return 0.0
+        if (time.time() - self.green_center_offset_time) > self.green_offset_timeout_s:
+            return 0.0
+        if abs(self.green_center_offset) > self.green_follow_centered_deadband:
+            return 0.0
+        return max(0.0, self.green_follow_linear_x)
+
     def _hold_green_centered(self):
         twist = Twist()
-        twist.linear.x = 0.0
+        twist.linear.x = self._green_follow_linear_x()
         twist.angular.z = self._green_centering_angular_z()
         self.active_event = "EV_go_to_green"
         self.active_twist = twist

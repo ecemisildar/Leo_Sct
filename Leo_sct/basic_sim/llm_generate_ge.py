@@ -73,8 +73,8 @@ OBJECT_UNCONTROLLABLE = ["detect_object_red"]
 OBJECT_GREEN_UNCONTROLLABLE = ["detect_object_green"]
 GREEN_CONTROLLABLE = ["go_to_green"]
 GREEN_UNCONTROLLABLE = ["green_detected"]
-YELLOW_CONTROLLABLE = ["escape_yellow"]
-YELLOW_UNCONTROLLABLE = ["yellow_detected"]
+PURPLE_CONTROLLABLE = ["escape_purple"]
+PURPLE_UNCONTROLLABLE = ["purple_detected"]
 RED_GOAL = (
     "Design a small grid-world DES model for multiple agents. The plant G should "
     "model which perception and motion events can occur. The specification E "
@@ -118,19 +118,19 @@ GREEN_GOAL = (
     "in a 2x2 green target area while still allowing all seven controllable "
     "actions somewhere in the automaton."
 )
-YELLOW_GOAL = (
+PURPLE_GOAL = (
     "Design a small grid-world DES model for multiple agents. The plant G should "
     "model which perception and motion events can occur. The specification E "
     "should constrain motion for obstacle-aware movement and make robots escape "
-    "from a 2x2 yellow danger area while still allowing all seven controllable "
+    "from a 2x2 purple danger area while still allowing all seven controllable "
     "actions somewhere in the automaton."
 )
-GREEN_YELLOW_GOAL = (
+GREEN_PURPLE_GOAL = (
     "Design a small grid-world DES model for multiple agents. The plant G should "
     "model which perception and motion events can occur. The specification E "
     "should constrain motion for obstacle-aware movement, make robots gather in "
     "a 2x2 green target area, and make robots avoid or escape from a separate "
-    "2x2 yellow danger area while still allowing all eight controllable actions "
+    "2x2 purple danger area while still allowing all eight controllable actions "
     "somewhere in the automaton."
 )
 
@@ -142,7 +142,7 @@ BASIC_SIM_CONSTRAINTS = [
     "Do not use move_backward from clear/path_clear states.",
     "Use stop only when the robot should intentionally hold position, such as after reaching a goal or when no safe movement is available.",
     "Obstacle states should prefer directed rotations or short recovery before returning to clear.",
-    "Obstacle detection has priority over color detection: color events such as red_detected, green_detected, blue_detected, or yellow_detected should only be triggered from clear/path-clear decision states.",
+    "Obstacle detection has priority over color detection: color events such as red_detected, green_detected, blue_detected, or purple_detected should only be triggered from clear/path-clear decision states.",
     "Do not let color-detected events transition directly out of obs_front, obs_left, obs_right, recovery, scan, or commit states; those states must handle obstacle events first.",
 ]
 
@@ -178,10 +178,10 @@ GREEN_TASK_CONSTRAINTS = [
     "When green_detected occurs, the robot has reached the green area and should remain there or use only minimal safe correction.",
 ]
 
-YELLOW_TASK_CONSTRAINTS = [
-    "The specification E should prioritize escape_yellow immediately after yellow_detected.",
-    "When yellow_detected occurs, the robot is inside the yellow danger area and should leave it before resuming normal movement.",
-    "After escape_yellow, return to obstacle-aware movement and avoid re-entering the yellow area when possible.",
+PURPLE_TASK_CONSTRAINTS = [
+    "The specification E should prioritize escape_purple immediately after purple_detected.",
+    "When purple_detected occurs, the robot is inside the purple danger area and should leave it before resuming normal movement.",
+    "After escape_purple, return to obstacle-aware movement and avoid re-entering the purple area when possible.",
 ]
 
 RANDOM_WALK_PROMPT_REPLACEMENTS = {
@@ -393,11 +393,11 @@ def is_green_task(user_task: str | None) -> bool:
     return "go_to_green" in task or "green_detected" in task or "green area" in task
 
 
-def is_yellow_task(user_task: str | None) -> bool:
+def is_purple_task(user_task: str | None) -> bool:
     if not user_task:
         return False
     task = user_task.lower()
-    return "escape_yellow" in task or "yellow_detected" in task or "yellow area" in task
+    return "escape_purple" in task or "purple_detected" in task or "purple area" in task
 
 
 def is_object_task(user_task: str | None) -> bool:
@@ -438,7 +438,7 @@ def build_basic_prompt(user_task: str | None, include_examples: bool) -> str:
     red_task = is_red_task(user_task)
     blue_task = is_blue_task(user_task)
     green_task = is_green_task(user_task)
-    yellow_task = is_yellow_task(user_task)
+    purple_task = is_purple_task(user_task)
     object_task = is_object_task(user_task)
     state_semantics, event_semantics = merge_prompt_semantics(None, None)
     event_semantics.pop("random_walk", None)
@@ -495,21 +495,21 @@ def build_basic_prompt(user_task: str | None, include_examples: bool) -> str:
             ),
         })
 
-    if yellow_task:
-        controllable += YELLOW_CONTROLLABLE
-        uncontrollable += YELLOW_UNCONTROLLABLE
-        goal = YELLOW_GOAL
-        constraints += YELLOW_TASK_CONSTRAINTS
+    if purple_task:
+        controllable += PURPLE_CONTROLLABLE
+        uncontrollable += PURPLE_UNCONTROLLABLE
+        goal = PURPLE_GOAL
+        constraints += PURPLE_TASK_CONSTRAINTS
         event_semantics.update({
-            "yellow_detected": "the agent is inside the 2x2 yellow danger area.",
-            "escape_yellow": (
-                "move one grid cell away from the yellow area; use immediately after "
-                "yellow_detected to leave the danger area."
+            "purple_detected": "the agent is inside the 2x2 purple danger area.",
+            "escape_purple": (
+                "move one grid cell away from the purple area; use immediately after "
+                "purple_detected to leave the danger area."
             ),
         })
 
-    if green_task and yellow_task:
-        goal = GREEN_YELLOW_GOAL
+    if green_task and purple_task:
+        goal = GREEN_PURPLE_GOAL
 
     if object_task:
         controllable += OBJECT_CONTROLLABLE
@@ -643,7 +643,7 @@ def warn_for_real_robot_events(yaml_payload: dict, yaml_path: Path) -> None:
         "EV_go_to_red",
         "EV_escape_blue",
         "EV_go_to_green",
-        "EV_escape_yellow",
+        "EV_escape_purple",
         "EV_push",
     }
     supported_uncontrollables = {
@@ -654,7 +654,7 @@ def warn_for_real_robot_events(yaml_payload: dict, yaml_path: Path) -> None:
         "EV_red_detected",
         "EV_blue_detected",
         "EV_green_detected",
-        "EV_yellow_detected",
+        "EV_purple_detected",
         "EV_detect_object_green",
     }
     events = list(yaml_payload["events"])

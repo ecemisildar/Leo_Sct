@@ -89,6 +89,8 @@ def generate_launch_description():
             {"green_centering_max_angular": 0.45},
             {"green_centering_deadband": 0.08},
             {"green_offset_timeout_s": 0.5},
+            {"green_follow_linear_x": 0.06},
+            {"green_follow_centered_deadband": 0.18},
         ],
         output="screen",
     )
