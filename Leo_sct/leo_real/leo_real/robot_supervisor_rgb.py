@@ -214,6 +214,21 @@ class RobotSupervisor(Node):
             "enable_supervisor_explore",
             self.handle_enable_supervisor_explore,
         )
+        self.enable_service_draw_square = self.create_service(
+            SetBool,
+            "enable_supervisor_draw_square",
+            self._mission_service_handler("prompt_5_run_001", "draw square"),
+        )
+        self.enable_service_find_green = self.create_service(
+            SetBool,
+            "enable_supervisor_find_green",
+            self._mission_service_handler("prompt_8_run_003", "find green"),
+        )
+        self.enable_service_escape_blue = self.create_service(
+            SetBool,
+            "enable_supervisor_escape_blue",
+            self._mission_service_handler("prompt_9_run_002", "escape blue"),
+        )
 
         # -------------------------------
         # Action table (data-driven)
@@ -235,7 +250,7 @@ class RobotSupervisor(Node):
             ),
             "EV_stop": ActionSpec(linear_x=0.0, angular_z=0.0),
             "EV_go_to_green": ActionSpec(linear_x=0.16, angular_z=0.0),
-            "EV_escape_purple": ActionSpec(linear_x=-0.2, angular_z=0.6, hold_s=self.recovery_back_hold_s),
+            "EV_escape_blue": ActionSpec(linear_x=-0.2, angular_z=0.6, hold_s=self.recovery_back_hold_s),
             # full_rotate is executed as an atomic rotation using odom; target is full_rotate_target_rad (≤ π here).
             "EV_full_rotate": ActionSpec(linear_x=0.0, angular_z=self.full_rotate_omega, is_full_rotate=True),
         }
@@ -258,10 +273,7 @@ class RobotSupervisor(Node):
         self.get_logger().info(f"Triggered events: {', '.join(event_names)}")
 
     def _canonical_mission_name(self, mission: str) -> str:
-        key = str(mission or "").strip().lower().replace("-", "_").replace(" ", "_")
-        if key != "explore":
-            key = "explore"
-        return key
+        return str(mission or "").strip().lower().replace("-", "_").replace(" ", "_")
 
     def _resolve_config_dir(self) -> str:
         try:
@@ -273,6 +285,9 @@ class RobotSupervisor(Node):
     def _mission_yaml_candidates(self, mission: str):
         mission_key = self._canonical_mission_name(mission)
         candidates = []
+        direct = os.path.join(self.config_dir, f"{mission_key}.yaml")
+        if os.path.exists(direct):
+            candidates.append(direct)
         preferred = os.path.join(self.config_dir, f"{mission_key}_sup_gpt.yaml")
         if os.path.exists(preferred):
             candidates.append(preferred)
@@ -300,8 +315,8 @@ class RobotSupervisor(Node):
         self.enabled_color_tokens = set()
         if "EV_green_detected" in self.sct.EV:
             self.enabled_color_tokens.add("GREEN")
-        if "EV_purple_detected" in self.sct.EV:
-            self.enabled_color_tokens.add("purple")
+        if "EV_blue_detected" in self.sct.EV:
+            self.enabled_color_tokens.add("blue")
         for ev_id in self.sct.EV.values():
             if ev_id not in self.sct.callback:
                 self.sct.callback[ev_id] = {
@@ -433,11 +448,11 @@ class RobotSupervisor(Node):
             "OBSTACLE_RIGHT": "RIGHT",
             "GREEN_DETECTED": "GREEN",
             "GREEN_AREA": "GREEN",
-            "PURPLE": "purple",
-            "PURPLE_DETECTED": "purple",
-            "PURPLE_AREA": "purple",
+            "BLUE": "blue",
+            "BLUE_DETECTED": "blue",
+            "BLUE_AREA": "blue",
         }
-        valid = {"CLEAR", "LEFT", "RIGHT", "CORNER", "GREEN", "purple"}
+        valid = {"CLEAR", "LEFT", "RIGHT", "CORNER", "GREEN", "blue"}
         raw_tokens = re.split(r"[\s,;/|]+", str(text).strip().upper())
         tokens = set()
         for raw in raw_tokens:
@@ -456,7 +471,7 @@ class RobotSupervisor(Node):
 
     def _filter_zone_tokens_for_current_sct(self, tokens: set[str]) -> set[str]:
         filtered = set(tokens)
-        for color in ("GREEN", "purple"):
+        for color in ("GREEN", "blue"):
             if color in filtered and color not in getattr(self, "enabled_color_tokens", set()):
                 filtered.discard(color)
         if not filtered:
@@ -495,8 +510,8 @@ class RobotSupervisor(Node):
     def green_detected_check(self, sup_data):
         return "GREEN" in self.perception_tokens
 
-    def purple_detected_check(self, sup_data):
-        return "purple" in self.perception_tokens
+    def blue_detected_check(self, sup_data):
+        return "blue" in self.perception_tokens
 
 
     def _install_uncontrollable_callbacks(self):
@@ -511,7 +526,7 @@ class RobotSupervisor(Node):
         add("obstacle_left", self.left_check)
         add("obstacle_right", self.right_check)
         add("green_detected", self.green_detected_check)
-        add("purple_detected", self.purple_detected_check)
+        add("blue_detected", self.blue_detected_check)
 
     # -------------------------------
     # Enable service
@@ -529,8 +544,9 @@ class RobotSupervisor(Node):
         return response
 
     def handle_enable_supervisor_explore(self, request, response):
+        detail = os.path.basename(self.current_yaml_path or "")
         if bool(request.data):
-            ok, detail = self._switch_mission("explore")
+            ok, detail = self._switch_mission("prompt_1_run_001")
             if not ok:
                 response.success = False
                 response.message = detail
@@ -542,6 +558,26 @@ class RobotSupervisor(Node):
         else:
             response.message = "Supervisor disabled."
         return response
+
+    def _mission_service_handler(self, mission: str, label: str):
+        def _handler(request, response):
+            if bool(request.data):
+                ok, detail = self._switch_mission(mission)
+                if not ok:
+                    response.success = False
+                    response.message = detail
+                    return response
+            else:
+                detail = os.path.basename(self.current_yaml_path or "")
+            self._set_enabled(request.data)
+            response.success = True
+            if self.enabled:
+                response.message = f"Supervisor enabled for {label} ({detail})."
+            else:
+                response.message = "Supervisor disabled."
+            return response
+
+        return _handler
 
     def _namespace_index(self) -> int:
         if self.ns.startswith("robot_"):

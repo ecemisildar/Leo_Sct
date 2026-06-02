@@ -51,13 +51,13 @@
 #     aruco_adaptive_thresh_win_max: 43
 #     aruco_adaptive_thresh_win_step: 4
 
-#     # RGB color detection tuning. Raise color_min_area_ratio or disable purple
-#     # if background/lighting is incorrectly classified as purple.
+#     # RGB color detection tuning. Raise color_min_area_ratio or disable blue
+#     # if background/lighting is incorrectly classified as blue.
 #     green_detection_enabled: true
-#     purple_detection_enabled: true
+#     blue_detection_enabled: true
 #     color_detect_hold_ms: 800
 #     green_detect_hold_ms: 1500
-#     purple_detect_hold_ms: 800
+#     blue_detect_hold_ms: 800
 #     image_view_enabled: true
 #     save_green_images: true
 #     green_image_save_dir: "/tmp/leo_green_detections"
@@ -72,11 +72,11 @@
 #     green_value_min: 50
 #     green_hue_min: 36
 #     green_hue_max: 88
-#     purple_min_area_ratio: 0.02
-#     purple_saturation_min: 40
-#     purple_value_min: 40
-#     purple_hue_min: 125
-#     purple_hue_max: 165
+#     blue_min_area_ratio: 0.02
+#     blue_saturation_min: 40
+#     blue_value_min: 40
+#     blue_hue_min: 90
+#     blue_hue_max: 130
 
 image_processor_rgb:
   ros__parameters:
@@ -104,10 +104,10 @@ image_processor_rgb:
     ignore_color_for_zones: true
     rgb_topic: "camera/camera/color/image_raw"
     green_detection_enabled: true
-    purple_detection_enabled: true
+    blue_detection_enabled: true
     color_detect_hold_ms: 100
     green_detect_hold_ms: 1500
-    purple_detect_hold_ms: 100
+    blue_detect_hold_ms: 100
     image_view_enabled: true
     save_green_images: true
     green_image_save_dir: "/tmp/leo_green_detections"
@@ -124,8 +124,8 @@ image_processor_rgb:
     green_value_min: 70
     green_hue_min: 40
     green_hue_max: 80
-    purple_min_area_ratio: 0.02
-    purple_saturation_min: 40
-    purple_value_min: 40
-    purple_hue_min: 125
-    purple_hue_max: 165
+    blue_min_area_ratio: 0.02
+    blue_saturation_min: 40
+    blue_value_min: 40
+    blue_hue_min: 90
+    blue_hue_max: 130
