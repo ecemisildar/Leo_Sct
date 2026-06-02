@@ -45,9 +45,6 @@ run_robot() {
     source /opt/ros/humble/setup.bash
     colcon build --symlink-install --packages-select leo_real leo_image
 
-    sudo systemctl restart leo-ros.service
-    sudo systemctl restart $ROSBRIDGE_SERVICE
-
     echo \"Finished on \$(hostname)\"
   "
 }

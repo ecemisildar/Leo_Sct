@@ -137,7 +137,8 @@ class RobotSupervisor(Node):
         base_seed = int(self.declare_parameter("random_seed", 12345).value)
         self.rng = random.Random(base_seed + self._namespace_index())
 
-        self.enabled = bool(self.declare_parameter("enabled", False).value)
+        self.declare_parameter("enabled", False)
+        self.enabled = False
         self.static_mode = bool(self.declare_parameter("static", False).value)
         self.routine_logging_enabled = bool(
             self.declare_parameter("routine_logging_enabled", False).value
@@ -196,6 +197,7 @@ class RobotSupervisor(Node):
         # Publishers/Subscribers
         # -------------------------------
         self.cmd_pub = self.create_publisher(Twist, "cmd_vel", 10)
+        self._publish_stop()
 
         self.sub_zone = self.create_subscription(String, "detected_zones", self.zone_callback, 10)
         self.sub_green_center_offset = self.create_subscription(
