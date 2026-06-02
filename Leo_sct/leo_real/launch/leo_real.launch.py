@@ -13,6 +13,7 @@ def generate_launch_description():
     robot_ns = LaunchConfiguration("robot_ns")
     spawn_x = LaunchConfiguration("spawn_x")
     spawn_y = LaunchConfiguration("spawn_y")
+    cmd_vel_topic = LaunchConfiguration("cmd_vel_topic")
 
     enable_supervisor = LaunchConfiguration("enable_supervisor")
     supervisor_yaml_path = LaunchConfiguration("supervisor_yaml_path")
@@ -27,6 +28,11 @@ def generate_launch_description():
     )
     spawn_x_arg = DeclareLaunchArgument("spawn_x", default_value="0.0")
     spawn_y_arg = DeclareLaunchArgument("spawn_y", default_value="0.0")
+    cmd_vel_topic_arg = DeclareLaunchArgument(
+        "cmd_vel_topic",
+        default_value="/cmd_vel",
+        description="Topic where robot_supervisor_rgb publishes velocity commands.",
+    )
 
     enable_supervisor_arg = DeclareLaunchArgument(
         "enable_supervisor",
@@ -98,6 +104,9 @@ def generate_launch_description():
             {"green_follow_linear_x": 0.06},
             {"green_follow_centered_deadband": 0.18},
         ],
+        remappings=[
+            ("cmd_vel", cmd_vel_topic),
+        ],
         output="screen",
     )
 
@@ -153,7 +162,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        robot_ns_arg, spawn_x_arg, spawn_y_arg,
+        robot_ns_arg, spawn_x_arg, spawn_y_arg, cmd_vel_topic_arg,
         enable_supervisor_arg, supervisor_yaml_path_arg, enable_aruco_arg,
         static_mode_arg, enable_web_video_arg,
         group_with_ns,
