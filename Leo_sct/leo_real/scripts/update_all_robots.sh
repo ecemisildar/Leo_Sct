@@ -10,25 +10,43 @@ ROBOTS=(
 
 WS="~/ros_ws"
 REPO="$WS/src/Leo_Sct/Leo_sct"
-BRANCH="real"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCAL_REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 run_robot() {
   local R="$1"
+  local HOST="${R#*@}"
+  local USER="${R%@*}"
+  local PADDED="${USER#jetson-}"
+  local ROSBRIDGE_SERVICE="jetson-${PADDED}-rosbridge.service"
+
   echo "========== Updating $R =========="
+  ssh -o BatchMode=yes -o ConnectTimeout=10 "$R" "mkdir -p $REPO"
+
+  rsync -az --delete \
+    --exclude build \
+    --exclude install \
+    --exclude log \
+    "$LOCAL_REPO/leo_real/" "$R:$REPO/leo_real/"
+
+  rsync -az --delete \
+    --exclude build \
+    --exclude install \
+    --exclude log \
+    "$LOCAL_REPO/leo_image/" "$R:$REPO/leo_image/"
+
   ssh -o BatchMode=yes -o ConnectTimeout=10 "$R" "
     set -e
     cd $REPO
     echo '[update] repo=' \$(pwd)
-    git fetch --prune origin
-    git checkout -f -B $BRANCH origin/$BRANCH
-    git reset --hard origin/$BRANCH
-    git clean -fdx
     find . -type d -name __pycache__ -prune -exec rm -rf {} +
-    echo '[update] commit=' \$(git rev-parse --short HEAD)
 
     cd $WS
     source /opt/ros/humble/setup.bash
     colcon build --symlink-install --packages-select leo_real leo_image
+
+    sudo systemctl restart leo-ros.service
+    sudo systemctl restart $ROSBRIDGE_SERVICE
 
     echo \"Finished on \$(hostname)\"
   "
