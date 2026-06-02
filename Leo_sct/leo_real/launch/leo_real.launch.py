@@ -18,6 +18,7 @@ def generate_launch_description():
     supervisor_yaml_path = LaunchConfiguration("supervisor_yaml_path")
     enable_aruco = LaunchConfiguration("enable_aruco")
     static_mode = LaunchConfiguration("static")
+    enable_web_video = LaunchConfiguration("enable_web_video")
 
     robot_ns_arg = DeclareLaunchArgument(
         "robot_ns",
@@ -46,6 +47,11 @@ def generate_launch_description():
         "static",
         default_value="false",
         description="Force robot_supervisor cmd_vel output to zero for testing.",
+    )
+    enable_web_video_arg = DeclareLaunchArgument(
+        "enable_web_video",
+        default_value="true",
+        description="Start web_video_server on port 8080 for Robot Hub camera streaming.",
     )
 
     # --- Conditions ---
@@ -111,6 +117,18 @@ def generate_launch_description():
         output="screen",
     )
 
+    web_video_node = Node(
+        package="web_video_server",
+        executable="web_video_server",
+        name="web_video_server",
+        parameters=[
+            {"address": "0.0.0.0"},
+            {"port": 8080},
+        ],
+        condition=IfCondition(enable_web_video),
+        output="screen",
+    )
+
     # --- Group when namespace is used ---
     group_with_ns = GroupAction(
         actions=[
@@ -118,6 +136,7 @@ def generate_launch_description():
             realsense_node,
             supervisor_node,
             image_proc_node,
+            web_video_node,
         ],
         condition=IfCondition(use_ns),
     )
@@ -128,13 +147,15 @@ def generate_launch_description():
             realsense_node,
             supervisor_node,
             image_proc_node,
+            web_video_node,
         ],
         condition=UnlessCondition(use_ns),
     )
 
     return LaunchDescription([
         robot_ns_arg, spawn_x_arg, spawn_y_arg,
-        enable_supervisor_arg, supervisor_yaml_path_arg, enable_aruco_arg, static_mode_arg,
+        enable_supervisor_arg, supervisor_yaml_path_arg, enable_aruco_arg,
+        static_mode_arg, enable_web_video_arg,
         group_with_ns,
         group_no_ns,
     ])
