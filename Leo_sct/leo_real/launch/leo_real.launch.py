@@ -30,7 +30,7 @@ def generate_launch_description():
     spawn_y_arg = DeclareLaunchArgument("spawn_y", default_value="0.0")
     cmd_vel_topic_arg = DeclareLaunchArgument(
         "cmd_vel_topic",
-        default_value="/cmd_vel",
+        default_value="cmd_vel",
         description="Topic where robot_supervisor_rgb publishes velocity commands.",
     )
 
