@@ -131,6 +131,14 @@ class RobotSupervisor(Node):
         self.green_follow_centered_deadband = abs(
             float(self.declare_parameter("green_follow_centered_deadband", 0.18).value)
         )
+        self.green_stop_distance_m = max(
+            0.0,
+            float(self.declare_parameter("green_stop_distance_m", 0.50).value),
+        )
+        self.front_distance_timeout_s = max(
+            0.0,
+            float(self.declare_parameter("front_distance_timeout_s", 0.5).value),
+        )
 
         # Random seed (per-robot namespace)
         self.ns = self.get_namespace().strip("/") or "root"
@@ -165,6 +173,10 @@ class RobotSupervisor(Node):
         self.green_logged_active = False
         self.green_center_offset: Optional[float] = None
         self.green_center_offset_time = 0.0
+        self.front_obstacle_distance: Optional[float] = None
+        self.front_obstacle_distance_time = 0.0
+        self.green_target_seen = False
+        self.green_target_reached = False
     
 
         # Odom / yaw tracking for full-rotate
@@ -202,6 +214,9 @@ class RobotSupervisor(Node):
         self.sub_zone = self.create_subscription(String, "detected_zones", self.zone_callback, 10)
         self.sub_green_center_offset = self.create_subscription(
             Float32, "green_center_offset", self.green_center_offset_callback, 10
+        )
+        self.sub_front_obstacle_distance = self.create_subscription(
+            Float32, "front_obstacle_distance", self.front_obstacle_distance_callback, 10
         )
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
 
@@ -385,6 +400,8 @@ class RobotSupervisor(Node):
     def _set_enabled(self, enable: bool):
         self.enabled = bool(enable)
         self.stop_sent = False
+        self.green_target_seen = False
+        self.green_target_reached = False
         self._cancel_all_motion()
         if not self.enabled:
             self._publish_stop()
@@ -418,6 +435,26 @@ class RobotSupervisor(Node):
         else:
             self.green_center_offset = None
             self.green_center_offset_time = 0.0
+
+    def front_obstacle_distance_callback(self, msg: Float32):
+        value = float(msg.data)
+        if math.isfinite(value) and value > 0.0:
+            self.front_obstacle_distance = value
+            self.front_obstacle_distance_time = time.time()
+        else:
+            self.front_obstacle_distance = None
+            self.front_obstacle_distance_time = 0.0
+
+    def _is_find_green_mission(self) -> bool:
+        return os.path.basename(self.current_yaml_path).startswith("prompt_8_")
+
+    def _green_stop_distance_reached(self, now: float) -> bool:
+        return (
+            self.green_target_seen
+            and self.front_obstacle_distance is not None
+            and (now - self.front_obstacle_distance_time) <= self.front_distance_timeout_s
+            and self.front_obstacle_distance <= self.green_stop_distance_m
+        )
 
     def zone_callback(self, msg: String):
         now = time.time()
@@ -840,7 +877,19 @@ class RobotSupervisor(Node):
 
         self.stop_sent = False
         now = time.time()
-        
+
+        if self._is_find_green_mission():
+            if "GREEN" in self.perception_tokens:
+                self.green_target_seen = True
+            if not self.green_target_reached and self._green_stop_distance_reached(now):
+                self.green_target_reached = True
+                self.get_logger().info(
+                    f"Green target reached at {self.front_obstacle_distance:.2f} m; stopping."
+                )
+            if self.green_target_reached:
+                self._cancel_all_motion()
+                self._publish_stop()
+                return
 
         # If we’re in the middle of a true full_rotate, keep executing until complete.
         if self.full_rotate_active:

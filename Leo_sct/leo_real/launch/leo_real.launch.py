@@ -103,6 +103,8 @@ def generate_launch_description():
             {"green_offset_timeout_s": 0.5},
             {"green_follow_linear_x": 0.06},
             {"green_follow_centered_deadband": 0.18},
+            {"green_stop_distance_m": 0.50},
+            {"front_distance_timeout_s": 0.5},
         ],
         remappings=[
             ("cmd_vel", cmd_vel_topic),
