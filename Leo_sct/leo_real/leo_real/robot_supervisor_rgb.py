@@ -883,9 +883,14 @@ class RobotSupervisor(Node):
                 self.green_target_seen = True
             if not self.green_target_reached and self._green_stop_distance_reached(now):
                 self.green_target_reached = True
+                self.enabled = False
+                self._cancel_all_motion()
+                self._publish_stop()
+                self.stop_sent = True
                 self.get_logger().info(
-                    f"Green target reached at {self.front_obstacle_distance:.2f} m; stopping."
+                    f"Find-green task completed at {self.front_obstacle_distance:.2f} m; supervisor disabled."
                 )
+                return
             if self.green_target_reached:
                 self._cancel_all_motion()
                 self._publish_stop()
