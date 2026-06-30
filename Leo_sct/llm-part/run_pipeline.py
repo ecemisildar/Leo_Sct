@@ -62,7 +62,7 @@ RUN_LLM = True
 
 # LLM defaults (shared with the LLM-only flow).
 DEFAULT_KEY_FILE = THIS_DIR.parent / "api_key.txt"
-DEFAULT_MODEL = "gpt-4.1"
+DEFAULT_MODEL = "llama3.2:1b" #"gpt-4.1"
 DEFAULT_TIMEOUT_S = 120.0
 DEFAULT_RETRIES = 2
 DEFAULT_LLM_COOLDOWN_MIN_S = 1.0
@@ -343,6 +343,14 @@ def parse_json_response(content: str) -> Dict[str, object]:
                 elif isinstance(item, (tuple, list)) and len(item) == 3 and all(isinstance(x, str) for x in item):
                     s, ev, t = item
                     normalized.append(f'(\"{s}\", \"{ev}\", \"{t}\")')
+                elif isinstance(item, dict):
+                    source = item.get("source", item.get("state", item.get("from")))
+                    event = item.get("event")
+                    target = item.get("target", item.get("next", item.get("to")))
+                    if all(isinstance(value, str) for value in (source, event, target)):
+                        normalized.append(f'(\"{source}\", \"{event}\", \"{target}\")')
+                    else:
+                        raise ValueError(f"Unsupported transition entry: {item!r}")
                 else:
                     raise ValueError(f"Unsupported transition entry: {item!r}")
             return normalized
@@ -419,14 +427,26 @@ def call_chat_completion(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+    # payload = {
+    #     "model": model,
+    #     "temperature": temperature,
+    #     "messages": [
+    #         {
+    #             "role": "system",
+    #             "content": SYSTEM_PROMPT,
+    #         },
+    #         {"role": "user", "content": prompt},
+    #     ],
+    # }
     payload = {
         "model": model,
-        "temperature": temperature,
+        "stream": False,
+        "format": "json",
+        "options": {
+            "temperature": temperature,
+        },
         "messages": [
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT,
-            },
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ],
     }
@@ -441,13 +461,15 @@ def call_chat_completion(
                 print(f"[LLM cooldown] sleeping {delay:.1f}s before request")
                 time.sleep(delay)
             response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
+                "http://localhost:11434/api/chat",
+                #"https://api.openai.com/v1/chat/completions",
                 headers=headers,
                 data=json.dumps(payload),
                 timeout=timeout_s,
             )
             response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"]
+            # content = response.json()["choices"][0]["message"]["content"]
+            content = response.json()["message"]["content"]
             return parse_json_response(content)
         except requests.exceptions.ReadTimeout as exc:
             last_error = exc

@@ -546,7 +546,7 @@ def make_parser() -> argparse.ArgumentParser:
         help="Nadzoru XML, generated JSON, or compact SCT YAML files. Reused round-robin.",
     )
     parser.add_argument("--agents", type=int, default=2)
-    parser.add_argument("--steps", type=int, default=50)
+    parser.add_argument("--steps", type=int, default=150)
     parser.add_argument("--width", type=int, default=8)
     parser.add_argument("--height", type=int, default=6)
     parser.add_argument("--seed", type=int, default=7)

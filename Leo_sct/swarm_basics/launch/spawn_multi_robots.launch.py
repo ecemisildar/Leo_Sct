@@ -531,7 +531,6 @@ def generate_launch_description():
             executable="bump_counter",
             name="bump_counter",
             parameters=[
-                {"global_mode": True},
                 {"run_id": run_id},
                 {"results_dir": LaunchConfiguration("results_dir")},
             ],

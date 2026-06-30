@@ -16,7 +16,8 @@ SYSTEM_PROMPT = (
 DEFAULT_CONSTRAINTS = [
     "Do NOT introduce any new controllable or uncontrollable events. Use ONLY the provided event lists.",
     "Do NOT invent sensor events beyond the given uncontrollable list (e.g., no 'battery_low', etc.).",
-    "All transitions must be formatted exactly as: (\"state\", \"event\", \"next\").",
+    "All transitions must be formatted exactly as JSON strings: \"(\\\"state\\\", \\\"event\\\", \\\"next\\\")\".",
+    "The transitions field must be a JSON array of strings, not an object, dictionary, map, nested array, or list of objects.",
     "Determinism is required: for each (state, event) pair, specify EXACTLY ONE next state. No duplicates.",
     "Every transition must be labeled by one event from the lists.",
     "For EVERY state, include an outgoing transition for ALL uncontrollable events (total w.r.t. uncontrollable events).",
@@ -242,7 +243,8 @@ def build_pipeline_prompt(
     lines.append("Rules:")
     lines.append("- Use only the provided event names unless a genuinely necessary plant event is justified in the rationale.")
     lines.append("- Every automaton must be deterministic.")
-    lines.append("- Use tuple-string transitions exactly in the form (\"state\", \"event\", \"next\").")
-    lines.append("- Return at least one plant automaton in G and at least one specification automaton in E.")
+    lines.append("- Use tuple-string transitions exactly in the form \"(\\\"state\\\", \\\"event\\\", \\\"next\\\")\".")
+    lines.append("- The transitions field must be a JSON array of strings, never a dictionary/object/map.")
+    lines.append("- Return exactly one plant automaton in G and exactly one specification automaton in E.")
     lines.append("- Keep the JSON compact and valid.")
     return "\n".join(lines)

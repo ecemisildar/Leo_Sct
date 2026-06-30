@@ -306,8 +306,18 @@ def call_llm_for_payload(args: argparse.Namespace, prompt: str) -> dict:
         cooldown_max_s=args.cooldown_max,
     )
     payload = _normalize_pipeline_payload(result)
+    if not payload["G"] or not payload["E"]:
+        raise SystemExit(
+            "Expected at least one G and one E automaton from the LLM; "
+            f"got G={len(payload['G'])}, E={len(payload['E'])}."
+        )
     if len(payload["G"]) != 1 or len(payload["E"]) != 1:
-        raise SystemExit("Expected exactly one G and one E automaton from the LLM.")
+        print(
+            "Warning: expected exactly one G and one E automaton from the LLM; "
+            f"got G={len(payload['G'])}, E={len(payload['E'])}. Using the first of each."
+        )
+        payload["G"] = payload["G"][:1]
+        payload["E"] = payload["E"][:1]
     return payload
 
 

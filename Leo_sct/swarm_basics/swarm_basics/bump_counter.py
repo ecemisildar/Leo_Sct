@@ -4,25 +4,17 @@ bump_counter.py
 
 Counts Gazebo/Ignition contact events (ros_gz_interfaces/msg/Contacts).
 
-Two modes:
-  1) global_mode:=True  (RECOMMENDED)
-     - Run ONE node (no namespace needed).
-     - Auto-subscribes to all contact topics matching a filter (default: topics ending with "/contact").
-     - Counts UNIQUE PAIRS directly:
-         robot-robot contact => +1 per robot pair (robot_i, robot_j)
-         robot-obstacle      => +1 per (robot_i, obstacle_entity)
-     - Debounces repeated contact for the same key using cooldown.
-
-  2) global_mode:=False
-     - Run inside a robot namespace and subscribe to a single CONTACT_TOPIC (default "contact").
-     - Counts per-robot bump events against "other" entity names (good for per-robot stats),
-       but robot-robot will naturally appear twice if you run one node per robot.
+Run ONE node with no robot namespace. It auto-subscribes to all contact topics
+matching a filter (default: topics ending with "/contact") and counts unique
+pairs directly:
+  robot-robot contact => +1 per robot pair (robot_i, robot_j)
+  robot-obstacle      => +1 per (robot_i, obstacle_entity)
 
 Publishes:
   bump_count           (UInt32) : total (robot-robot-pairs + robot-obstacle)
-  bump_count_robot     (UInt32) : robot-robot PAIR events (global_mode) or robot-vs-robot events (per-robot mode)
+  bump_count_robot     (UInt32) : robot-robot PAIR events
   bump_count_obstacle  (UInt32) : robot-obstacle events
-  last_bump_with       (String) : last other entity name (or "robot_i<->robot_j" in global mode)
+  last_bump_with       (String) : last other entity name or "robot_i<->robot_j"
   last_bump_type       (String) : "robot" or "obstacle"
 
 Logs CSV to ~/ros_bump_logs/bumps_<label>_<YYYY-MM-DD>.csv
@@ -43,10 +35,9 @@ from ros_gz_interfaces.msg import Contacts
 
 # ------------------ Defaults ------------------
 DEFAULT_COOLDOWN_SEC = 0.5          # generic cooldown
-DEFAULT_COOLDOWN_ROBOT_SEC = 0.8    # optional: slightly longer for robot-robot
-DEFAULT_COOLDOWN_OBS_SEC = 0.5      # optional: for robot-obstacle
+DEFAULT_COOLDOWN_ROBOT_SEC = 2.0    # optional: slightly longer for robot-robot
+DEFAULT_COOLDOWN_OBS_SEC = 2.0      # optional: for robot-obstacle
 PRUNE_HZ = 10.0                     # prune inactive contacts at this rate
-CONTACT_TOPIC = "contact"           # used only in per-robot mode
 DEFAULT_LOG_DIR = Path.home() / "ros_bump_logs"
 # ---------------------------------------------
 
@@ -74,9 +65,7 @@ class BumpCounter(Node):
         super().__init__("bump_counter")
 
         # ---- Params ----
-        self.global_mode = bool(self.declare_parameter("global_mode", True).value)
-
-        # Topic discovery filter (global mode)
+        # Topic discovery filter
         self.contact_topic_substring = str(
             self.declare_parameter("contact_topic_substring", "/contact").value
         )
@@ -103,8 +92,7 @@ class BumpCounter(Node):
         self.flush_max_rows = int(self.declare_parameter("flush_max_rows", 200).value)
 
         # ---- Identity label for CSV/logging ----
-        ns = self.get_namespace().strip("/") or "root"
-        self.label = "global" if self.global_mode else ns
+        self.label = "global"
 
         # ---- CSV output dir ----
         results_dir = str(self.declare_parameter("results_dir", "").value).strip()
@@ -120,7 +108,7 @@ class BumpCounter(Node):
         self.active: Dict[Any, Tuple[rclpy.time.Time, str]] = {}
 
         self.bump_total = 0
-        self.bump_robot = 0       # global_mode: robot-robot PAIR events
+        self.bump_robot = 0       # robot-robot PAIR events
         self.bump_obstacle = 0
 
         # ---- Publishers ----
@@ -133,10 +121,7 @@ class BumpCounter(Node):
 
         # ---- Subscriptions ----
         self._subs = {}
-        if self.global_mode:
-            self._topic_scan_timer = self.create_timer(1.0, self._refresh_contact_subs)
-        else:
-            self.sub = self.create_subscription(Contacts, CONTACT_TOPIC, self._on_contacts, 10)
+        self._topic_scan_timer = self.create_timer(1.0, self._refresh_contact_subs)
 
         # prune timer
         self.create_timer(1.0 / PRUNE_HZ, self._prune)
@@ -151,8 +136,8 @@ class BumpCounter(Node):
         self._flush_timer = self.create_timer(self.flush_interval_sec, self._flush_csv_rows)
 
         self.get_logger().info(
-            f"[{self.label}] global_mode={self.global_mode} "
-            f"cooldown(robot)={cooldown_robot_sec:.2f}s cooldown(obs)={cooldown_obstacle_sec:.2f}s "
+            f"[{self.label}] cooldown(robot)={cooldown_robot_sec:.2f}s "
+            f"cooldown(obs)={cooldown_obstacle_sec:.2f}s "
             f"Logging to {self.csv_path}"
         )
 
@@ -294,46 +279,25 @@ class BumpCounter(Node):
             col1 = entity_name(c.collision1)
             col2 = entity_name(c.collision2)
 
-            if self.global_mode:
-                bump_type, r1, r2_or_other = self._classify_bump(col1, col2)
-                if bump_type == "unknown":
-                    continue
+            bump_type, r1, r2_or_other = self._classify_bump(col1, col2)
+            if bump_type == "unknown":
+                continue
 
-                if bump_type == "robot":
-                    # key is robot pair (sorted) => counts ONCE per pair
-                    r2 = r2_or_other
-                    key = tuple(sorted([r1, r2]))
-                    entity_a, entity_b = key[0], key[1]
-                    last_with = f"{entity_a}<->{entity_b}"
-                    last_robot = f"{entity_a},{entity_b}"
-                else:
-                    # key is (robot, obstacle_entity) => counts ONCE per pair
-                    robot = r1
-                    other = r2_or_other
-                    key = (robot, other)
-                    entity_a, entity_b = robot, other
-                    last_with = other
-                    last_robot = robot
-
+            if bump_type == "robot":
+                # key is robot pair (sorted) => counts ONCE per pair
+                r2 = r2_or_other
+                key = tuple(sorted([r1, r2]))
+                entity_a, entity_b = key[0], key[1]
+                last_with = f"{entity_a}<->{entity_b}"
+                last_robot = f"{entity_a},{entity_b}"
             else:
-                # Per-robot mode: only count contacts that involve this namespace.
-                # Determine "me" by namespace containment (same heuristic you used).
-                ns = self.get_namespace().strip("/")
-                is1_me = (ns != "") and (ns in col1)
-                is2_me = (ns != "") and (ns in col2)
-                if is1_me == is2_me:
-                    continue
-
-                me = col1 if is1_me else col2
-                other = col2 if is1_me else col1
-                bump_type, r_me, r_other = self._classify_bump(me, other)
-                if bump_type == "unknown":
-                    continue
-
-                key = other  # debounced per "other entity"
-                entity_a, entity_b = me, other
+                # key is (robot, obstacle_entity) => counts ONCE per pair
+                robot = r1
+                other = r2_or_other
+                key = (robot, other)
+                entity_a, entity_b = robot, other
                 last_with = other
-                last_robot = r_me or ns
+                last_robot = robot
 
             # Debounce: new bump only if key not active
             if key not in self.active:
