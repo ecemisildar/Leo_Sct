@@ -18,7 +18,7 @@ ROBOTS=(
 usage() {
   cat <<'EOF'
 Usage:
-  ./start_robots_tmux.sh [--list] [--list-yamls] [--list-config-yamls] [--no-stop-service]
+  ./start_robots_tmux.sh [--list] [--list-yamls] [--list-config-yamls] [--no-stop-service] [--with-web-video]
                          [--latest | --yaml id|group/id|file.yaml | --config-yaml id|file.yaml]
                          [robot_name ...]
 
@@ -33,6 +33,7 @@ Examples:
   ./start_robots_tmux.sh --yaml 5.4/1 Robot1
   ./start_robots_tmux.sh --config-yaml prompt_8_run_001.yaml Robot1
   ./start_robots_tmux.sh --no-stop-service Robot1
+  ./start_robots_tmux.sh --with-web-video Robot4
 EOF
 }
 
@@ -208,6 +209,7 @@ fi
 YAML_NAME=""
 CONFIG_YAML_NAME=""
 STOP_LEO_SERVICE=1
+ENABLE_WEB_VIDEO=0
 declare -a ROBOT_ARGS=()
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -228,6 +230,10 @@ while [[ "$#" -gt 0 ]]; do
       ;;
     --no-stop-service)
       STOP_LEO_SERVICE=0
+      shift
+      ;;
+    --with-web-video)
+      ENABLE_WEB_VIDEO=1
       shift
       ;;
     --latest)
@@ -313,11 +319,14 @@ for entry in "${SELECTED[@]}"; do
   tmux select-layout -t "$SESSION":0 tiled
 
   # Build launch args (robot_ns optional)
-  LAUNCH_ARGS="enable_supervisor:=true"
+  LAUNCH_ARGS="enable_supervisor:=true enable_web_video:=false"
   if [[ -n "$YAML_NAME" ]]; then
-    LAUNCH_ARGS="enable_supervisor:=true supervisor_yaml_path:=$REMOTE_BEST_RESULTS_DIR/$YAML_NAME"
+    LAUNCH_ARGS="enable_supervisor:=true enable_web_video:=false supervisor_yaml_path:=$REMOTE_BEST_RESULTS_DIR/$YAML_NAME"
   elif [[ -n "$CONFIG_YAML_NAME" ]]; then
-    LAUNCH_ARGS="enable_supervisor:=true supervisor_yaml_path:=$REMOTE_CONFIG_YAML_DIR/$CONFIG_YAML_NAME"
+    LAUNCH_ARGS="enable_supervisor:=true enable_web_video:=false supervisor_yaml_path:=$REMOTE_CONFIG_YAML_DIR/$CONFIG_YAML_NAME"
+  fi
+  if [[ "$ENABLE_WEB_VIDEO" == "1" ]]; then
+    LAUNCH_ARGS="${LAUNCH_ARGS/enable_web_video:=false/enable_web_video:=true}"
   fi
   if [ -n "${NS:-}" ]; then
     LAUNCH_ARGS="$LAUNCH_ARGS robot_ns:=$NS"
@@ -325,9 +334,12 @@ for entry in "${SELECTED[@]}"; do
 
   REMOTE_PREP=""
   if [[ "$STOP_LEO_SERVICE" == "1" ]]; then
-    REMOTE_PREP="if systemctl list-unit-files leo-ros.service --no-legend 2>/dev/null | grep -q \"^leo-ros.service\"; then echo \"[${NAME}] stopping leo-ros.service to free rover ports\"; sudo systemctl stop leo-ros.service || { echo \"[${NAME}] error: could not stop leo-ros.service\"; exit 1; }; fi; "
+    REMOTE_PREP="if systemctl list-unit-files leo-ros.service --no-legend 2>/dev/null | grep -q \"^leo-ros.service\"; then echo \"[${NAME}] stopping leo-ros.service to free rover ports\"; sudo systemctl stop leo-ros.service || { echo \"[${NAME}] error: could not stop leo-ros.service\"; exit 1; }; for i in 1 2 3 4 5; do systemctl is-active --quiet leo-ros.service || break; sleep 1; done; if systemctl is-active --quiet leo-ros.service; then echo \"[${NAME}] error: leo-ros.service is still active after stop\"; exit 1; fi; fi; "
   fi
-  REMOTE_PREP="${REMOTE_PREP}pkill -u \"\$USER\" -f \"ros2 launch leo_real leo_real.launch.py\" 2>/dev/null || true; pkill -u \"\$USER\" -f \"web_video_server\" 2>/dev/null || true; sleep 1; if command -v ss >/dev/null 2>&1 && ss -H -ltn \"sport = :8080\" | grep -q .; then echo \"[${NAME}] error: port 8080 is still in use; stop the process using it and rerun\"; exit 1; fi; "
+  REMOTE_PREP="${REMOTE_PREP}pkill -u \"\$USER\" -f \"ros2 launch leo_real leo_real.launch.py\" 2>/dev/null || true; pkill -u \"\$USER\" -f \"web_video_server\" 2>/dev/null || true; "
+  if [[ "$ENABLE_WEB_VIDEO" == "1" ]]; then
+    REMOTE_PREP="${REMOTE_PREP}for i in 1 2 3 4 5; do if ! command -v ss >/dev/null 2>&1 || ! ss -H -ltn \"sport = :8080\" | grep -q .; then break; fi; sleep 1; done; if command -v ss >/dev/null 2>&1 && ss -H -ltn \"sport = :8080\" | grep -q .; then echo \"[${NAME}] error: port 8080 is still in use by:\"; ss -H -ltnp \"sport = :8080\" 2>/dev/null || ss -H -ltn \"sport = :8080\"; exit 1; fi; "
+  fi
 
   tmux send-keys -t "$SESSION":0.$IDX \
 "echo '[${NAME}] connecting to ${HOST}'; ssh -t $HOST '${REMOTE_PREP}source /opt/ros/humble/setup.bash; source ~/ros_ws/install/setup.bash; export ROS_DOMAIN_ID=$DID; export ROS_LOCALHOST_ONLY=0; ros2 launch leo_real leo_real.launch.py $LAUNCH_ARGS'" C-m
