@@ -325,7 +325,7 @@ for entry in "${SELECTED[@]}"; do
 
   REMOTE_PREP=""
   if [[ "$STOP_LEO_SERVICE" == "1" ]]; then
-    REMOTE_PREP="if systemctl list-unit-files leo-ros.service --no-legend 2>/dev/null | grep -q \"^leo-ros.service\"; then echo \"[${NAME}] stopping leo-ros.service to free rover ports\"; sudo -n systemctl stop leo-ros.service || { echo \"[${NAME}] error: could not stop leo-ros.service with passwordless sudo\"; exit 1; }; fi; "
+    REMOTE_PREP="if systemctl list-unit-files leo-ros.service --no-legend 2>/dev/null | grep -q \"^leo-ros.service\"; then echo \"[${NAME}] stopping leo-ros.service to free rover ports\"; sudo systemctl stop leo-ros.service || { echo \"[${NAME}] error: could not stop leo-ros.service\"; exit 1; }; fi; "
   fi
   REMOTE_PREP="${REMOTE_PREP}pkill -u \"\$USER\" -f \"ros2 launch leo_real leo_real.launch.py\" 2>/dev/null || true; pkill -u \"\$USER\" -f \"web_video_server\" 2>/dev/null || true; sleep 1; if command -v ss >/dev/null 2>&1 && ss -H -ltn \"sport = :8080\" | grep -q .; then echo \"[${NAME}] error: port 8080 is still in use; stop the process using it and rerun\"; exit 1; fi; "
 
