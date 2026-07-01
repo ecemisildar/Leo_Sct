@@ -18,7 +18,7 @@ ROBOTS=(
 usage() {
   cat <<'EOF'
 Usage:
-  ./start_robots_tmux.sh [--list] [--list-yamls] [--list-config-yamls]
+  ./start_robots_tmux.sh [--list] [--list-yamls] [--list-config-yamls] [--no-stop-service]
                          [--latest | --yaml id|group/id|file.yaml | --config-yaml id|file.yaml]
                          [robot_name ...]
 
@@ -32,6 +32,7 @@ Examples:
   ./start_robots_tmux.sh --yaml 2 Robot3 Robot4
   ./start_robots_tmux.sh --yaml 5.4/1 Robot1
   ./start_robots_tmux.sh --config-yaml prompt_8_run_001.yaml Robot1
+  ./start_robots_tmux.sh --no-stop-service Robot1
 EOF
 }
 
@@ -206,6 +207,7 @@ fi
 
 YAML_NAME=""
 CONFIG_YAML_NAME=""
+STOP_LEO_SERVICE=1
 declare -a ROBOT_ARGS=()
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -223,6 +225,10 @@ while [[ "$#" -gt 0 ]]; do
     --list-config-yamls)
       list_config_yamls
       exit 0
+      ;;
+    --no-stop-service)
+      STOP_LEO_SERVICE=0
+      shift
       ;;
     --latest)
       if [[ -n "$YAML_NAME" || -n "$CONFIG_YAML_NAME" ]]; then
@@ -317,8 +323,14 @@ for entry in "${SELECTED[@]}"; do
     LAUNCH_ARGS="$LAUNCH_ARGS robot_ns:=$NS"
   fi
 
+  REMOTE_PREP=""
+  if [[ "$STOP_LEO_SERVICE" == "1" ]]; then
+    REMOTE_PREP="if systemctl list-unit-files leo-ros.service --no-legend 2>/dev/null | grep -q \"^leo-ros.service\"; then echo \"[${NAME}] stopping leo-ros.service to free rover ports\"; sudo -n systemctl stop leo-ros.service || { echo \"[${NAME}] error: could not stop leo-ros.service with passwordless sudo\"; exit 1; }; fi; "
+  fi
+  REMOTE_PREP="${REMOTE_PREP}pkill -u \"\$USER\" -f \"ros2 launch leo_real leo_real.launch.py\" 2>/dev/null || true; pkill -u \"\$USER\" -f \"web_video_server\" 2>/dev/null || true; sleep 1; if command -v ss >/dev/null 2>&1 && ss -H -ltn \"sport = :8080\" | grep -q .; then echo \"[${NAME}] error: port 8080 is still in use; stop the process using it and rerun\"; exit 1; fi; "
+
   tmux send-keys -t "$SESSION":0.$IDX \
-"echo '[${NAME}] connecting to ${HOST}'; ssh -t $HOST 'source /opt/ros/humble/setup.bash; source ~/ros_ws/install/setup.bash; export ROS_DOMAIN_ID=$DID; export ROS_LOCALHOST_ONLY=0; ros2 launch leo_real leo_real.launch.py $LAUNCH_ARGS'" C-m
+"echo '[${NAME}] connecting to ${HOST}'; ssh -t $HOST '${REMOTE_PREP}source /opt/ros/humble/setup.bash; source ~/ros_ws/install/setup.bash; export ROS_DOMAIN_ID=$DID; export ROS_LOCALHOST_ONLY=0; ros2 launch leo_real leo_real.launch.py $LAUNCH_ARGS'" C-m
 
   IDX=$((IDX+1))
 done
