@@ -18,7 +18,7 @@ ROBOTS=(
 usage() {
   cat <<'EOF'
 Usage:
-  ./start_robots_tmux.sh [--list] [--list-yamls] [--list-config-yamls] [--no-stop-service] [--with-web-video]
+  ./start_robots_tmux.sh [--list] [--list-yamls] [--list-config-yamls] [--stop-service] [--no-stop-service] [--with-web-video]
                          [--latest | --yaml id|group/id|file.yaml | --config-yaml id|file.yaml]
                          [robot_name ...]
 
@@ -32,6 +32,7 @@ Examples:
   ./start_robots_tmux.sh --yaml 2 Robot3 Robot4
   ./start_robots_tmux.sh --yaml 5.4/1 Robot1
   ./start_robots_tmux.sh --config-yaml prompt_8_run_001.yaml Robot1
+  ./start_robots_tmux.sh --stop-service Robot1
   ./start_robots_tmux.sh --no-stop-service Robot1
   ./start_robots_tmux.sh --with-web-video Robot4
 EOF
@@ -208,7 +209,7 @@ fi
 
 YAML_NAME=""
 CONFIG_YAML_NAME=""
-STOP_LEO_SERVICE=1
+STOP_LEO_SERVICE=0
 ENABLE_WEB_VIDEO=0
 declare -a ROBOT_ARGS=()
 while [[ "$#" -gt 0 ]]; do
@@ -230,6 +231,10 @@ while [[ "$#" -gt 0 ]]; do
       ;;
     --no-stop-service)
       STOP_LEO_SERVICE=0
+      shift
+      ;;
+    --stop-service)
+      STOP_LEO_SERVICE=1
       shift
       ;;
     --with-web-video)
