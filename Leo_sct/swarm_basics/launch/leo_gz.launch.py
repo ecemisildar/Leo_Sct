@@ -24,7 +24,6 @@ import subprocess
 import time
 
 from ament_index_python.packages import get_package_share_directory
-from swarm_basics.launch_defaults import MOVING_ARUCO_DEFAULTS
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, Shutdown, TimerAction, SetEnvironmentVariable
@@ -96,65 +95,51 @@ def generate_launch_description():
     )
     run_duration = DeclareLaunchArgument(
         "run_duration",
-        default_value="200.0",
+        default_value="300.0",
         description="Seconds before shutting down the launch",
     )
     total_robots = DeclareLaunchArgument(
         "total_robots",
-        default_value="10",
+        default_value="1",
         description="Number of robots to spawn in the star formation",
     )
     spawn_layout = DeclareLaunchArgument(
         "spawn_layout",
         default_value="spread",
-        description="Robot spawn layout: 'spread' or 'middle_circle'.",
+        description="Robot spawn layout: 'spread', 'origin', 'middle_circle', or 'random_safe'.",
+    )
+    spawn_seed = DeclareLaunchArgument(
+        "spawn_seed",
+        default_value="auto",
+        description="Seed for randomized spawn layouts such as random_safe. Use 'auto' for a fresh seed each run.",
+    )
+    random_seed = DeclareLaunchArgument(
+        "random_seed",
+        default_value="auto",
+        description="Base seed for per-robot supervisor random choices. Use 'auto' for a fresh seed each run.",
+    )
+    sct_choice_mode = DeclareLaunchArgument(
+        "sct_choice_mode",
+        default_value="random",
+        description="SCT controllable choice mode: 'random' or deterministic 'first'.",
+    )
+    controller_mode = DeclareLaunchArgument(
+        "controller_mode",
+        default_value="sct",
+        description="Per-robot controller: 'sct' or 'random_walk_cbf'.",
     )
     auto_start_supervisor = DeclareLaunchArgument(
         "auto_start_supervisor",
         default_value="true",
         description="Enable robot_supervisor_3_movements on launch",
     )
-    spawn_moving_aruco = DeclareLaunchArgument(
-        "spawn_moving_aruco",
-        default_value=MOVING_ARUCO_DEFAULTS["spawn_moving_aruco"],
-        description="Spawn a moving ArUco target box.",
-    )
-    moving_aruco_x = DeclareLaunchArgument(
-        "moving_aruco_x",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_x"],
-        description="Center X position for the moving ArUco target.",
-    )
-    moving_aruco_y = DeclareLaunchArgument(
-        "moving_aruco_y",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_y"],
-        description="Center Y position for the moving ArUco target.",
-    )
-    moving_aruco_z = DeclareLaunchArgument(
-        "moving_aruco_z",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_z"],
-        description="Z position for the moving ArUco target.",
-    )
-    moving_aruco_radius = DeclareLaunchArgument(
-        "moving_aruco_radius",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_radius"],
-        description="Circular path radius for the moving ArUco target.",
-    )
-    moving_aruco_speed = DeclareLaunchArgument(
-        "moving_aruco_speed",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_speed"],
-        description="Circular path angular speed for the moving ArUco target.",
-    )
-    moving_aruco_update_rate = DeclareLaunchArgument(
-        "moving_aruco_update_rate",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_update_rate"],
-        description="Circular path update rate in Hz for the moving ArUco target.",
-    )
     results_dir = DeclareLaunchArgument(
         "results_dir",
         default_value=os.path.join(
             os.path.expanduser("~"),
-            "ros2_ws",
+            "sct_llm_ws",
             "src",
+            "Leo_Sct",
             "Leo_sct",
             "results_exp",
         ),
@@ -206,18 +191,15 @@ def generate_launch_description():
             "run_duration": LaunchConfiguration("run_duration"),
             "total_robots": LaunchConfiguration("total_robots"),
             "spawn_layout": LaunchConfiguration("spawn_layout"),
+            "spawn_seed": LaunchConfiguration("spawn_seed"),
+            "random_seed": LaunchConfiguration("random_seed"),
+            "sct_choice_mode": LaunchConfiguration("sct_choice_mode"),
+            "controller_mode": LaunchConfiguration("controller_mode"),
             "results_dir": LaunchConfiguration("results_dir"),
             "metadata_yaml_path": LaunchConfiguration("metadata_yaml_path"),
             "prompt_text": LaunchConfiguration("prompt_text"),
             "prompt_file_path": LaunchConfiguration("prompt_file_path"),
             "auto_start_supervisor": LaunchConfiguration("auto_start_supervisor"),
-            "spawn_moving_aruco": LaunchConfiguration("spawn_moving_aruco"),
-            "moving_aruco_x": LaunchConfiguration("moving_aruco_x"),
-            "moving_aruco_y": LaunchConfiguration("moving_aruco_y"),
-            "moving_aruco_z": LaunchConfiguration("moving_aruco_z"),
-            "moving_aruco_radius": LaunchConfiguration("moving_aruco_radius"),
-            "moving_aruco_speed": LaunchConfiguration("moving_aruco_speed"),
-            "moving_aruco_update_rate": LaunchConfiguration("moving_aruco_update_rate"),
         }.items(),
     )
 
@@ -253,14 +235,11 @@ def generate_launch_description():
             run_duration,
             total_robots,
             spawn_layout,
+            spawn_seed,
+            random_seed,
+            sct_choice_mode,
+            controller_mode,
             auto_start_supervisor,
-            spawn_moving_aruco,
-            moving_aruco_x,
-            moving_aruco_y,
-            moving_aruco_z,
-            moving_aruco_radius,
-            moving_aruco_speed,
-            moving_aruco_update_rate,
             results_dir,
             metadata_yaml_path,
             prompt_text,

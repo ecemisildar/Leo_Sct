@@ -15,29 +15,8 @@ setup(
         ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
         ('share/' + package_name + '/config', glob('config/*.yaml')),
         ('share/' + package_name + '/config', ['config/cylinder_positions.json']),
+        ('share/' + package_name + '/rviz', glob('rviz/*.rviz')),
         ('share/' + package_name + '/worlds', ['worlds/random_world.sdf']),
-        ('share/' + package_name + '/worlds', ['worlds/aruco_4x4_0.png']),
-        ('share/' + package_name + '/worlds/textures', ['worlds/textures/aruco_4x4_0.png']),
-        ('share/' + package_name + '/models/aruco_marker_0', [
-            'models/aruco_marker_0/model.config',
-            'models/aruco_marker_0/model.sdf',
-        ]),
-        ('share/' + package_name + '/models/aruco_marker_moving', [
-            'models/aruco_marker_moving/model.config',
-            'models/aruco_marker_moving/model.sdf',
-        ]),
-        ('share/' + package_name + '/models/aruco_marker_0/materials/scripts', [
-            'models/aruco_marker_0/materials/scripts/aruco_marker.material',
-        ]),
-        ('share/' + package_name + '/models/aruco_marker_0/materials/textures', [
-            'models/aruco_marker_0/materials/textures/aruco_4x4_0.png',
-        ]),
-        ('share/' + package_name + '/models/aruco_marker_moving/materials/scripts', [
-            'models/aruco_marker_0/materials/scripts/aruco_marker.material',
-        ]),
-        ('share/' + package_name + '/models/aruco_marker_moving/materials/textures', [
-            'models/aruco_marker_0/materials/textures/aruco_4x4_0.png',
-        ]),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -49,9 +28,12 @@ setup(
     entry_points={
         'console_scripts': [
             'robot_supervisor = swarm_basics.robot_supervisor:main',
+            'random_walk_cbf_controller = swarm_basics.random_walk_cbf_controller:main',
+            'robot_proximity_warner = swarm_basics.robot_proximity_warner:main',
+            'robot_id_warning_relay = swarm_basics.robot_id_warning_relay:main',
             'coverage_counter = swarm_basics.coverage_counter:main',
             'bump_counter = swarm_basics.bump_counter:main',
-            'aruco_mover = swarm_basics.aruco_mover:main',
+            'plot_bump_reasons = swarm_basics.plot_bump_reasons:main',
         ],
     },
 )

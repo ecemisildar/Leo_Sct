@@ -13,7 +13,6 @@ from launch.actions import OpaqueFunction, Shutdown, TimerAction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
-from swarm_basics.launch_defaults import MOVING_ARUCO_DEFAULTS
 
 
 def _parse_pose(pose_text: str | None):
@@ -128,6 +127,17 @@ def _build_robot_spawn_slots(total_robots: int, world_path: str):
     return robots
 
 
+def _build_origin_slots(total_robots: int, world_path: str):
+    if total_robots != 1:
+        raise RuntimeError("spawn_layout 'origin' is only valid with total_robots:=1.")
+
+    obstacles = _load_world_obstacles(world_path)
+    if not _point_is_free(0.0, 0.0, obstacles, wall_margin=0.6, obstacle_margin=0.55):
+        raise RuntimeError(f"Origin is not a safe spawn point in {world_path}.")
+
+    return [{"x": 0.0, "y": 0.0, "yaw": 0.0}]
+
+
 def _build_middle_circle_slots(total_robots: int, world_path: str):
     obstacles = _load_world_obstacles(world_path)
     center_x = 0.0
@@ -160,9 +170,9 @@ def _build_middle_circle_slots(total_robots: int, world_path: str):
     )
 
 
-def _build_random_safe_slots(total_robots: int, world_path: str):
+def _build_random_safe_slots(total_robots: int, world_path: str, seed: int):
     obstacles = _load_world_obstacles(world_path)
-    rng = random.Random(time.time_ns())
+    rng = random.Random(seed)
     min_robot_spacing = 1.25
     wall_margin = 0.75
     obstacle_margin = 0.7
@@ -192,65 +202,54 @@ def _build_random_safe_slots(total_robots: int, world_path: str):
     return robots
 
 
+def _resolve_seed(value: str, name: str) -> int:
+    text = str(value).strip().lower()
+    if text in {"", "auto", "random"}:
+        return random.SystemRandom().randint(1, 2_147_483_647)
+    try:
+        return int(text)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"Invalid {name} '{value}'. Use an integer seed or 'auto'."
+        ) from exc
+
+
 def generate_launch_description():
 
     leo_description = get_package_share_directory("leo_description")
     swarm_basics_dir = get_package_share_directory("swarm_basics")
-    leo_follow_aruco_dir = get_package_share_directory("leo_example_follow_aruco_marker")
     run_id = time.strftime("run_%Y%m%d_%H%M%S")
 
     auto_start_supervisor = LaunchConfiguration("auto_start_supervisor")
-    spawn_moving_aruco = LaunchConfiguration("spawn_moving_aruco")
-    moving_aruco_x = LaunchConfiguration("moving_aruco_x")
-    moving_aruco_y = LaunchConfiguration("moving_aruco_y")
-    moving_aruco_z = LaunchConfiguration("moving_aruco_z")
-    moving_aruco_radius = LaunchConfiguration("moving_aruco_radius")
-    moving_aruco_speed = LaunchConfiguration("moving_aruco_speed")
-    moving_aruco_update_rate = LaunchConfiguration("moving_aruco_update_rate")
     auto_start_supervisor_arg = DeclareLaunchArgument(
         "auto_start_supervisor",
         default_value="true",
         description="Enable robot_supervisor_3_movements on launch",
     )
-    spawn_moving_aruco_arg = DeclareLaunchArgument(
-        "spawn_moving_aruco",
-        default_value=MOVING_ARUCO_DEFAULTS["spawn_moving_aruco"],
-        description="Spawn a moving ArUco target box in Gazebo.",
-    )
-    moving_aruco_x_arg = DeclareLaunchArgument(
-        "moving_aruco_x",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_x"],
-        description="Center X position for the moving ArUco target square path.",
-    )
-    moving_aruco_y_arg = DeclareLaunchArgument(
-        "moving_aruco_y",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_y"],
-        description="Center Y position for the moving ArUco target square path.",
-    )
-    moving_aruco_z_arg = DeclareLaunchArgument(
-        "moving_aruco_z",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_z"],
-        description="Z position for the moving ArUco target.",
-    )
-    moving_aruco_radius_arg = DeclareLaunchArgument(
-        "moving_aruco_radius",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_radius"],
-        description="Side length of the square ArUco path.",
-    )
-    moving_aruco_speed_arg = DeclareLaunchArgument(
-        "moving_aruco_speed",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_speed"],
-        description="Linear speed in m/s along the square ArUco path.",
-    )
-    moving_aruco_update_rate_arg = DeclareLaunchArgument(
-        "moving_aruco_update_rate",
-        default_value=MOVING_ARUCO_DEFAULTS["moving_aruco_update_rate"],
-        description="Pose update rate in Hz for the moving ArUco target.",
-    )
     spawn_layout_arg = DeclareLaunchArgument(
         "spawn_layout",
         default_value="spread",
-        description="Robot spawn layout: 'spread', 'middle_circle', or 'random_safe'.",
+        description="Robot spawn layout: 'spread', 'origin', 'middle_circle', or 'random_safe'.",
+    )
+    spawn_seed_arg = DeclareLaunchArgument(
+        "spawn_seed",
+        default_value="auto",
+        description="Seed for randomized spawn layouts such as random_safe. Use 'auto' for a fresh seed each run.",
+    )
+    random_seed_arg = DeclareLaunchArgument(
+        "random_seed",
+        default_value="auto",
+        description="Base seed for per-robot supervisor random choices. Use 'auto' for a fresh seed each run.",
+    )
+    sct_choice_mode_arg = DeclareLaunchArgument(
+        "sct_choice_mode",
+        default_value="random",
+        description="SCT controllable choice mode: 'random' or deterministic 'first'.",
+    )
+    controller_mode_arg = DeclareLaunchArgument(
+        "controller_mode",
+        default_value="sct",
+        description="Per-robot controller: 'sct' or 'random_walk_cbf'.",
     )
 
     # total_robots_arg = LaunchConfiguration("total_robots")
@@ -277,15 +276,31 @@ def generate_launch_description():
         total_robots = max(1, total_robots_value)
         world_path = os.path.join(swarm_basics_dir, "worlds", "random_world.sdf")
         spawn_layout = LaunchConfiguration("spawn_layout").perform(context).strip().lower()
+        spawn_seed = _resolve_seed(LaunchConfiguration("spawn_seed").perform(context), "spawn_seed")
+        random_seed = _resolve_seed(LaunchConfiguration("random_seed").perform(context), "random_seed")
+        sct_choice_mode = LaunchConfiguration("sct_choice_mode").perform(context).strip().lower()
+        controller_mode = LaunchConfiguration("controller_mode").perform(context).strip().lower()
+        if controller_mode not in {"sct", "random_walk_cbf"}:
+            raise RuntimeError(
+                f"Unknown controller_mode '{controller_mode}'. Use 'sct' or 'random_walk_cbf'."
+            )
+        print(
+            f"[spawn_multi_robots] run_id={run_id} spawn_seed={spawn_seed} "
+            f"random_seed={random_seed} sct_choice_mode={sct_choice_mode} "
+            f"controller_mode={controller_mode}",
+            flush=True,
+        )
         if spawn_layout == "spread":
             base_slots = _build_robot_spawn_slots(total_robots, world_path)
+        elif spawn_layout == "origin":
+            base_slots = _build_origin_slots(total_robots, world_path)
         elif spawn_layout == "middle_circle":
             base_slots = _build_middle_circle_slots(total_robots, world_path)
         elif spawn_layout == "random_safe":
-            base_slots = _build_random_safe_slots(total_robots, world_path)
+            base_slots = _build_random_safe_slots(total_robots, world_path, spawn_seed)
         else:
             raise RuntimeError(
-                f"Unknown spawn_layout '{spawn_layout}'. Use 'spread', 'middle_circle', or 'random_safe'."
+                f"Unknown spawn_layout '{spawn_layout}'. Use 'spread', 'origin', 'middle_circle', or 'random_safe'."
             )
         robots = []
         for i, slot in enumerate(base_slots):
@@ -298,50 +313,6 @@ def generate_launch_description():
 
         nodes = []
 
-        if LaunchConfiguration("spawn_moving_aruco").perform(context).lower() == "true":
-            marker_model_path = os.path.join(
-                swarm_basics_dir,
-                "models",
-                "aruco_marker_0",
-                "model.sdf",
-            )
-            marker_spawn = Node(
-                package="ros_gz_sim",
-                executable="create",
-                name="moving_aruco_box_spawner",
-                arguments=[
-                    "-name", "moving_aruco_box",
-                    "-x", str(float(moving_aruco_x.perform(context)) - 0.5 * float(moving_aruco_radius.perform(context))),
-                    "-y", str(float(moving_aruco_y.perform(context)) - 0.5 * float(moving_aruco_radius.perform(context))),
-                    "-z", moving_aruco_z,
-                    "-file", marker_model_path,
-                ],
-                output="screen",
-            )
-            marker_mover = Node(
-                package="swarm_basics",
-                executable="aruco_mover",
-                name="aruco_mover",
-                parameters=[
-                    {"world_name": "random_world"},
-                    {"entity_name": "moving_aruco_box"},
-                    {"center_x": moving_aruco_x},
-                    {"center_y": moving_aruco_y},
-                    {"z": moving_aruco_z},
-                    {"radius": moving_aruco_radius},
-                    {"angular_speed": moving_aruco_speed},
-                    {"update_rate_hz": moving_aruco_update_rate},
-                ],
-                output="screen",
-            )
-            # nodes += [
-            #     marker_spawn,
-            #     TimerAction(
-            #         period=2.0,
-            #         actions=[marker_mover],
-            #     ),
-            # ]
-
         # --- One bridge for all robots ---
         bridge_args = []
         for robot in robots:
@@ -349,17 +320,14 @@ def generate_launch_description():
             bridge_args += [
                 f"/{ns}/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
                 f"/{ns}/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
-                # f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+                f"/{ns}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+                f"/{ns}/joint_states@sensor_msgs/msg/JointState[ignition.msgs.Model",
+                f"/{ns}/depth_camera/image@sensor_msgs/msg/Image[ignition.msgs.Image",
                 f"/{ns}/depth_camera/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image",
-                # RGB image bridge disabled while ArUco is not in use.
-                # f"/{ns}/depth_camera/image@sensor_msgs/msg/Image[ignition.msgs.Image",
+                f"/{ns}/depth_camera/camera_info@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
                 f"/world/random_world/model/{ns}/link/{ns}/base_footprint/sensor/contact_sensor/contact"
                 f"@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts",
             ]
-
-        bridge_args += [
-            "/world/random_world/dynamic_pose/info@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
-        ]    
 
         bridge_node = Node(
             package="ros_ign_bridge", # ros_gz_bridge
@@ -367,6 +335,9 @@ def generate_launch_description():
             name="all_robots_bridge",
             arguments=bridge_args,
             parameters=[{"qos_overrides./tf_static.publisher.durability": "transient_local"}],
+            remappings=[
+                *[(f"/{robot['ns']}/tf", "/tf") for robot in robots],
+            ],
             output="screen"
         )
         nodes.append(bridge_node)
@@ -381,7 +352,10 @@ def generate_launch_description():
             # URDF with per-robot namespace mapping
             xacro_file = os.path.join(leo_description, 'urdf', 'leo_sim.urdf.xacro')
             doc = xacro.process_file(xacro_file, mappings={"robot_ns": ns})
-            robot_description = doc.toxml()
+            robot_description = doc.toxml().replace(
+                "<frame_id>odom</frame_id>",
+                f"<frame_id>{ns}/odom</frame_id>",
+            )
 
             # State publisher (per robot)
             state_pub = Node(
@@ -392,7 +366,11 @@ def generate_launch_description():
                     "use_sim_time": True,
                     "robot_description": robot_description
                 }],
-                remappings=[("/joint_states", f"{ns}/joint_states")],
+                remappings=[
+                    ("joint_states", f"/{ns}/joint_states"),
+                    ("tf", "/tf"),
+                    ("tf_static", "/tf_static"),
+                ],
                 output="screen"
             )
 
@@ -412,17 +390,98 @@ def generate_launch_description():
                 output="screen"
             )
 
+            spawn_offset_tf = Node(
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                name=f"{ns}_spawn_offset_tf",
+                arguments=[
+                    str(x),
+                    str(y),
+                    "0.0",
+                    str(yaw),
+                    "0.0",
+                    "0.0",
+                    "odom",
+                    f"{ns}/odom",
+                ],
+                output="screen",
+            )
+
             # Controller node (per robot)
-            behavior_node = Node(
+            if controller_mode == "random_walk_cbf":
+                behavior_node = Node(
+                    package="swarm_basics",
+                    executable="random_walk_cbf_controller",
+                    name="random_walk_cbf_controller",
+                    namespace=ns,
+                    parameters=[
+                        {"enabled": auto_start_supervisor},
+                        {"random_seed": random_seed},
+                        {"run_id": run_id},
+                        {"results_dir": LaunchConfiguration("results_dir")},
+                        {"cbf_filter_log_enabled": False},
+                    ],
+                    output="screen",
+                )
+            else:
+                behavior_node = Node(
+                    package="swarm_basics",
+                    executable="robot_supervisor",
+                    name="robot_supervisor",
+                    namespace=ns,
+                    parameters=[
+                        {"spawn_x": x},
+                        {"spawn_y": y},
+                        {"enabled": auto_start_supervisor},
+                        {"supervisor_yaml_path": LaunchConfiguration("metadata_yaml_path")},
+                        {"random_seed": random_seed},
+                        {"sct_choice_mode": sct_choice_mode},
+                        {"run_id": run_id},
+                        {"results_dir": LaunchConfiguration("results_dir")},
+                        {"peer_warning_log_enabled": False},
+                    ],
+                    output="screen",
+                )
+
+            proximity_warner_node = Node(
                 package="swarm_basics",
-                executable="robot_supervisor",
-                name="robot_supervisor",
+                executable="robot_proximity_warner",
+                name="robot_proximity_warner",
                 namespace=ns,
                 parameters=[
-                    {"spawn_x": x},
-                    {"spawn_y": y},
-                    {"enabled": auto_start_supervisor},
-                    {"supervisor_yaml_path": LaunchConfiguration("metadata_yaml_path")},
+                    {"total_robots": total_robots},
+                    {"warning_distance_m": 1.0},
+                    {"critical_distance_m": 0.55},
+                    {"zone_timeout_s": 0.8},
+                    {"publish_period_s": 0.1},
+                    {"publish_to_self": False},
+                    {"run_id": run_id},
+                    {"results_dir": LaunchConfiguration("results_dir")},
+                    {"warner_diagnostic_log_enabled": True},
+                    {"diagnostic_distance_margin_m": 0.25},
+                ],
+                output="screen",
+            )
+
+            robot_id_warning_relay_node = Node(
+                package="swarm_basics",
+                executable="robot_id_warning_relay",
+                name="robot_id_warning_relay",
+                namespace=ns,
+                parameters=[
+                    {"total_robots": total_robots},
+                    {"warning_distance_m": 1.0},
+                    {"warning_source": "global_pose"},
+                    {"critical_distance_m": 0.55},
+                    {"front_angle_rad": math.radians(50.0)},
+                    {"pose_timeout_s": 0.6},
+                    {"publish_period_s": 0.1},
+                    {"min_confidence": 0.0},
+                    {"classified_robot_detections_topic": "classified_robot_detections"},
+                    {"no_detection_warn_period_s": 10.0},
+                    {"run_id": run_id},
+                    {"results_dir": LaunchConfiguration("results_dir")},
+                    {"robot_id_warning_log_enabled": True},
                 ],
                 output="screen",
             )
@@ -435,82 +494,43 @@ def generate_launch_description():
                 parameters=[
                     {"use_sim_time": True},
                     {"depth_topic": f"/{ns}/depth_camera/depth_image"},
-                    {"aruco_enabled": False},
                     {"zone_log_enabled": True},
-                    {"process_every_nth_depth_frame": 5},
+                    {"process_every_nth_depth_frame": 1},
+                    {"enter_thresh": 0.70},
+                    {"exit_thresh": 0.90},
+                    {"side_enter_thresh": 0.70},
+                    {"side_exit_thresh": 0.90},
+                    {"hold_ms": 250},
+                    {"corner_hold_ms": 250},
+                    {"side_hold_ms": 250},
                     {"depth_watchdog_enabled": True},
                     {"depth_stall_timeout_s": 4.0},
-                    # RGB / ArUco disabled for current runs.
-                    # {"rgb_topic": f"/{ns}/depth_camera/image"},
-                    # {"aruco_dictionary_id": 0},
-                    # {"aruco_target_id": 0},
-                    # {"aruco_seen_hold_ms": 200},
                 ],
                 output="screen"
-            )
-
-            aruco_tracker_node = Node(
-                package="aruco_opencv",
-                executable="aruco_tracker_autostart",
-                name="aruco_tracker",
-                namespace=ns,
-                parameters=[
-                    os.path.join(leo_follow_aruco_dir, "config", "tracker.yaml"),
-                    {
-                        "use_sim_time": True,
-                        "cam_base_topic": "depth_camera/image",
-                        "output_frame": "",
-                        "publish_tf": False,
-                        "marker_size": 0.15,
-                    },
-                ],
-                output="screen",
-            )
-
-            aruco_follower_node = Node(
-                package="leo_example_follow_aruco_marker",
-                executable="aruco_follower",
-                name="aruco_follower",
-                namespace=ns,
-                parameters=[
-                    os.path.join(leo_follow_aruco_dir, "config", "follower.yaml"),
-                    {
-                        "use_sim_time": True,
-                        "follow_id": 0,
-                        "follow_enabled": True,
-                    },
-                ],
-                remappings=[
-                    ("merged_odom", "odom"),
-                    ("cmd_vel", "aruco_follower/cmd_vel"),
-                ],
-                output="screen",
             )
 
             nodes += [
                 state_pub,
                 spawn_node,
+                spawn_offset_tf,
                 behavior_node,
+                proximity_warner_node,
+                robot_id_warning_relay_node,
                 TimerAction(
                     period=2.0,
                     actions=[cpp_node],
                 ),
-                # aruco_tracker_node,
-                # aruco_follower_node,
             ]
 
         return nodes
 
     return LaunchDescription([
         auto_start_supervisor_arg,
-        spawn_moving_aruco_arg,
-        moving_aruco_x_arg,
-        moving_aruco_y_arg,
-        moving_aruco_z_arg,
-        moving_aruco_radius_arg,
-        moving_aruco_speed_arg,
-        moving_aruco_update_rate_arg,
         spawn_layout_arg,
+        spawn_seed_arg,
+        random_seed_arg,
+        sct_choice_mode_arg,
+        controller_mode_arg,
         RegisterEventHandler(
             OnShutdown(
                 on_shutdown=[
@@ -534,6 +554,8 @@ def generate_launch_description():
                 {"global_mode": True},
                 {"run_id": run_id},
                 {"results_dir": LaunchConfiguration("results_dir")},
+                {"total_robots": LaunchConfiguration("total_robots")},
+                {"detection_context_timeout_s": 1.0},
             ],
             output="screen",
         ),

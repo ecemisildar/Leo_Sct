@@ -3,13 +3,15 @@ import yaml
 
 class SCT:
 
-    def __init__(self, filename):
+    def __init__(self, filename, random_seed=None, choice_mode="random"):
 
         self.read_supervisor(filename)
 
         self.callback = {}
         self.input_buffer = None # Clear content after timestep
         self.last_events = [0] * len(self.EV)
+        self.rng = random.Random(random_seed)
+        self.choice_mode = str(choice_mode or "random").strip().lower()
 
 
     def read_supervisor(self, filename):
@@ -126,7 +128,12 @@ class SCT:
         actives = self.get_active_controllable_events()
         
         if not all(v == 0 for v in actives):
-            randomPos = random.randint(0,1000000000) % actives.count(1)
+            if self.choice_mode == "first":
+                for i in range(0, self.num_events):
+                    if actives[i]:
+                        return True, i
+
+            randomPos = self.rng.randint(0,1000000000) % actives.count(1)
             for i in range(0, self.num_events):
                 if not randomPos and actives[i]:
                     return True, i

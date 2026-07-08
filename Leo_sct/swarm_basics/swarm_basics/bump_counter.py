@@ -39,6 +39,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
 from std_msgs.msg import UInt32, String
+from nav_msgs.msg import Odometry
 from ros_gz_interfaces.msg import Contacts
 
 # ------------------ Defaults ------------------
@@ -67,6 +68,21 @@ def mean_xyz(pts):
     sz = sum(getattr(p, "z", 0.0) for p in pts)
     n = float(len(pts))
     return (sx / n, sy / n, sz / n)
+
+
+def _wrap_to_pi(angle: float) -> float:
+    while angle <= -math.pi:
+        angle += 2.0 * math.pi
+    while angle > math.pi:
+        angle -= 2.0 * math.pi
+    return angle
+
+
+def _yaw_from_quat(q) -> float:
+    x, y, z, w = q.x, q.y, q.z, q.w
+    siny_cosp = 2.0 * (w * z + x * y)
+    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+    return math.atan2(siny_cosp, cosy_cosp)
 
 
 class BumpCounter(Node):
@@ -101,6 +117,10 @@ class BumpCounter(Node):
 
         self.flush_interval_sec = float(self.declare_parameter("flush_interval_sec", 1.0).value)
         self.flush_max_rows = int(self.declare_parameter("flush_max_rows", 200).value)
+        self.total_robots = int(self.declare_parameter("total_robots", 5).value)
+        self.detection_context_timeout_s = float(
+            self.declare_parameter("detection_context_timeout_s", 1.0).value
+        )
 
         # ---- Identity label for CSV/logging ----
         ns = self.get_namespace().strip("/") or "root"
@@ -122,6 +142,9 @@ class BumpCounter(Node):
         self.bump_total = 0
         self.bump_robot = 0       # global_mode: robot-robot PAIR events
         self.bump_obstacle = 0
+        self.robot_zones: Dict[str, Tuple[str, float]] = {}
+        self.peer_warnings: Dict[Tuple[str, str], Tuple[float, Dict[str, str], str]] = {}
+        self.robot_poses: Dict[str, Tuple[float, float, float, float]] = {}
 
         # ---- Publishers ----
         self.pub_total = self.create_publisher(UInt32, "bump_count", 10)
@@ -137,6 +160,27 @@ class BumpCounter(Node):
             self._topic_scan_timer = self.create_timer(1.0, self._refresh_contact_subs)
         else:
             self.sub = self.create_subscription(Contacts, CONTACT_TOPIC, self._on_contacts, 10)
+
+        for idx in range(self.total_robots):
+            robot = f"robot_{idx}"
+            self.create_subscription(
+                String,
+                f"/{robot}/detected_zones",
+                self._make_zone_callback(robot),
+                10,
+            )
+            self.create_subscription(
+                String,
+                f"/{robot}/peer_warning_zone",
+                self._make_peer_warning_callback(robot),
+                10,
+            )
+            self.create_subscription(
+                Odometry,
+                f"/{robot}/odom",
+                self._make_odom_callback(robot),
+                10,
+            )
 
         # prune timer
         self.create_timer(1.0 / PRUNE_HZ, self._prune)
@@ -173,11 +217,16 @@ class BumpCounter(Node):
                     "key",
                     "entity_a", "entity_b",
                     "avg_contact_x", "avg_contact_y", "avg_contact_z",
-                    "source_topic"
+                    "source_topic",
+                    "entity_a_bump_direction",
+                    "entity_b_bump_direction",
+                    "pair_detection_summary",
                 ])
 
     def _append_csv(self, stamp, bump_type: str, key: Any,
                     entity_a: str, entity_b: str, avg_xyz, source_topic: str):
+        context = self._collision_detection_context(entity_a, entity_b, time.time())
+        direction_a, direction_b = self._collision_direction_context(entity_a, entity_b, avg_xyz)
         self._csv_rows.append([
             int(stamp.sec), int(stamp.nanosec),
             self.label,
@@ -188,7 +237,10 @@ class BumpCounter(Node):
             f"{avg_xyz[0]:.6f}" if isinstance(avg_xyz[0], float) else "",
             f"{avg_xyz[1]:.6f}" if isinstance(avg_xyz[1], float) else "",
             f"{avg_xyz[2]:.6f}" if isinstance(avg_xyz[2], float) else "",
-            source_topic
+            source_topic,
+            direction_a,
+            direction_b,
+            context["pair_detection_summary"],
         ])
         if len(self._csv_rows) >= self.flush_max_rows:
             self._flush_csv_rows()
@@ -212,6 +264,190 @@ class BumpCounter(Node):
             pass
         super().destroy_node()
     # --------------------------------------------
+
+    # ---------------- Detection / warning context ----------------
+    def _parse_zone_token(self, data: str) -> str:
+        token = str(data or "").strip().upper()
+        if ":" in token:
+            token = token.split(":", 1)[0].strip()
+        if "," in token:
+            token = token.split(",", 1)[0].strip()
+        return token if token in {"LEFT", "RIGHT", "CORNER", "CLEAR"} else "CLEAR"
+
+    def _parse_key_values(self, data: str) -> Dict[str, str]:
+        fields: Dict[str, str] = {}
+        for part in str(data or "").split(","):
+            if "=" not in part:
+                continue
+            key, value = part.split("=", 1)
+            fields[key.strip().lower()] = value.strip()
+        return fields
+
+    def _make_zone_callback(self, robot: str):
+        def callback(msg: String):
+            self.robot_zones[robot] = (self._parse_zone_token(msg.data), time.time())
+
+        return callback
+
+    def _make_peer_warning_callback(self, receiver: str):
+        def callback(msg: String):
+            zone = self._parse_zone_token(msg.data)
+            fields = self._parse_key_values(msg.data)
+            source = fields.get("source", "")
+            if not source:
+                return
+            self.peer_warnings[(receiver, source)] = (time.time(), fields, zone)
+
+        return callback
+
+    def _make_odom_callback(self, robot: str):
+        def callback(msg: Odometry):
+            self.robot_poses[robot] = (
+                float(msg.pose.pose.position.x),
+                float(msg.pose.pose.position.y),
+                _yaw_from_quat(msg.pose.pose.orientation),
+                time.time(),
+            )
+
+        return callback
+
+    def _direction_from_contact(self, robot: str, avg_xyz) -> str:
+        if not robot or robot not in self.robot_poses:
+            return ""
+        cx, cy, _ = avg_xyz
+        if not (math.isfinite(cx) and math.isfinite(cy)):
+            return ""
+
+        x, y, yaw, _ = self.robot_poses[robot]
+        bearing = _wrap_to_pi(math.atan2(cy - y, cx - x) - yaw)
+        abs_bearing = abs(bearing)
+        if abs_bearing <= math.radians(45.0):
+            return "front"
+        if abs_bearing >= math.radians(135.0):
+            return "back"
+        return "left" if bearing > 0.0 else "right"
+
+    def _collision_direction_context(self, entity_a: str, entity_b: str, avg_xyz) -> Tuple[str, str]:
+        robot_a = self._robot_from_entity_name(entity_a)
+        robot_b = self._robot_from_entity_name(entity_b)
+        return (
+            self._direction_from_contact(robot_a, avg_xyz),
+            self._direction_from_contact(robot_b, avg_xyz),
+        )
+
+    def _robot_zone_context(self, robot: str, now_wall: float) -> Tuple[str, str, str]:
+        zone, stamp = self.robot_zones.get(robot, ("CLEAR", 0.0))
+        age = now_wall - stamp if stamp > 0.0 else float("inf")
+        active = zone != "CLEAR" and age <= self.detection_context_timeout_s
+        age_text = f"{age:.6f}" if math.isfinite(age) else "inf"
+        return zone, age_text, str(active).lower()
+
+    def _warning_context(self, receiver: str, source: str, now_wall: float) -> Dict[str, str]:
+        stamp, fields, zone = self.peer_warnings.get((receiver, source), (0.0, {}, "CLEAR"))
+        age = now_wall - stamp if stamp > 0.0 else float("inf")
+        active = stamp > 0.0 and age <= self.detection_context_timeout_s
+        return {
+            "active": str(active).lower(),
+            "age_s": f"{age:.6f}" if math.isfinite(age) else "inf",
+            "zone": zone,
+            "source_zone": fields.get("source_zone", ""),
+            "target_zone": fields.get("target_zone", ""),
+            "distance_m": fields.get("distance", ""),
+        }
+
+    def _collision_detection_context(self, entity_a: str, entity_b: str, now_wall: float) -> Dict[str, str]:
+        context = {
+            "entity_a_zone": "",
+            "entity_a_zone_age_s": "",
+            "entity_a_zone_active": "",
+            "entity_b_zone": "",
+            "entity_b_zone_age_s": "",
+            "entity_b_zone_active": "",
+            "entity_a_warning_from_b_active": "",
+            "entity_a_warning_from_b_age_s": "",
+            "entity_a_warning_from_b_zone": "",
+            "entity_a_warning_from_b_source_zone": "",
+            "entity_a_warning_from_b_target_zone": "",
+            "entity_a_warning_from_b_distance_m": "",
+            "entity_b_warning_from_a_active": "",
+            "entity_b_warning_from_a_age_s": "",
+            "entity_b_warning_from_a_zone": "",
+            "entity_b_warning_from_a_source_zone": "",
+            "entity_b_warning_from_a_target_zone": "",
+            "entity_b_warning_from_a_distance_m": "",
+            "pair_warning_active": "false",
+            "pair_detection_summary": "not_robot_pair",
+        }
+
+        robot_a = self._robot_from_entity_name(entity_a)
+        robot_b = self._robot_from_entity_name(entity_b)
+        if not robot_a:
+            return context
+
+        a_zone, a_age, a_active = self._robot_zone_context(robot_a, now_wall)
+        context["entity_a_zone"] = a_zone
+        context["entity_a_zone_age_s"] = a_age
+        context["entity_a_zone_active"] = a_active
+
+        if not robot_b:
+            context["pair_detection_summary"] = (
+                f"robot_obstacle_detecting_{a_zone}"
+                if a_active == "true"
+                else "robot_obstacle_not_detecting"
+            )
+            return context
+
+        b_zone, b_age, b_active = self._robot_zone_context(robot_b, now_wall)
+        context["entity_b_zone"] = b_zone
+        context["entity_b_zone_age_s"] = b_age
+        context["entity_b_zone_active"] = b_active
+
+        a_from_b = self._warning_context(robot_a, robot_b, now_wall)
+        b_from_a = self._warning_context(robot_b, robot_a, now_wall)
+
+        context["entity_a_warning_from_b_active"] = a_from_b["active"]
+        context["entity_a_warning_from_b_age_s"] = a_from_b["age_s"]
+        context["entity_a_warning_from_b_zone"] = a_from_b["zone"]
+        context["entity_a_warning_from_b_source_zone"] = a_from_b["source_zone"]
+        context["entity_a_warning_from_b_target_zone"] = a_from_b["target_zone"]
+        context["entity_a_warning_from_b_distance_m"] = a_from_b["distance_m"]
+        context["entity_b_warning_from_a_active"] = b_from_a["active"]
+        context["entity_b_warning_from_a_age_s"] = b_from_a["age_s"]
+        context["entity_b_warning_from_a_zone"] = b_from_a["zone"]
+        context["entity_b_warning_from_a_source_zone"] = b_from_a["source_zone"]
+        context["entity_b_warning_from_a_target_zone"] = b_from_a["target_zone"]
+        context["entity_b_warning_from_a_distance_m"] = b_from_a["distance_m"]
+
+        a_warned_by_b = a_from_b["active"] == "true"
+        b_warned_by_a = b_from_a["active"] == "true"
+        # Pair-specific detection: A is treated as detecting B only when A sent
+        # a fresh warning to B. A local non-CLEAR zone alone may be another robot
+        # or an obstacle, so it is not enough for robot-robot collision reasons.
+        a_detecting = b_warned_by_a
+        b_detecting = a_warned_by_b
+        pair_warning_active = a_warned_by_b or b_warned_by_a
+        context["pair_warning_active"] = str(pair_warning_active).lower()
+
+        if a_detecting and b_detecting:
+            summary = "both_detecting"
+        elif a_detecting and not b_detecting:
+            summary = "entity_a_detecting_only"
+        elif b_detecting and not a_detecting:
+            summary = "entity_b_detecting_only"
+        else:
+            summary = "neither_detecting"
+
+        if a_warned_by_b and b_warned_by_a:
+            summary += "|both_warned"
+        elif a_warned_by_b:
+            summary += "|entity_a_warned_by_b"
+        elif b_warned_by_a:
+            summary += "|entity_b_warned_by_a"
+        else:
+            summary += "|no_pair_warning"
+        context["pair_detection_summary"] = summary
+        return context
+    # ------------------------------------------------------------
 
     # ---------------- Topic discovery (global) ----------------
     def _refresh_contact_subs(self):

@@ -79,7 +79,7 @@ public:
       std::bind(&DepthZoneDetector::depthWatchdogCallback, this));
 
     RCLCPP_INFO(get_logger(),
-      "image_processor: depth='%s' aruco_runtime=disabled",
+      "image_processor: depth='%s'",
       depth_topic_.c_str());
 
     const auto now = get_clock()->now();

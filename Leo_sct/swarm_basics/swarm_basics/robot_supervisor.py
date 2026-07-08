@@ -1,18 +1,21 @@
 import os
+import csv
 import random
 import math
 import time
 from glob import glob
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import Twist
-from std_msgs.msg import String, Bool, Float32
+from std_msgs.msg import String, Float32
 from std_srvs.srv import SetBool
 from nav_msgs.msg import Odometry
+from ros_gz_interfaces.msg import Contacts
 
 from ament_index_python.packages import get_package_share_directory
 from swarm_basics.sct import SCT
@@ -103,27 +106,82 @@ class RobotSupervisor(Node):
         self.rotate_90_prev_yaw = 0.0
 
 
-        # Zone update throttle. Keep low for fast reaction while marker following.
+        # Zone update throttle. Keep low for fast reaction to depth obstacles.
         self.zone_update_min_dt = float(
             self.declare_parameter("zone_update_min_dt", 0.1).value
         )
-        self.marker_log_period_s = float(
-            self.declare_parameter("marker_log_period_s", 0.1).value
+        self.obstacle_zone_memory_s = float(
+            self.declare_parameter("obstacle_zone_memory_s", 0.4).value
         )
 
         # Random seed (per-robot namespace)
         self.ns = self.get_namespace().strip("/") or "root"
+        self.robot_index = self._namespace_index()
         base_seed = int(self.declare_parameter("random_seed", 12345).value)
-        self.rng = random.Random(base_seed + self._namespace_index())
+        robot_seed = base_seed + self.robot_index
+        self.rng = random.Random(robot_seed)
+        random.seed(robot_seed)
+        self.robot_seed = robot_seed
+        self.sct_choice_mode = str(
+            self.declare_parameter("sct_choice_mode", "random").value
+        ).strip().lower()
 
         self.enabled = bool(self.declare_parameter("enabled", False).value)
         self.static_mode = bool(self.declare_parameter("static", False).value)
-        self.aruco_follower_cmd_timeout_s = float(
-            self.declare_parameter("aruco_follower_cmd_timeout_s", 0.5).value
+        self.cbf_enabled = bool(self.declare_parameter("cbf_enabled", True).value)
+        self.cbf_safety_distance_m = float(
+            self.declare_parameter("cbf_safety_distance_m", 0.60).value
         )
-        self.aruco_stop_distance_m = float(self.declare_parameter("aruco_stop_distance_m", 0.2).value)
-        self.aruco_block_forward_on_obstacle = bool(
-            self.declare_parameter("aruco_block_forward_on_obstacle", True).value
+        self.cbf_alpha = float(self.declare_parameter("cbf_alpha", 1.2).value)
+        self.cbf_distance_timeout_s = float(
+            self.declare_parameter("cbf_distance_timeout_s", 0.4).value
+        )
+        self.cbf_stop_on_stale_distance = bool(
+            self.declare_parameter("cbf_stop_on_stale_distance", True).value
+        )
+        self.cbf_zone_stop_forward = bool(
+            self.declare_parameter("cbf_zone_stop_forward", True).value
+        )
+        self.cbf_zone_avoid_turning_into_obstacle = bool(
+            self.declare_parameter("cbf_zone_avoid_turning_into_obstacle", True).value
+        )
+        self.cbf_filter_log_enabled = bool(
+            self.declare_parameter("cbf_filter_log_enabled", False).value
+        )
+        self.sct_decision_log_enabled = bool(
+            self.declare_parameter("sct_decision_log_enabled", False).value
+        )
+        self.peer_warning_enabled = bool(
+            self.declare_parameter("peer_warning_enabled", True).value
+        )
+        self.peer_warning_log_enabled = bool(
+            self.declare_parameter("peer_warning_log_enabled", False).value
+        )
+        self.peer_warning_timeout_s = float(
+            self.declare_parameter("peer_warning_timeout_s", 0.35).value
+        )
+        self.results_dir = str(self.declare_parameter("results_dir", "").value).strip()
+        self.run_id = str(self.declare_parameter("run_id", "").value).strip()
+        self.contact_recovery_enabled = bool(
+            self.declare_parameter("contact_recovery_enabled", True).value
+        )
+        self.contact_recovery_duration_s = float(
+            self.declare_parameter("contact_recovery_duration_s", 1.2).value
+        )
+        self.contact_recovery_linear_x = float(
+            self.declare_parameter("contact_recovery_linear_x", -0.16).value
+        )
+        self.contact_recovery_angular_z = float(
+            self.declare_parameter("contact_recovery_angular_z", 0.8).value
+        )
+        self.contact_recovery_retrigger_block_s = float(
+            self.declare_parameter("contact_recovery_retrigger_block_s", 0.4).value
+        )
+        self.contact_topic = str(
+            self.declare_parameter(
+                "contact_topic",
+                f"/world/random_world/model/{self.ns}/link/{self.ns}/base_footprint/sensor/contact_sensor/contact",
+            ).value
         )
 
         # -------------------------------
@@ -140,24 +198,22 @@ class RobotSupervisor(Node):
         # State (sensing)
         # -------------------------------
         self.obstacle_zones = ["CLEAR"]
+        self.last_non_clear_obstacle_zone = "CLEAR"
+        self.last_non_clear_obstacle_zone_time = 0.0
+        self.front_obstacle_distance_m = float("inf")
+        self.last_front_obstacle_distance_time = 0.0
         self.last_zone_update = 0.0
         self.last_logged_zone = "CLEAR"
-        self.aruco_detected = False
-        self.aruco_distance_m = float("inf")
-        self.aruco_offset = float("nan")
-        self.last_aruco_seen_time = 0.0
-        self.tick_aruco_detected = False
-        self.tick_aruco_distance_m = float("inf")
-        self.last_marker_log_time = 0.0
-        self.last_marker_log_detected: Optional[bool] = None
-        self.last_marker_log_direction = "NONE"
-        self.last_marker_log_distance_m = float("inf")
-        self.aruco_follower_twist = Twist()
-        self.last_aruco_follower_cmd_time = 0.0
-
+        self.peer_warning_zone = "CLEAR"
+        self.peer_warning_source = ""
+        self.last_peer_warning_time = 0.0
         # Odom / yaw tracking for full-rotate
         self.have_odom = False
+        self.x = 0.0
+        self.y = 0.0
         self.yaw = 0.0
+        self.odom_stamp_sec = 0
+        self.odom_stamp_nsec = 0
 
         # -------------------------------
         # State (actuation)
@@ -178,6 +234,15 @@ class RobotSupervisor(Node):
         self.last_full_rotate_completed_at = 0.0
         self.last_rotate_90_completed_at = 0.0
         self.turn_settle_until = 0.0
+        self.contact_recovery_until = 0.0
+        self.last_contact_recovery_started_at = 0.0
+        self.contact_recovery_source = ""
+        self.cbf_filter_log_path: Optional[Path] = None
+        self.sct_decision_log_path: Optional[Path] = None
+        self.peer_warning_log_path: Optional[Path] = None
+        self._init_cbf_filter_log()
+        self._init_sct_decision_log()
+        self._init_peer_warning_log()
 
         # -------------------------------
         # Publishers/Subscribers
@@ -185,13 +250,25 @@ class RobotSupervisor(Node):
         self.cmd_pub = self.create_publisher(Twist, "cmd_vel", 10)
 
         self.sub_zone = self.create_subscription(String, "detected_zones", self.zone_callback, 10)
-        self.sub_aruco_detected = self.create_subscription(Bool, "aruco_id1_detected", self.aruco_detected_callback, 10)
-        self.sub_aruco_distance = self.create_subscription(Float32, "aruco_id1_distance", self.aruco_distance_callback, 10)
-        self.sub_aruco_offset = self.create_subscription(Float32, "aruco_id1_offset", self.aruco_offset_callback, 10)
-        self.sub_aruco_follower_cmd = self.create_subscription(
-            Twist, "aruco_follower/cmd_vel", self.aruco_follower_cmd_callback, 10
+        self.sub_front_obstacle_distance = self.create_subscription(
+            Float32,
+            "front_obstacle_distance",
+            self.front_obstacle_distance_callback,
+            10,
         )
         self.sub_odom = self.create_subscription(Odometry, "odom", self.odom_callback, 10)
+        self.sub_contact = self.create_subscription(
+            Contacts,
+            self.contact_topic,
+            self.contact_callback,
+            10,
+        )
+        self.sub_peer_warning = self.create_subscription(
+            String,
+            "peer_warning_zone",
+            self.peer_warning_callback,
+            10,
+        )
 
         # -------------------------------
         # SCT callbacks for UCEs (data-driven, but still attaches known sensors)
@@ -212,7 +289,6 @@ class RobotSupervisor(Node):
         self.action_table: Dict[str, ActionSpec] = {
             "EV_random_walk": ActionSpec(linear_x=0.0, angular_z=0.0, hold_s=None),  # special handled below
             "EV_move_forward": ActionSpec(linear_x=0.2, angular_z=0.0),
-            "EV_move_to_marker": ActionSpec(linear_x=0.0, angular_z=0.0),
             "EV_move_backward": ActionSpec(linear_x=-0.2, angular_z=0.0, hold_s=self.recovery_back_hold_s),
             "EV_rotate_clockwise": ActionSpec(
                 linear_x=0.0,
@@ -260,7 +336,11 @@ class RobotSupervisor(Node):
         return unique
 
     def _load_sct_from_yaml(self, config_path: str):
-        self.sct = SCT(config_path)
+        self.sct = SCT(
+            config_path,
+            random_seed=self.robot_seed,
+            choice_mode=self.sct_choice_mode,
+        )
         self.ev_name_by_id = {ev_id: ev_name for ev_name, ev_id in self.sct.EV.items()}
         for ev_id in self.sct.EV.values():
             if ev_id not in self.sct.callback:
@@ -341,21 +421,329 @@ class RobotSupervisor(Node):
         if self.static_mode:
             self.cmd_pub.publish(Twist())
             return
+        safe_twist = self._cbf_filter_twist(twist)
+        self.cmd_pub.publish(safe_twist)
+
+    def _run_log_dir(self) -> Path:
+        if self.results_dir:
+            base_dir = Path(self.results_dir)
+            return base_dir / self.run_id if self.run_id else base_dir
+        return Path.cwd()
+
+    def _init_cbf_filter_log(self):
+        if not self.cbf_filter_log_enabled:
+            return
+
+        log_dir = self._run_log_dir()
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.cbf_filter_log_path = log_dir / f"cbf_filter_{self.ns}.csv"
+        if self.cbf_filter_log_path.exists():
+            return
+
+        with self.cbf_filter_log_path.open("w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "wall_time",
+                "robot",
+                "event",
+                "reasons",
+                "zones",
+                "front_distance_m",
+                "distance_age_s",
+                "cbf_safety_distance_m",
+                "cbf_alpha",
+                "requested_linear_x",
+                "requested_angular_z",
+                "filtered_linear_x",
+                "filtered_angular_z",
+            ])
+
+    def _init_sct_decision_log(self):
+        if not self.sct_decision_log_enabled:
+            return
+
+        log_dir = self._run_log_dir()
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.sct_decision_log_path = log_dir / f"sct_decisions_{self.ns}.csv"
+        if self.sct_decision_log_path.exists():
+            return
+
+        with self.sct_decision_log_path.open("w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "wall_time",
+                "robot",
+                "selected_event",
+                "ce_exists",
+                "sct_state",
+                "raw_zone",
+                "effective_zone",
+                "front_distance_m",
+                "distance_age_s",
+                "path_clear",
+                "obstacle_front",
+                "obstacle_left",
+                "obstacle_right",
+                "contact_recovery_active",
+                "turn_settle_active",
+                "active_event_before",
+            ])
+
+    def _init_peer_warning_log(self):
+        if not self.peer_warning_log_enabled:
+            return
+
+        log_dir = self._run_log_dir()
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.peer_warning_log_path = log_dir / f"peer_warnings_{self.ns}.csv"
+        if self.peer_warning_log_path.exists():
+            return
+
+        with self.peer_warning_log_path.open("w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "wall_time",
+                "odom_stamp_sec",
+                "odom_stamp_nsec",
+                "receiver",
+                "warning_zone",
+                "source",
+                "source_zone",
+                "target_zone",
+                "distance_m",
+                "bearing_rad",
+                "bearing_deg",
+                "zone_reason",
+                "source_x",
+                "source_y",
+                "source_yaw",
+                "target_x",
+                "target_y",
+                "target_yaw",
+                "raw_zone",
+                "effective_zones_after",
+                "front_distance_m",
+                "distance_age_s",
+                "active_event",
+                "contact_recovery_active",
+                "turn_settle_active",
+                "receiver_x",
+                "receiver_y",
+                "receiver_yaw",
+                "raw_message",
+            ])
+
+    def _parse_peer_warning_fields(self, message: str) -> Dict[str, str]:
+        fields: Dict[str, str] = {}
+        for part in message.split(","):
+            if "=" not in part:
+                continue
+            key, value = part.split("=", 1)
+            fields[key.strip().lower()] = value.strip()
+        return fields
+
+    def _log_peer_warning(self, warning_zone: str, raw_message: str):
+        if not self.peer_warning_log_enabled or self.peer_warning_log_path is None:
+            return
+
+        now = time.time()
+        fields = self._parse_peer_warning_fields(raw_message)
+        distance = fields.get("distance", "")
+        try:
+            distance_text = f"{float(distance):.6f}"
+        except (TypeError, ValueError):
+            distance_text = distance
+
+        effective_zones = self._effective_obstacle_zones()
+        distance_age = now - self.last_front_obstacle_distance_time
+
+        with self.peer_warning_log_path.open("a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                f"{now:.6f}",
+                int(self.odom_stamp_sec),
+                int(self.odom_stamp_nsec),
+                self.ns,
+                warning_zone,
+                fields.get("source", ""),
+                fields.get("source_zone", ""),
+                fields.get("target_zone", ""),
+                distance_text,
+                fields.get("bearing_rad", ""),
+                fields.get("bearing_deg", ""),
+                fields.get("zone_reason", ""),
+                fields.get("source_x", ""),
+                fields.get("source_y", ""),
+                fields.get("source_yaw", ""),
+                fields.get("target_x", ""),
+                fields.get("target_y", ""),
+                fields.get("target_yaw", ""),
+                self.obstacle_zones[0],
+                "|".join(effective_zones),
+                f"{self.front_obstacle_distance_m:.6f}" if math.isfinite(self.front_obstacle_distance_m) else "inf",
+                f"{distance_age:.6f}" if math.isfinite(distance_age) else "inf",
+                self._current_command_event_label(),
+                str(bool(now < self.contact_recovery_until)).lower(),
+                str(bool(now < self.turn_settle_until)).lower(),
+                f"{self.x:.6f}",
+                f"{self.y:.6f}",
+                f"{self.yaw:.6f}",
+                raw_message,
+            ])
+
+    def _snapshot_sct_inputs(self, now: float):
+        effective_zones = self._effective_obstacle_zones()
+        depth_obstacles = {"LEFT", "RIGHT", "CORNER"}
+        return {
+            "raw_zone": self.obstacle_zones[0],
+            "effective_zone": "|".join(effective_zones),
+            "front_distance_m": self.front_obstacle_distance_m,
+            "distance_age_s": now - self.last_front_obstacle_distance_time,
+            "path_clear": not any(zone in depth_obstacles for zone in effective_zones),
+            "obstacle_front": "CORNER" in effective_zones,
+            "obstacle_left": "LEFT" in effective_zones,
+            "obstacle_right": "RIGHT" in effective_zones,
+            "contact_recovery_active": now < self.contact_recovery_until,
+            "turn_settle_active": now < self.turn_settle_until,
+            "active_event_before": self.active_event or "",
+        }
+
+    def _log_sct_decision(self, selected_event: str, ce_exists: bool, snapshot):
+        if not self.sct_decision_log_enabled or self.sct_decision_log_path is None:
+            return
+
+        with self.sct_decision_log_path.open("a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                f"{time.time():.6f}",
+                self.ns,
+                selected_event,
+                str(bool(ce_exists)).lower(),
+                "|".join(str(int(s)) for s in self.sct.sup_current_state),
+                snapshot["raw_zone"],
+                snapshot["effective_zone"],
+                f"{snapshot['front_distance_m']:.6f}" if math.isfinite(snapshot["front_distance_m"]) else "inf",
+                f"{snapshot['distance_age_s']:.6f}" if math.isfinite(snapshot["distance_age_s"]) else "inf",
+                str(bool(snapshot["path_clear"])).lower(),
+                str(bool(snapshot["obstacle_front"])).lower(),
+                str(bool(snapshot["obstacle_left"])).lower(),
+                str(bool(snapshot["obstacle_right"])).lower(),
+                str(bool(snapshot["contact_recovery_active"])).lower(),
+                str(bool(snapshot["turn_settle_active"])).lower(),
+                snapshot["active_event_before"],
+            ])
+
+    def _current_command_event_label(self) -> str:
+        if self.contact_recovery_until > time.time():
+            return "CONTACT_RECOVERY"
+        if self.full_rotate_active:
+            return self.active_event or "FULL_ROTATE"
+        if self.rotate_90_active:
+            return self.active_event or "ROTATE_90"
+        return self.active_event or "none"
+
+    def _log_cbf_filter(
+        self,
+        requested: Twist,
+        filtered: Twist,
+        effective_zones,
+        distance_age: float,
+        reasons,
+    ):
+        if not self.cbf_filter_log_enabled or self.cbf_filter_log_path is None or not reasons:
+            return
+
+        with self.cbf_filter_log_path.open("a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                f"{time.time():.6f}",
+                self.ns,
+                self._current_command_event_label(),
+                "|".join(reasons),
+                "|".join(effective_zones),
+                f"{self.front_obstacle_distance_m:.6f}" if math.isfinite(self.front_obstacle_distance_m) else "inf",
+                f"{distance_age:.6f}" if math.isfinite(distance_age) else "inf",
+                f"{self.cbf_safety_distance_m:.6f}",
+                f"{self.cbf_alpha:.6f}",
+                f"{requested.linear.x:.6f}",
+                f"{requested.angular.z:.6f}",
+                f"{filtered.linear.x:.6f}",
+                f"{filtered.angular.z:.6f}",
+            ])
+
+    def _cbf_filter_twist(self, twist: Twist) -> Twist:
+        """
+        One-dimensional CBF safety filter for the robot's front depth ROI.
+
+        h(d) = d - d_safe. For a forward command v, approximate h_dot = -v.
+        Enforce h_dot + alpha*h >= 0, which gives v <= alpha*(d-d_safe).
+        Backward and rotational commands are left available so the supervisor can
+        recover from blocked states.
+        """
         safe_twist = Twist()
-        safe_twist.linear.x = max(0.0, float(twist.linear.x))
+        safe_twist.linear.x = float(twist.linear.x)
         safe_twist.linear.y = float(twist.linear.y)
         safe_twist.linear.z = float(twist.linear.z)
         safe_twist.angular.x = float(twist.angular.x)
         safe_twist.angular.y = float(twist.angular.y)
         safe_twist.angular.z = float(twist.angular.z)
-        self.cmd_pub.publish(safe_twist)
+
+        if not self.cbf_enabled:
+            return safe_twist
+
+        now = time.time()
+        effective_zones = self._effective_obstacle_zones()
+        zones = set(effective_zones)
+        distance_age = now - self.last_front_obstacle_distance_time
+        reasons = []
+
+        if self.cbf_zone_stop_forward and safe_twist.linear.x > 0.0 and zones & {"LEFT", "RIGHT", "CORNER"}:
+            safe_twist.linear.x = 0.0
+            reasons.append("zone_stop_forward")
+
+        if self.cbf_zone_avoid_turning_into_obstacle:
+            if "LEFT" in zones and safe_twist.angular.z > 0.0:
+                safe_twist.angular.z = 0.0
+                reasons.append("turn_left_blocked")
+            if "RIGHT" in zones and safe_twist.angular.z < 0.0:
+                safe_twist.angular.z = 0.0
+                reasons.append("turn_right_blocked")
+
+        if safe_twist.linear.x <= 0.0:
+            self._log_cbf_filter(twist, safe_twist, effective_zones, distance_age, reasons)
+            return safe_twist
+
+        distance_is_fresh = (
+            self.last_front_obstacle_distance_time > 0.0
+            and distance_age <= self.cbf_distance_timeout_s
+            and math.isfinite(self.front_obstacle_distance_m)
+        )
+
+        if not distance_is_fresh:
+            if self.cbf_stop_on_stale_distance and effective_zones[0] != "CLEAR":
+                safe_twist.linear.x = 0.0
+                reasons.append("stale_distance_stop")
+                self._log_cbf_filter(twist, safe_twist, effective_zones, distance_age, reasons)
+            return safe_twist
+
+        h = self.front_obstacle_distance_m - self.cbf_safety_distance_m
+        max_forward_v = max(0.0, self.cbf_alpha * h)
+        if safe_twist.linear.x > max_forward_v:
+            safe_twist.linear.x = max_forward_v
+            reasons.append("distance_cbf_cap")
+        self._log_cbf_filter(twist, safe_twist, effective_zones, distance_age, reasons)
+        return safe_twist
 
     # -------------------------------
     # Subscriptions
     # -------------------------------
     def odom_callback(self, msg: Odometry):
         self.have_odom = True
+        self.x = float(msg.pose.pose.position.x)
+        self.y = float(msg.pose.pose.position.y)
         self.yaw = _yaw_from_quat(msg.pose.pose.orientation)
+        self.odom_stamp_sec = int(msg.header.stamp.sec)
+        self.odom_stamp_nsec = int(msg.header.stamp.nanosec)
 
     def zone_callback(self, msg: String):
         now = time.time()
@@ -371,65 +759,100 @@ class RobotSupervisor(Node):
             self.obstacle_zones = ["CLEAR"]
 
         zone = self.obstacle_zones[0]
+        if zone != "CLEAR":
+            self.last_non_clear_obstacle_zone = zone
+            self.last_non_clear_obstacle_zone_time = now
         if zone != self.last_logged_zone:
             self.get_logger().info(f"Detected zone changed to {zone}")
             self.last_logged_zone = zone
 
-    def aruco_detected_callback(self, msg: Bool):
-        self.aruco_detected = bool(msg.data)
-        if self.aruco_detected:
-            self.last_aruco_seen_time = time.time()
-        #     # Preempt an exploratory pulse immediately so the next supervisor
-        #     # cycle can switch to marker following without waiting for the
-        #     # remaining random-walk hold time to expire.
-        #     if self.active_event == "EV_random_walk":
-        #         self.active_event = None
-        #         self.motion_until = 0.0
-        #         self._publish_stop()
-        # self._log_marker_status(force=True)
-
-    def aruco_distance_callback(self, msg: Float32):
-        d = float(msg.data)
-        if math.isfinite(d):
-            self.aruco_distance_m = d
-        else:
-            self.aruco_distance_m = float("inf")
-        self._log_marker_status()
-
-    def aruco_offset_callback(self, msg: Float32):
-        offset = float(msg.data)
-        self.aruco_offset = offset if math.isfinite(offset) else float("nan")
-
-    def aruco_follower_cmd_callback(self, msg: Twist):
-        self.aruco_follower_twist = msg
-        self.last_aruco_follower_cmd_time = time.time()
-
-    def _log_marker_status(self, force: bool = False):
-        now = time.time()
-        if not force and (now - self.last_marker_log_time) < self.marker_log_period_s:
+    def peer_warning_callback(self, msg: String):
+        if not self.peer_warning_enabled:
             return
 
-        distance_text = f"{self.aruco_distance_m:.3f} m" if math.isfinite(self.aruco_distance_m) else "nan"
-        age_s = (now - self.last_aruco_seen_time) if self.last_aruco_seen_time > 0.0 else float("inf")
-        age_text = f"{age_s:.2f} s" if math.isfinite(age_s) else "never"
-        # self.get_logger().info(
-        #     f"Marker status: detected={str(self.aruco_detected).lower()} "
-        #     f"direction={direction} distance={distance_text} last_seen={age_text}"
-        # )
-        self.last_marker_log_time = now
-        self.last_marker_log_detected = self.aruco_detected
-        self.last_marker_log_direction = "NONE"
-        self.last_marker_log_distance_m = self.aruco_distance_m
+        token = msg.data.strip().upper().split(",", 1)[0].split(":", 1)[0].strip()
+        if token not in {"LEFT", "RIGHT", "CORNER", "CLEAR"}:
+            return
+
+        self.peer_warning_zone = token
+        self.peer_warning_source = msg.data
+        self.last_peer_warning_time = time.time()
+        self._log_peer_warning(token, msg.data)
+
+    def _effective_obstacle_zones(self):
+        zones = []
+        if self.obstacle_zones[0] != "CLEAR":
+            zones.extend(self.obstacle_zones)
+        elif (
+            self.last_non_clear_obstacle_zone != "CLEAR"
+            and (time.time() - self.last_non_clear_obstacle_zone_time) <= self.obstacle_zone_memory_s
+        ):
+            zones.append(self.last_non_clear_obstacle_zone)
+
+        if (
+            self.peer_warning_enabled
+            and self.peer_warning_zone != "CLEAR"
+            and (time.time() - self.last_peer_warning_time) <= self.peer_warning_timeout_s
+        ):
+            zones.append(self.peer_warning_zone)
+
+        if not zones:
+            return ["CLEAR"]
+
+        unique_zones = []
+        for zone in zones:
+            if zone not in unique_zones:
+                unique_zones.append(zone)
+        return unique_zones
+
+    def front_obstacle_distance_callback(self, msg: Float32):
+        distance = float(msg.data)
+        self.front_obstacle_distance_m = distance if math.isfinite(distance) else float("inf")
+        self.last_front_obstacle_distance_time = time.time()
+
+    def contact_callback(self, msg: Contacts):
+        if not self.contact_recovery_enabled or not self.enabled:
+            return
+        if not msg.contacts:
+            return
+
+        now = time.time()
+        if (now - self.last_contact_recovery_started_at) < self.contact_recovery_retrigger_block_s:
+            return
+
+        self.last_contact_recovery_started_at = now
+        self.contact_recovery_until = max(
+            self.contact_recovery_until,
+            now + self.contact_recovery_duration_s,
+        )
+        self.contact_recovery_source = self._contact_summary(msg)
+        self.full_rotate_active = False
+        self.rotate_90_active = False
+        self.active_event = None
+        self.motion_until = 0.0
+        self.get_logger().info(
+            "CONTACT RECOVERY activated "
+            f"(source={self.contact_recovery_source}, duration_s={self.contact_recovery_duration_s:.2f})"
+        )
+
+    def _contact_summary(self, msg: Contacts) -> str:
+        names = []
+        for contact in msg.contacts[:3]:
+            for collision in (contact.collision1, contact.collision2):
+                name = getattr(collision, "name", str(collision))
+                if self.ns not in name:
+                    names.append(name)
+        return ",".join(names[:3]) or "local_contact"
 
     # -------------------------------
     # SCT input check functions (uncontrollables)
     # -------------------------------
     def clear_path_check(self, sup_data):
         depth_obstacles = {"LEFT", "RIGHT", "CORNER"}
-        return not any(zone in depth_obstacles for zone in self.obstacle_zones)
+        return not any(zone in depth_obstacles for zone in self._effective_obstacle_zones())
 
     def middle_check(self, sup_data):
-        hit = "CORNER" in self.obstacle_zones
+        hit = "CORNER" in self._effective_obstacle_zones()
         if hit and not self.front_obstacle_active:
             now = time.time()
             # If we're in a front-obstacle situation, block full_rotate for ~1 tick
@@ -441,23 +864,10 @@ class RobotSupervisor(Node):
         return hit
 
     def left_check(self, sup_data):
-        return "LEFT" in self.obstacle_zones
+        return "LEFT" in self._effective_obstacle_zones()
 
     def right_check(self, sup_data):
-        return "RIGHT" in self.obstacle_zones
-
-    def marker_seen_check(self, sup_data):
-        return self.tick_aruco_detected
-
-    def marker_lost_check(self, sup_data):
-        return not self.tick_aruco_detected
-
-    def marker_close_check(self, sup_data):
-        return (
-            self.tick_aruco_detected
-            and math.isfinite(self.tick_aruco_distance_m)
-            and self.tick_aruco_distance_m <= self.aruco_stop_distance_m
-        )
+        return "RIGHT" in self._effective_obstacle_zones()
 
     def _install_uncontrollable_callbacks(self):
         # Attach callbacks only for events that exist in current supervisor YAML.
@@ -470,9 +880,6 @@ class RobotSupervisor(Node):
         add("path_clear", self.clear_path_check)
         add("obstacle_left", self.left_check)
         add("obstacle_right", self.right_check)
-        add("marker_seen", self.marker_seen_check)
-        add("marker_lost", self.marker_lost_check)
-        add("marker_close", self.marker_close_check)
 
     # -------------------------------
     # Enable service
@@ -519,72 +926,22 @@ class RobotSupervisor(Node):
         self.active_twist = Twist()
         self._publish_cmd(self.active_twist)
 
-    def _aruco_follower_cmd_is_fresh(self) -> bool:
-        if self.last_aruco_follower_cmd_time <= 0.0:
-            return False
-        return (time.time() - self.last_aruco_follower_cmd_time) <= self.aruco_follower_cmd_timeout_s
-
-    def _filter_aruco_follower_cmd(self, base_twist: Twist) -> Twist:
+    def _publish_contact_recovery_cmd(self):
         twist = Twist()
-        twist.linear.x = max(0.0, float(base_twist.linear.x))
-        twist.angular.z = float(base_twist.angular.z)
-        zones = set(self.obstacle_zones)
-
-        if (
-            self.aruco_detected
-            and math.isfinite(self.aruco_distance_m)
-            and self.aruco_distance_m <= self.aruco_stop_distance_m
-        ):
-            return Twist()
+        linear_x = self.contact_recovery_linear_x
+        turn_sign = 1.0 if (self.robot_index % 2 == 0) else -1.0
+        zones = self._effective_obstacle_zones()
 
         if "CORNER" in zones:
-            twist.linear.x = 0.0
-            return twist
+            linear_x = min(linear_x, 0.0)
+        elif "LEFT" in zones:
+            turn_sign = -1.0
+        elif "RIGHT" in zones:
+            turn_sign = 1.0
 
-        if self.aruco_block_forward_on_obstacle and ("LEFT" in zones or "RIGHT" in zones):
-            twist.linear.x = 0.0
-
-        if "LEFT" in zones and twist.angular.z > 0.0:
-            twist.angular.z = 0.0
-        if "RIGHT" in zones and twist.angular.z < 0.0:
-            twist.angular.z = 0.0
-        return twist
-
-    def _compute_direct_marker_cmd(self) -> Twist:
-        twist = Twist()
-        if not self.aruco_detected:
-            return twist
-
-        offset = self.aruco_offset if math.isfinite(self.aruco_offset) else 0.0
-        abs_offset = abs(offset)
-
-        # Rotate first when the marker is far from image center.
-        if abs_offset > 0.08:
-            twist.angular.z = max(-0.8, min(0.8, -2.2 * offset))
-            if abs_offset < 0.18:
-                twist.linear.x = 0.04
-        else:
-            twist.angular.z = max(-0.25, min(0.25, -1.2 * offset))
-            if math.isfinite(self.aruco_distance_m):
-                if self.aruco_distance_m <= self.aruco_stop_distance_m:
-                    return Twist()
-                if self.aruco_distance_m < 0.35:
-                    twist.linear.x = 0.05
-                elif self.aruco_distance_m < 0.6:
-                    twist.linear.x = 0.09
-                else:
-                    twist.linear.x = 0.14
-            else:
-                # Depth is often missing on the marker; creep forward if centered.
-                twist.linear.x = 0.07
-
-        return self._filter_aruco_follower_cmd(twist)
-
-    def _publish_aruco_safe_cmd(self):
-        twist = self._compute_direct_marker_cmd()
-        self.active_event = None
+        twist.linear.x = linear_x
+        twist.angular.z = turn_sign * abs(self.contact_recovery_angular_z)
         self.active_twist = twist
-        self.motion_until = 0.0
         self._publish_cmd(self.active_twist)
 
     def _cancel_all_motion(self):
@@ -598,6 +955,7 @@ class RobotSupervisor(Node):
         self.rotate_90_accum = 0.0
         self.rotate_90_started_at = 0.0
         self.rotate_90_prev_yaw = 0.0
+        self.contact_recovery_until = 0.0
         self.turn_settle_until = 0.0
 
     def _enter_post_turn_settle(self, now: float):
@@ -726,11 +1084,6 @@ class RobotSupervisor(Node):
             self._publish_stop()
             return
 
-        if ev_name == "EV_move_to_marker":
-            self.active_event = ev_name
-            self._publish_aruco_safe_cmd()
-            return
-
         # random walk is special (stochastic each time it fires)
         if ev_name == "EV_random_walk":
             twist = Twist()
@@ -810,9 +1163,10 @@ class RobotSupervisor(Node):
 
         self.stop_sent = False
         now = time.time()
-        self.tick_aruco_detected = self.aruco_detected
-        self.tick_aruco_distance_m = self.aruco_distance_m
-        self._log_marker_status()
+
+        if now < self.contact_recovery_until:
+            self._publish_contact_recovery_cmd()
+            return
 
         # If we’re in the middle of a true full_rotate, keep executing until complete.
         if self.full_rotate_active:
@@ -854,18 +1208,22 @@ class RobotSupervisor(Node):
         # Otherwise: pick next event from SCT
         self.active_event = None
         self.sct.input_buffer = []
+        sct_input_snapshot = self._snapshot_sct_inputs(now)
         ce_exists, ce = self.sct.run_step()
         self._print_current_state()
         if not ce_exists:
             # No controllable enabled -> stop
+            self._log_sct_decision("none", False, sct_input_snapshot)
             self._publish_stop()
             return
 
         ev_name = self.ev_name_by_id.get(int(ce))
         if ev_name is None:
+            self._log_sct_decision(f"unknown:{int(ce)}", True, sct_input_snapshot)
             self._publish_stop()
             return
 
+        self._log_sct_decision(ev_name, True, sct_input_snapshot)
         self.get_logger().info(f"Selected controllable event: {ev_name}")
         self.publish_twist_for_event(ev_name)
 
