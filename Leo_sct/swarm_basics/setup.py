@@ -29,8 +29,8 @@ setup(
         'console_scripts': [
             'robot_supervisor = swarm_basics.robot_supervisor:main',
             'random_walk_cbf_controller = swarm_basics.random_walk_cbf_controller:main',
-            'robot_proximity_warner = swarm_basics.robot_proximity_warner:main',
             'robot_id_warning_relay = swarm_basics.robot_id_warning_relay:main',
+            'peer_obstacle_warning_test = swarm_basics.peer_obstacle_warning_test:main',
             'coverage_counter = swarm_basics.coverage_counter:main',
             'bump_counter = swarm_basics.bump_counter:main',
             'plot_bump_reasons = swarm_basics.plot_bump_reasons:main',

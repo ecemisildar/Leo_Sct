@@ -32,15 +32,18 @@ import csv
 import math
 import re
 import time
+from collections import deque
 from pathlib import Path
 from typing import Dict, Tuple, Any, Optional
 
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
 from std_msgs.msg import UInt32, String
 from nav_msgs.msg import Odometry
 from ros_gz_interfaces.msg import Contacts
+from sensor_msgs.msg import Image
 
 # ------------------ Defaults ------------------
 DEFAULT_COOLDOWN_SEC = 0.5          # generic cooldown
@@ -121,6 +124,19 @@ class BumpCounter(Node):
         self.detection_context_timeout_s = float(
             self.declare_parameter("detection_context_timeout_s", 1.0).value
         )
+        self.save_depth_pre_collision_images = bool(
+            self.declare_parameter("save_depth_pre_collision_images", True).value
+        )
+        self.depth_history_frames = max(
+            1,
+            int(self.declare_parameter("depth_history_frames", 5).value),
+        )
+        self.depth_topic_template = str(
+            self.declare_parameter(
+                "depth_topic_template",
+                "/{robot}/depth_camera/depth_image",
+            ).value
+        )
 
         # ---- Identity label for CSV/logging ----
         ns = self.get_namespace().strip("/") or "root"
@@ -145,6 +161,12 @@ class BumpCounter(Node):
         self.robot_zones: Dict[str, Tuple[str, float]] = {}
         self.peer_warnings: Dict[Tuple[str, str], Tuple[float, Dict[str, str], str]] = {}
         self.robot_poses: Dict[str, Tuple[float, float, float, float]] = {}
+        self.depth_buffers = {
+            f"robot_{idx}": deque(maxlen=self.depth_history_frames)
+            for idx in range(self.total_robots)
+        }
+        self.depth_snapshot_dir = self.log_dir / "collision_depth_frames"
+        self.depth_snapshot_index_path = self.depth_snapshot_dir / "frames.csv"
 
         # ---- Publishers ----
         self.pub_total = self.create_publisher(UInt32, "bump_count", 10)
@@ -181,12 +203,22 @@ class BumpCounter(Node):
                 self._make_odom_callback(robot),
                 10,
             )
+            if self.save_depth_pre_collision_images:
+                self.create_subscription(
+                    Image,
+                    self.depth_topic_template.format(robot=robot),
+                    self._make_depth_callback(robot),
+                    10,
+                )
 
         # prune timer
         self.create_timer(1.0 / PRUNE_HZ, self._prune)
 
         # ---- CSV logging ----
         self.log_dir.mkdir(parents=True, exist_ok=True)
+        if self.save_depth_pre_collision_images:
+            self.depth_snapshot_dir.mkdir(parents=True, exist_ok=True)
+            self._ensure_depth_snapshot_index_header()
         self.csv_path = self._csv_path_for_today()
         self._ensure_csv_header()
         self._csv_rows = []
@@ -221,12 +253,20 @@ class BumpCounter(Node):
                     "entity_a_bump_direction",
                     "entity_b_bump_direction",
                     "pair_detection_summary",
+                    "depth_snapshot_dir",
                 ])
 
     def _append_csv(self, stamp, bump_type: str, key: Any,
                     entity_a: str, entity_b: str, avg_xyz, source_topic: str):
         context = self._collision_detection_context(entity_a, entity_b, time.time())
         direction_a, direction_b = self._collision_direction_context(entity_a, entity_b, avg_xyz)
+        depth_snapshot_dir = self._save_pre_collision_depth_frames(
+            stamp,
+            bump_type,
+            key,
+            entity_a,
+            entity_b,
+        )
         self._csv_rows.append([
             int(stamp.sec), int(stamp.nanosec),
             self.label,
@@ -241,6 +281,7 @@ class BumpCounter(Node):
             direction_a,
             direction_b,
             context["pair_detection_summary"],
+            depth_snapshot_dir,
         ])
         if len(self._csv_rows) >= self.flush_max_rows:
             self._flush_csv_rows()
@@ -265,6 +306,177 @@ class BumpCounter(Node):
         super().destroy_node()
     # --------------------------------------------
 
+    # ---------------- Pre-collision depth snapshots ----------------
+    def _ensure_depth_snapshot_index_header(self):
+        if self.depth_snapshot_index_path.exists():
+            return
+        with self.depth_snapshot_index_path.open("w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "bump_total",
+                "stamp_sec",
+                "stamp_nsec",
+                "bump_type",
+                "key",
+                "entity_a",
+                "entity_b",
+                "robot",
+                "frame_index_oldest_first",
+                "frame_wall_time",
+                "frame_stamp_sec",
+                "frame_stamp_nsec",
+                "encoding",
+                "height",
+                "width",
+                "npy_path",
+                "pgm_path",
+            ])
+
+    def _make_depth_callback(self, robot: str):
+        def callback(msg: Image):
+            frame = self._decode_depth_image(msg)
+            if frame is None:
+                return
+            self.depth_buffers[robot].append(frame)
+
+        return callback
+
+    def _dtype_for_image_encoding(self, encoding: str):
+        key = str(encoding or "").upper()
+        mapping = {
+            "32FC1": np.float32,
+            "16UC1": np.uint16,
+            "16SC1": np.int16,
+            "8UC1": np.uint8,
+            "8SC1": np.int8,
+            "MONO8": np.uint8,
+            "MONO16": np.uint16,
+        }
+        return mapping.get(key)
+
+    def _decode_depth_image(self, msg: Image):
+        dtype = self._dtype_for_image_encoding(msg.encoding)
+        if dtype is None:
+            if not hasattr(self, "_warned_depth_encodings"):
+                self._warned_depth_encodings = set()
+            if msg.encoding not in self._warned_depth_encodings:
+                self.get_logger().warn(
+                    f"Depth snapshot disabled for unsupported encoding '{msg.encoding}'."
+                )
+                self._warned_depth_encodings.add(msg.encoding)
+            return None
+
+        try:
+            itemsize = np.dtype(dtype).itemsize
+            row_stride = int(msg.step) // itemsize
+            raw = np.frombuffer(msg.data, dtype=dtype)
+            if row_stride <= 0 or raw.size < int(msg.height) * row_stride:
+                return None
+            image = raw.reshape((int(msg.height), row_stride))[:, : int(msg.width)].copy()
+        except (TypeError, ValueError) as exc:
+            self.get_logger().warn(f"Could not decode depth image: {exc}")
+            return None
+
+        return {
+            "wall_time": time.time(),
+            "stamp_sec": int(msg.header.stamp.sec),
+            "stamp_nsec": int(msg.header.stamp.nanosec),
+            "encoding": str(msg.encoding),
+            "height": int(msg.height),
+            "width": int(msg.width),
+            "image": image,
+        }
+
+    def _write_depth_preview_pgm(self, path: Path, image: np.ndarray):
+        arr = image.astype(np.float32, copy=False)
+        finite = np.isfinite(arr)
+        if not np.any(finite):
+            preview = np.zeros(arr.shape, dtype=np.uint8)
+        else:
+            values = arr[finite]
+            lo = float(np.percentile(values, 2.0))
+            hi = float(np.percentile(values, 98.0))
+            if hi <= lo:
+                hi = lo + 1.0
+            normalized = (arr - lo) / (hi - lo)
+            normalized = np.where(finite, normalized, 0.0)
+            preview = np.clip(normalized * 255.0, 0.0, 255.0).astype(np.uint8)
+
+        with path.open("wb") as f:
+            f.write(f"P5\n{preview.shape[1]} {preview.shape[0]}\n255\n".encode("ascii"))
+            f.write(preview.tobytes())
+
+    def _collision_robots(self, entity_a: str, entity_b: str):
+        robots = []
+        for entity in (entity_a, entity_b):
+            robot = self._robot_from_entity_name(entity)
+            if robot and robot not in robots:
+                robots.append(robot)
+        return robots
+
+    def _safe_name(self, value: Any) -> str:
+        return re.sub(r"[^A-Za-z0-9_.-]+", "_", str(value)).strip("_")[:80] or "item"
+
+    def _save_pre_collision_depth_frames(
+        self,
+        stamp,
+        bump_type: str,
+        key: Any,
+        entity_a: str,
+        entity_b: str,
+    ) -> str:
+        if not self.save_depth_pre_collision_images:
+            return ""
+
+        robots = self._collision_robots(entity_a, entity_b)
+        if not robots:
+            return ""
+
+        bump_dir = (
+            self.depth_snapshot_dir
+            / f"bump_{int(self.bump_total):04d}_{self._safe_name(key)}"
+        )
+        wrote_any = False
+        index_rows = []
+        for robot in robots:
+            frames = list(self.depth_buffers.get(robot, []))[-self.depth_history_frames :]
+            robot_dir = bump_dir / robot
+            for frame_index, frame in enumerate(frames):
+                robot_dir.mkdir(parents=True, exist_ok=True)
+                prefix = f"frame_{frame_index:02d}_{frame['stamp_sec']}_{frame['stamp_nsec']}"
+                npy_path = robot_dir / f"{prefix}.npy"
+                pgm_path = robot_dir / f"{prefix}.pgm"
+                np.save(npy_path, frame["image"])
+                self._write_depth_preview_pgm(pgm_path, frame["image"])
+                wrote_any = True
+                index_rows.append([
+                    int(self.bump_total),
+                    int(stamp.sec),
+                    int(stamp.nanosec),
+                    bump_type,
+                    str(key),
+                    entity_a,
+                    entity_b,
+                    robot,
+                    frame_index,
+                    f"{frame['wall_time']:.6f}",
+                    frame["stamp_sec"],
+                    frame["stamp_nsec"],
+                    frame["encoding"],
+                    frame["height"],
+                    frame["width"],
+                    str(npy_path.relative_to(self.log_dir)),
+                    str(pgm_path.relative_to(self.log_dir)),
+                ])
+
+        if index_rows:
+            with self.depth_snapshot_index_path.open("a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerows(index_rows)
+
+        return str(bump_dir.relative_to(self.log_dir)) if wrote_any else ""
+    # ------------------------------------------------------------
+
     # ---------------- Detection / warning context ----------------
     def _parse_zone_token(self, data: str) -> str:
         token = str(data or "").strip().upper()
@@ -272,7 +484,7 @@ class BumpCounter(Node):
             token = token.split(":", 1)[0].strip()
         if "," in token:
             token = token.split(",", 1)[0].strip()
-        return token if token in {"LEFT", "RIGHT", "CORNER", "CLEAR"} else "CLEAR"
+        return token if token in {"LEFT", "RIGHT", "CORNER", "BACK", "CLEAR"} else "CLEAR"
 
     def _parse_key_values(self, data: str) -> Dict[str, str]:
         fields: Dict[str, str] = {}

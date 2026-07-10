@@ -3,7 +3,9 @@
 // Depth obstacle zones for fast sim runs.
 // Publishes:
 // - std_msgs/String  "detected_zones"          : LEFT | RIGHT | CORNER | CLEAR
+// - std_msgs/Float32 "left_obstacle_distance"   : left ROI near distance (m)
 // - std_msgs/Float32 "front_obstacle_distance"  : front ROI near distance (m)
+// - std_msgs/Float32 "right_obstacle_distance"  : right ROI near distance (m)
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -29,8 +31,10 @@ public:
   DepthZoneDetector() : Node("image_processor")
   {
     // Publishers
-    zones_pub_                  = create_publisher<std_msgs::msg::String>("detected_zones", 10);
+    zones_pub_                   = create_publisher<std_msgs::msg::String>("detected_zones", 10);
+    left_obstacle_distance_pub_  = create_publisher<std_msgs::msg::Float32>("left_obstacle_distance", 10);
     front_obstacle_distance_pub_ = create_publisher<std_msgs::msg::Float32>("front_obstacle_distance", 10);
+    right_obstacle_distance_pub_ = create_publisher<std_msgs::msg::Float32>("right_obstacle_distance", 10);
 
     // Parameters
     auto p = [this](auto name, auto def) { return declare_parameter<decltype(def)>(name, def); };
@@ -49,6 +53,7 @@ public:
     stride_               = p("stride",               2);
     percentile_           = p("percentile",           0.10);
     near_count_k_         = p("near_count_k",         4);
+    near_ratio_min_       = p("near_ratio_min",       0.01);
     valid_count_min_      = p("valid_count_min",      60);
     crop_y0_frac_         = p("crop_y0_frac",         0.30);
     crop_y1_frac_         = p("crop_y1_frac",         0.80);
@@ -57,7 +62,6 @@ public:
     corner_hold_ms_       = p("corner_hold_ms",       30);
     side_hold_ms_         = p("side_hold_ms",         50);
     show_debug_           = p("show_debug",           false);
-    clear_skip_           = p("clear_skip",           1);
     safe_frames_required_        = p("safe_frames_required",        5);
     corner_safe_frames_required_ = p("corner_safe_frames_required", 1);
     side_safe_frames_required_   = p("side_safe_frames_required",   2);
@@ -90,7 +94,7 @@ public:
 private:
   // ── Data types ────────────────────────────────────────────────────────────
 
-  struct RoiStats { float p; int near_count; int valid_count; };
+  struct RoiStats { float p; int near_count; int valid_count; float near_ratio; };
 
   struct ZoneStats {
     RoiStats left, front, right;
@@ -151,9 +155,9 @@ private:
 
     const ZoneStats zs = computeZoneStats(depth);
 
-    std_msgs::msg::Float32 front_msg;
-    front_msg.data = zs.front.p > 0.0f ? zs.front.p : std::numeric_limits<float>::quiet_NaN();
-    front_obstacle_distance_pub_->publish(front_msg);
+    publishDistance(left_obstacle_distance_pub_, zs.left);
+    publishDistance(front_obstacle_distance_pub_, zs.front);
+    publishDistance(right_obstacle_distance_pub_, zs.right);
 
     std::string zone = determineZoneHysteresis(zs);
 
@@ -245,13 +249,25 @@ private:
         vals.push_back(d);
       }
     }
-    if (vals.empty()) return {-1.0f, 0, 0};
+    if (vals.empty()) return {-1.0f, 0, 0, 0.0f};
 
     size_t k = std::min(
       vals.size() - 1,
       (size_t)std::round(std::clamp(percentile, 0.0, 1.0) * (vals.size() - 1)));
     std::nth_element(vals.begin(), vals.begin() + k, vals.end());
-    return {vals[k], near_cnt, valid_cnt};
+    const float near_ratio = valid_cnt > 0
+      ? static_cast<float>(near_cnt) / static_cast<float>(valid_cnt)
+      : 0.0f;
+    return {vals[k], near_cnt, valid_cnt, near_ratio};
+  }
+
+  void publishDistance(
+    const rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr & pub,
+    const RoiStats & rs)
+  {
+    std_msgs::msg::Float32 msg;
+    msg.data = rs.p > 0.0f ? rs.p : std::numeric_limits<float>::quiet_NaN();
+    pub->publish(msg);
   }
 
   // Returns true if the ROI contains an obstacle given the threshold
@@ -260,7 +276,8 @@ private:
     return rs.p > 0.0f
         && rs.valid_count >= valid_count_min_
         && rs.p < (float)thresh
-        && rs.near_count >= near_count_k_;
+        && rs.near_count >= near_count_k_
+        && rs.near_ratio >= (float)near_ratio_min_;
   }
 
   // ── Hysteresis state machine ───────────────────────────────────────────────
@@ -317,17 +334,21 @@ private:
     last_logged_zone_ = zone;
     if (!zs) { RCLCPP_INFO(get_logger(), "Zone=%s", zone.c_str()); return; }
     RCLCPP_INFO(get_logger(),
-      "Zone=%s  left[p=%.3f near=%d v=%d]  front[p=%.3f near=%d v=%d]  right[p=%.3f near=%d v=%d]",
+      "Zone=%s  left[p=%.3f near=%d ratio=%.3f v=%d]  "
+      "front[p=%.3f near=%d ratio=%.3f v=%d]  "
+      "right[p=%.3f near=%d ratio=%.3f v=%d]",
       zone.c_str(),
-      zs->left.p,  zs->left.near_count,  zs->left.valid_count,
-      zs->front.p, zs->front.near_count, zs->front.valid_count,
-      zs->right.p, zs->right.near_count, zs->right.valid_count);
+      zs->left.p,  zs->left.near_count,  zs->left.near_ratio,  zs->left.valid_count,
+      zs->front.p, zs->front.near_count, zs->front.near_ratio, zs->front.valid_count,
+      zs->right.p, zs->right.near_count, zs->right.near_ratio, zs->right.valid_count);
   }
 
   // ── Publishers / Subscribers ───────────────────────────────────────────────
 
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr    zones_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr   left_obstacle_distance_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr   front_obstacle_distance_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr   right_obstacle_distance_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::TimerBase::SharedPtr depth_watchdog_timer_;
 
@@ -340,11 +361,11 @@ private:
   double min_depth_{0.08}, max_depth_{10.0};
   int    stride_{2};
   double percentile_{0.10};
+  double near_ratio_min_{0.01};
   int    near_count_k_{4}, valid_count_min_{60};
   double crop_y0_frac_{0.30}, crop_y1_frac_{0.80}, front_gain_{1.40};
   int    hold_ms_{50}, corner_hold_ms_{30}, side_hold_ms_{50};
   bool   show_debug_{false};
-  int    clear_skip_{1};
   int    safe_frames_required_{5}, corner_safe_frames_required_{1}, side_safe_frames_required_{2};
   bool   zone_log_enabled_{true};
   int    zone_log_throttle_ms_{500};
@@ -360,7 +381,6 @@ private:
   std::string last_state_{"CLEAR"}, last_logged_zone_{""}, last_non_clear_zone_{"CORNER"};
   rclcpp::Time last_non_clear_time_;
   int  safe_frames_{0};
-  int  clear_skip_counter_{0};
 };
 
 int main(int argc, char ** argv)

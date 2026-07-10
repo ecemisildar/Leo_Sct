@@ -100,7 +100,7 @@ def generate_launch_description():
     )
     total_robots = DeclareLaunchArgument(
         "total_robots",
-        default_value="1",
+        default_value="5",
         description="Number of robots to spawn in the star formation",
     )
     spawn_layout = DeclareLaunchArgument(
@@ -125,8 +125,18 @@ def generate_launch_description():
     )
     controller_mode = DeclareLaunchArgument(
         "controller_mode",
-        default_value="sct",
+        default_value="random_walk_cbf",
         description="Per-robot controller: 'sct' or 'random_walk_cbf'.",
+    )
+    exploration_algorithm = DeclareLaunchArgument(
+        "exploration_algorithm",
+        default_value="random_walk",
+        description="Exploration mode for random_walk_cbf: 'random_walk' or goal-free 'bug'.",
+    )
+    peer_warning_enabled = DeclareLaunchArgument(
+        "peer_warning_enabled",
+        default_value="true",
+        description="Enable peer-warning messages in per-robot controllers.",
     )
     auto_start_supervisor = DeclareLaunchArgument(
         "auto_start_supervisor",
@@ -187,6 +197,9 @@ def generate_launch_description():
             os.path.join(pkg_project_gazebo, "launch", "spawn_multi_robots.launch.py")
         ),
         launch_arguments={
+            "sim_world": LaunchConfiguration("sim_world"),
+            "headless": LaunchConfiguration("headless"),
+            "auto_start": LaunchConfiguration("auto_start"),
             "robot_ns": LaunchConfiguration("robot_ns"),
             "run_duration": LaunchConfiguration("run_duration"),
             "total_robots": LaunchConfiguration("total_robots"),
@@ -195,6 +208,8 @@ def generate_launch_description():
             "random_seed": LaunchConfiguration("random_seed"),
             "sct_choice_mode": LaunchConfiguration("sct_choice_mode"),
             "controller_mode": LaunchConfiguration("controller_mode"),
+            "exploration_algorithm": LaunchConfiguration("exploration_algorithm"),
+            "peer_warning_enabled": LaunchConfiguration("peer_warning_enabled"),
             "results_dir": LaunchConfiguration("results_dir"),
             "metadata_yaml_path": LaunchConfiguration("metadata_yaml_path"),
             "prompt_text": LaunchConfiguration("prompt_text"),
@@ -239,6 +254,8 @@ def generate_launch_description():
             random_seed,
             sct_choice_mode,
             controller_mode,
+            exploration_algorithm,
+            peer_warning_enabled,
             auto_start_supervisor,
             results_dir,
             metadata_yaml_path,

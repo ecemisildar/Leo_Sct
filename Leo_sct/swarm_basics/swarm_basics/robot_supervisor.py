@@ -701,6 +701,10 @@ class RobotSupervisor(Node):
             safe_twist.linear.x = 0.0
             reasons.append("zone_stop_forward")
 
+        if safe_twist.linear.x < 0.0 and "BACK" in zones:
+            safe_twist.linear.x = 0.0
+            reasons.append("peer_warning_stop_backward")
+
         if self.cbf_zone_avoid_turning_into_obstacle:
             if "LEFT" in zones and safe_twist.angular.z > 0.0:
                 safe_twist.angular.z = 0.0
@@ -720,7 +724,7 @@ class RobotSupervisor(Node):
         )
 
         if not distance_is_fresh:
-            if self.cbf_stop_on_stale_distance and effective_zones[0] != "CLEAR":
+            if self.cbf_stop_on_stale_distance and zones & {"LEFT", "RIGHT", "CORNER"}:
                 safe_twist.linear.x = 0.0
                 reasons.append("stale_distance_stop")
                 self._log_cbf_filter(twist, safe_twist, effective_zones, distance_age, reasons)
@@ -771,7 +775,7 @@ class RobotSupervisor(Node):
             return
 
         token = msg.data.strip().upper().split(",", 1)[0].split(":", 1)[0].strip()
-        if token not in {"LEFT", "RIGHT", "CORNER", "CLEAR"}:
+        if token not in {"LEFT", "RIGHT", "CORNER", "BACK", "CLEAR"}:
             return
 
         self.peer_warning_zone = token
@@ -934,6 +938,8 @@ class RobotSupervisor(Node):
 
         if "CORNER" in zones:
             linear_x = min(linear_x, 0.0)
+        elif "BACK" in zones:
+            linear_x = 0.0
         elif "LEFT" in zones:
             turn_sign = -1.0
         elif "RIGHT" in zones:

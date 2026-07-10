@@ -6,8 +6,8 @@ from typing import Dict, List, Optional
 
 import rclpy
 from rclpy.node import Node
-from nav_msgs.msg import Odometry
-from std_msgs.msg import String
+from std_msgs.msg import Float32, String
+from tf2_msgs.msg import TFMessage
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -32,8 +32,8 @@ class RobotIdWarningRelay(Node):
     global odometry or any other robot's pose. It expects the local
     perception/classifier to publish String messages on classified_robot_detections.
 
-    In global_pose mode, this node is simulation-only and uses robot odometry to
-    publish warnings before the image classifier exists.
+    In global_pose mode, this node is simulation-only and uses Gazebo global
+    dynamic poses to publish warnings before the image classifier exists.
 
     Accepted detection formats, separated by semicolons for multiple detections:
       robot_3,CORNER,distance=0.62,confidence=0.91
@@ -49,7 +49,7 @@ class RobotIdWarningRelay(Node):
         self.ns = self.get_namespace().strip("/") or "root"
         self.total_robots = int(self.declare_parameter("total_robots", 5).value)
         self.warning_distance_m = float(
-            self.declare_parameter("warning_distance_m", 1.0).value
+            self.declare_parameter("warning_distance_m", 1.3).value
         )
         self.min_confidence = float(self.declare_parameter("min_confidence", 0.0).value)
         self.warning_source = str(
@@ -70,6 +70,12 @@ class RobotIdWarningRelay(Node):
         self.publish_period_s = float(
             self.declare_parameter("publish_period_s", 0.1).value
         )
+        self.global_pose_topic = str(
+            self.declare_parameter(
+                "global_pose_topic",
+                "/world/random_world/dynamic_pose/info",
+            ).value
+        ).strip()
         self.log_enabled = bool(
             self.declare_parameter("robot_id_warning_log_enabled", True).value
         )
@@ -82,11 +88,24 @@ class RobotIdWarningRelay(Node):
         self.no_detection_warn_period_s = float(
             self.declare_parameter("no_detection_warn_period_s", 10.0).value
         )
+        self.peer_obstacle_warning_enabled = bool(
+            self.declare_parameter("peer_obstacle_warning_enabled", True).value
+        )
+        self.peer_obstacle_warning_timeout_s = float(
+            self.declare_parameter("peer_obstacle_warning_timeout_s", 0.6).value
+        )
+        self.peer_obstacle_warning_distance_m = float(
+            self.declare_parameter("peer_obstacle_warning_distance_m", 0.85).value
+        )
         self.results_dir = str(self.declare_parameter("results_dir", "").value).strip()
         self.run_id = str(self.declare_parameter("run_id", "").value).strip()
         self.detection_count = 0
         self.last_detection_time = 0.0
         self.poses = {}
+        self.obstacle_zone = "CLEAR"
+        self.last_obstacle_zone_time = 0.0
+        self.front_obstacle_distance_m = float("inf")
+        self.last_front_obstacle_distance_time = 0.0
 
         self.warn_publishers = {}
         for idx in range(self.total_robots):
@@ -96,15 +115,15 @@ class RobotIdWarningRelay(Node):
                 f"/{robot}/peer_warning_zone",
                 10,
             )
-            if self.warning_source == "global_pose":
-                self.create_subscription(
-                    Odometry,
-                    f"/{robot}/odom",
-                    self._make_odom_callback(robot),
-                    10,
-                )
 
         self.log_path = self._make_log_path()
+        self.create_subscription(String, "detected_zones", self.obstacle_zone_callback, 10)
+        self.create_subscription(
+            Float32,
+            "front_obstacle_distance",
+            self.front_obstacle_distance_callback,
+            10,
+        )
         if self.warning_source == "classifier":
             self.create_subscription(
                 String,
@@ -117,6 +136,12 @@ class RobotIdWarningRelay(Node):
                 self.diagnostic_callback,
             )
         else:
+            self.create_subscription(
+                TFMessage,
+                self.global_pose_topic,
+                self.global_pose_callback,
+                10,
+            )
             self.timer = self.create_timer(
                 self.publish_period_s,
                 self.global_pose_timer_callback,
@@ -126,6 +151,8 @@ class RobotIdWarningRelay(Node):
             f"(robot={self.ns}, total_robots={self.total_robots}, "
             f"warning_distance_m={self.warning_distance_m:.2f}, "
             f"warning_source={self.warning_source}, "
+            f"peer_obstacle_warning_enabled={self.peer_obstacle_warning_enabled}, "
+            f"global_pose_topic={self.global_pose_topic}, "
             f"detections_topic={self.detections_topic})"
         )
 
@@ -155,16 +182,32 @@ class RobotIdWarningRelay(Node):
                 )
         return path
 
-    def _make_odom_callback(self, robot: str):
-        def callback(msg: Odometry):
+    def global_pose_callback(self, msg: TFMessage):
+        now = time.time()
+        for transform in msg.transforms:
+            robot = transform.child_frame_id.strip()
+            if "/" in robot:
+                continue
+            if robot not in self.warn_publishers:
+                continue
+
             self.poses[robot] = (
-                float(msg.pose.pose.position.x),
-                float(msg.pose.pose.position.y),
-                _yaw_from_quat(msg.pose.pose.orientation),
-                time.time(),
+                float(transform.transform.translation.x),
+                float(transform.transform.translation.y),
+                _yaw_from_quat(transform.transform.rotation),
+                now,
             )
 
-        return callback
+    def obstacle_zone_callback(self, msg: String):
+        self.obstacle_zone = self._parse_zone(msg.data)
+        self.last_obstacle_zone_time = time.time()
+
+    def front_obstacle_distance_callback(self, msg: Float32):
+        distance = float(msg.data)
+        self.front_obstacle_distance_m = (
+            distance if math.isfinite(distance) else float("inf")
+        )
+        self.last_front_obstacle_distance_time = time.time()
 
     def _log(
         self,
@@ -375,7 +418,7 @@ class RobotIdWarningRelay(Node):
 
     def _parse_zone(self, value: str) -> str:
         token = value.strip().upper()
-        if token not in {"LEFT", "RIGHT", "CORNER", "CLEAR"}:
+        if token not in {"LEFT", "RIGHT", "CORNER", "BACK", "CLEAR"}:
             return "CLEAR"
         return token
 
@@ -399,11 +442,48 @@ class RobotIdWarningRelay(Node):
         sx, sy, _, _ = self.poses[source]
         bearing = _wrap_to_pi(math.atan2(sy - ty, sx - tx) - tyaw)
 
-        if distance <= self.critical_distance_m:
-            return "CORNER", bearing, "critical_distance"
+        critical = distance <= self.critical_distance_m
         if abs(bearing) <= self.front_angle_rad:
-            return "CORNER", bearing, "front_sector"
-        return ("LEFT" if bearing > 0.0 else "RIGHT"), bearing, "side_sector"
+            reason = "critical_front_sector" if critical else "front_sector"
+            return "CORNER", bearing, reason
+        if abs(bearing) >= (math.pi - self.front_angle_rad):
+            reason = "critical_rear_sector" if critical else "rear_sector"
+            return "BACK", bearing, reason
+        reason = "critical_side_sector" if critical else "side_sector"
+        return ("LEFT" if bearing > 0.0 else "RIGHT"), bearing, reason
+
+    def _peer_obstacle_context_fields(self, peer_zone: str) -> List[str]:
+        if not self.peer_obstacle_warning_enabled:
+            return []
+
+        now = time.time()
+        zone_age = (
+            now - self.last_obstacle_zone_time
+            if self.last_obstacle_zone_time > 0.0
+            else float("inf")
+        )
+        distance_age = (
+            now - self.last_front_obstacle_distance_time
+            if self.last_front_obstacle_distance_time > 0.0
+            else float("inf")
+        )
+        obstacle_is_fresh = (
+            self.obstacle_zone != "CLEAR"
+            and zone_age <= self.peer_obstacle_warning_timeout_s
+            and distance_age <= self.peer_obstacle_warning_timeout_s
+            and math.isfinite(self.front_obstacle_distance_m)
+            and self.front_obstacle_distance_m <= self.peer_obstacle_warning_distance_m
+        )
+        if not obstacle_is_fresh or self.obstacle_zone != peer_zone:
+            return []
+
+        return [
+            "obstacle_behind=true",
+            f"obstacle_zone={self.obstacle_zone}",
+            f"obstacle_distance={self.front_obstacle_distance_m:.3f}",
+            f"obstacle_zone_age_s={zone_age:.3f}",
+            f"obstacle_distance_age_s={distance_age:.3f}",
+        ]
 
     def _warning_message(self, target: str, zone: str, distance, confidence) -> str:
         fields = [
@@ -418,6 +498,7 @@ class RobotIdWarningRelay(Node):
         if confidence is not None:
             fields.append(f"confidence={confidence:.3f}")
         fields.append(f"target={target}")
+        fields.extend(self._peer_obstacle_context_fields(zone))
         return ",".join(fields)
 
     def _global_pose_warning_message(
@@ -449,6 +530,7 @@ class RobotIdWarningRelay(Node):
             f"target_y={ty:.6f}",
             f"target_yaw={tyaw:.6f}",
         ]
+        fields.extend(self._peer_obstacle_context_fields(zone))
         return ",".join(fields)
 
 

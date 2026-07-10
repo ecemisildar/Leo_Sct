@@ -12,6 +12,7 @@ from launch.event_handlers import OnShutdown
 from launch.actions import OpaqueFunction, Shutdown, TimerAction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from ament_index_python.packages import get_package_share_directory
 
 
@@ -202,6 +203,33 @@ def _build_random_safe_slots(total_robots: int, world_path: str, seed: int):
     return robots
 
 
+def _build_peer_obstacle_test_slots(total_robots: int, world_path: str, seed: int):
+    if total_robots < 2:
+        raise RuntimeError("spawn_layout 'peer_obstacle_test' needs at least 2 robots.")
+
+    # Place robot_1 just outside box4 with its rear pointing toward the box.
+    # Place robot_0 nearby as the observing/warning robot.
+    robots = [
+        {"x": 4.25, "y": 2.75, "yaw": -1.8896874360548837},
+        {"x": 3.7909022434826443, "y": 1.9378131158529264, "yaw": 1.2519052175349097},
+    ]
+
+    if total_robots > len(robots):
+        extra_slots = _build_random_safe_slots(total_robots, world_path, seed)
+        for slot in extra_slots:
+            if len(robots) >= total_robots:
+                break
+            if all(math.hypot(slot["x"] - robot["x"], slot["y"] - robot["y"]) >= 1.25 for robot in robots):
+                robots.append(slot)
+
+    if len(robots) < total_robots:
+        raise RuntimeError(
+            f"Only found {len(robots)} peer_obstacle_test slots in {world_path}, "
+            f"need {total_robots}."
+        )
+    return robots
+
+
 def _resolve_seed(value: str, name: str) -> int:
     text = str(value).strip().lower()
     if text in {"", "auto", "random"}:
@@ -229,7 +257,10 @@ def generate_launch_description():
     spawn_layout_arg = DeclareLaunchArgument(
         "spawn_layout",
         default_value="spread",
-        description="Robot spawn layout: 'spread', 'origin', 'middle_circle', or 'random_safe'.",
+        description=(
+            "Robot spawn layout: 'spread', 'origin', 'middle_circle', "
+            "'random_safe', or 'peer_obstacle_test'."
+        ),
     )
     spawn_seed_arg = DeclareLaunchArgument(
         "spawn_seed",
@@ -251,6 +282,16 @@ def generate_launch_description():
         default_value="sct",
         description="Per-robot controller: 'sct' or 'random_walk_cbf'.",
     )
+    exploration_algorithm_arg = DeclareLaunchArgument(
+        "exploration_algorithm",
+        default_value="random_walk",
+        description="Exploration mode for random_walk_cbf: 'random_walk' or goal-free 'bug'.",
+    )
+    peer_warning_enabled_arg = DeclareLaunchArgument(
+        "peer_warning_enabled",
+        default_value="true",
+        description="Enable peer-warning messages in per-robot controllers.",
+    )
 
     # total_robots_arg = LaunchConfiguration("total_robots")
 
@@ -260,11 +301,40 @@ def generate_launch_description():
             name="coverage_counter",
             parameters=[
                 {"run_id": run_id},
-                {"run_duration": LaunchConfiguration("run_duration")},
+                {
+                    "run_duration": ParameterValue(
+                        LaunchConfiguration("run_duration"), value_type=float
+                    )
+                },
                 {"results_dir": LaunchConfiguration("results_dir")},
                 {"metadata_yaml_path": LaunchConfiguration("metadata_yaml_path")},
                 {"prompt_text": LaunchConfiguration("prompt_text")},
                 {"prompt_file_path": LaunchConfiguration("prompt_file_path")},
+                {
+                    f"launch_{name}": ParameterValue(
+                        LaunchConfiguration(name), value_type=str
+                    )
+                    for name in (
+                        "sim_world",
+                        "headless",
+                        "auto_start",
+                        "robot_ns",
+                        "run_duration",
+                        "total_robots",
+                        "spawn_layout",
+                        "spawn_seed",
+                        "random_seed",
+                        "sct_choice_mode",
+                        "controller_mode",
+                        "exploration_algorithm",
+                        "peer_warning_enabled",
+                        "auto_start_supervisor",
+                        "results_dir",
+                        "metadata_yaml_path",
+                        "prompt_text",
+                        "prompt_file_path",
+                    )
+                },
             ],
             output="screen"
     )
@@ -274,20 +344,30 @@ def generate_launch_description():
     def create_all_robot_nodes(context):
         total_robots_value = int(LaunchConfiguration("total_robots").perform(context))
         total_robots = max(1, total_robots_value)
-        world_path = os.path.join(swarm_basics_dir, "worlds", "random_world.sdf")
+        world_path = LaunchConfiguration("sim_world").perform(context)
         spawn_layout = LaunchConfiguration("spawn_layout").perform(context).strip().lower()
         spawn_seed = _resolve_seed(LaunchConfiguration("spawn_seed").perform(context), "spawn_seed")
         random_seed = _resolve_seed(LaunchConfiguration("random_seed").perform(context), "random_seed")
         sct_choice_mode = LaunchConfiguration("sct_choice_mode").perform(context).strip().lower()
         controller_mode = LaunchConfiguration("controller_mode").perform(context).strip().lower()
+        exploration_algorithm = (
+            LaunchConfiguration("exploration_algorithm").perform(context).strip().lower()
+        )
+        peer_warning_enabled = LaunchConfiguration("peer_warning_enabled")
         if controller_mode not in {"sct", "random_walk_cbf"}:
             raise RuntimeError(
                 f"Unknown controller_mode '{controller_mode}'. Use 'sct' or 'random_walk_cbf'."
             )
+        if exploration_algorithm not in {"random_walk", "bug"}:
+            raise RuntimeError(
+                f"Unknown exploration_algorithm '{exploration_algorithm}'. "
+                "Use 'random_walk' or 'bug'."
+            )
         print(
             f"[spawn_multi_robots] run_id={run_id} spawn_seed={spawn_seed} "
             f"random_seed={random_seed} sct_choice_mode={sct_choice_mode} "
-            f"controller_mode={controller_mode}",
+            f"controller_mode={controller_mode} "
+            f"exploration_algorithm={exploration_algorithm}",
             flush=True,
         )
         if spawn_layout == "spread":
@@ -298,9 +378,12 @@ def generate_launch_description():
             base_slots = _build_middle_circle_slots(total_robots, world_path)
         elif spawn_layout == "random_safe":
             base_slots = _build_random_safe_slots(total_robots, world_path, spawn_seed)
+        elif spawn_layout == "peer_obstacle_test":
+            base_slots = _build_peer_obstacle_test_slots(total_robots, world_path, spawn_seed)
         else:
             raise RuntimeError(
-                f"Unknown spawn_layout '{spawn_layout}'. Use 'spread', 'origin', 'middle_circle', or 'random_safe'."
+                f"Unknown spawn_layout '{spawn_layout}'. Use 'spread', 'origin', "
+                "'middle_circle', 'random_safe', or 'peer_obstacle_test'."
             )
         robots = []
         for i, slot in enumerate(base_slots):
@@ -328,6 +411,10 @@ def generate_launch_description():
                 f"/world/random_world/model/{ns}/link/{ns}/base_footprint/sensor/contact_sensor/contact"
                 f"@ros_gz_interfaces/msg/Contacts[ignition.msgs.Contacts",
             ]
+
+        bridge_args += [
+            "/world/random_world/dynamic_pose/info@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+        ]
 
         bridge_node = Node(
             package="ros_ign_bridge", # ros_gz_bridge
@@ -417,9 +504,20 @@ def generate_launch_description():
                     parameters=[
                         {"enabled": auto_start_supervisor},
                         {"random_seed": random_seed},
+                        {"exploration_algorithm": exploration_algorithm},
                         {"run_id": run_id},
                         {"results_dir": LaunchConfiguration("results_dir")},
-                        {"cbf_filter_log_enabled": False},
+                        {"peer_warning_enabled": peer_warning_enabled},
+                        {"peer_warning_timeout_s": 0.6},
+                        {"cbf_filter_log_enabled": True},
+                        {
+                            "test_reverse_enabled": (
+                                spawn_layout == "peer_obstacle_test" and ns == "robot_1"
+                            )
+                        },
+                        {"test_reverse_start_s": 5.0},
+                        {"test_reverse_duration_s": 25.0},
+                        {"test_reverse_linear_x": -0.10},
                     ],
                     output="screen",
                 )
@@ -438,30 +536,11 @@ def generate_launch_description():
                         {"sct_choice_mode": sct_choice_mode},
                         {"run_id": run_id},
                         {"results_dir": LaunchConfiguration("results_dir")},
+                        {"peer_warning_enabled": peer_warning_enabled},
                         {"peer_warning_log_enabled": False},
                     ],
                     output="screen",
                 )
-
-            proximity_warner_node = Node(
-                package="swarm_basics",
-                executable="robot_proximity_warner",
-                name="robot_proximity_warner",
-                namespace=ns,
-                parameters=[
-                    {"total_robots": total_robots},
-                    {"warning_distance_m": 1.0},
-                    {"critical_distance_m": 0.55},
-                    {"zone_timeout_s": 0.8},
-                    {"publish_period_s": 0.1},
-                    {"publish_to_self": False},
-                    {"run_id": run_id},
-                    {"results_dir": LaunchConfiguration("results_dir")},
-                    {"warner_diagnostic_log_enabled": True},
-                    {"diagnostic_distance_margin_m": 0.25},
-                ],
-                output="screen",
-            )
 
             robot_id_warning_relay_node = Node(
                 package="swarm_basics",
@@ -472,6 +551,7 @@ def generate_launch_description():
                     {"total_robots": total_robots},
                     {"warning_distance_m": 1.0},
                     {"warning_source": "global_pose"},
+                    {"global_pose_topic": "/world/random_world/dynamic_pose/info"},
                     {"critical_distance_m": 0.55},
                     {"front_angle_rad": math.radians(50.0)},
                     {"pose_timeout_s": 0.6},
@@ -479,6 +559,9 @@ def generate_launch_description():
                     {"min_confidence": 0.0},
                     {"classified_robot_detections_topic": "classified_robot_detections"},
                     {"no_detection_warn_period_s": 10.0},
+                    {"peer_obstacle_warning_enabled": True},
+                    {"peer_obstacle_warning_timeout_s": 0.6},
+                    {"peer_obstacle_warning_distance_m": 0.85},
                     {"run_id": run_id},
                     {"results_dir": LaunchConfiguration("results_dir")},
                     {"robot_id_warning_log_enabled": True},
@@ -494,12 +577,13 @@ def generate_launch_description():
                 parameters=[
                     {"use_sim_time": True},
                     {"depth_topic": f"/{ns}/depth_camera/depth_image"},
-                    {"zone_log_enabled": True},
+                    {"zone_log_enabled": False},
                     {"process_every_nth_depth_frame": 1},
                     {"enter_thresh": 0.70},
                     {"exit_thresh": 0.90},
                     {"side_enter_thresh": 0.70},
                     {"side_exit_thresh": 0.90},
+                    {"near_ratio_min": 0.01},
                     {"hold_ms": 250},
                     {"corner_hold_ms": 250},
                     {"side_hold_ms": 250},
@@ -514,7 +598,6 @@ def generate_launch_description():
                 spawn_node,
                 spawn_offset_tf,
                 behavior_node,
-                proximity_warner_node,
                 robot_id_warning_relay_node,
                 TimerAction(
                     period=2.0,
@@ -531,6 +614,8 @@ def generate_launch_description():
         random_seed_arg,
         sct_choice_mode_arg,
         controller_mode_arg,
+        exploration_algorithm_arg,
+        peer_warning_enabled_arg,
         RegisterEventHandler(
             OnShutdown(
                 on_shutdown=[
@@ -556,6 +641,9 @@ def generate_launch_description():
                 {"results_dir": LaunchConfiguration("results_dir")},
                 {"total_robots": LaunchConfiguration("total_robots")},
                 {"detection_context_timeout_s": 1.0},
+                {"save_depth_pre_collision_images": True},
+                {"depth_history_frames": 5},
+                {"depth_topic_template": "/{robot}/depth_camera/depth_image"},
             ],
             output="screen",
         ),

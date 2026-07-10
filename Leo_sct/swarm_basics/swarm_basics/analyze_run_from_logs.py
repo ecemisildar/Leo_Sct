@@ -23,6 +23,7 @@ ENV_MIN = -5
 ENV_MAX = 5
 GRID_SIZE = 1.0
 OBSTACLE_OCCUPANCY_THRESHOLD = 0.4
+CIRCLE_OBSTACLE_OCCUPANCY_THRESHOLD = 0.05
 def pick_latest_run_dir(results_dirs: list[Path]) -> tuple[str, Path, Path]:
     run_dirs = []
     legacy_runs = []
@@ -175,7 +176,7 @@ def load_obstacle_rectangles(world_sdf: Path):
     obstacles = []
     for model in world.findall("model"):
         name = model.get("name", "")
-        if name == "ground_plane":
+        if name == "ground_plane" or name.endswith("_wall"):
             continue
         model_pose = parse_pose(model.findtext("pose"))
         for link in model.findall("link"):
@@ -188,8 +189,24 @@ def load_obstacle_rectangles(world_sdf: Path):
                 size_text = collision.findtext("geometry/box/size")
                 if size_text:
                     sx, sy, _ = (float(v) for v in size_text.split())
-                    obstacles.append((x, y, sx, sy, yaw))
+                    obstacles.append(("box", x, y, sx, sy, yaw))
+                    continue
+                radius_text = collision.findtext("geometry/cylinder/radius")
+                if radius_text:
+                    obstacles.append(("circle", x, y, float(radius_text)))
     return obstacles
+
+
+def world_sdf_for_run(run_dir: Path) -> Path:
+    status_path = run_dir / "SAVE_STATUS.txt"
+    if status_path.exists():
+        for line in status_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("sim_world:"):
+                value = stripped.split(":", 1)[1].strip()
+                if value:
+                    return Path(value)
+    return WORLD_SDF
 
 
 def rect_corners(cx, cy, sx, sy, yaw):
@@ -234,8 +251,14 @@ def polygon_area(poly):
     return abs(area) * 0.5
 
 
+def overlap_area_obstacle_cell(obstacle, min_x, min_y, max_x, max_y):
+    if obstacle[0] == "circle":
+        return overlap_area_circle_cell(obstacle, min_x, min_y, max_x, max_y)
+    return overlap_area_rect_cell(obstacle, min_x, min_y, max_x, max_y)
+
+
 def overlap_area_rect_cell(obstacle, min_x, min_y, max_x, max_y):
-    cx, cy, sx, sy, yaw = obstacle
+    _, cx, cy, sx, sy, yaw = obstacle
     poly = rect_corners(cx, cy, sx, sy, yaw)
 
     def clip_left(p):   return p[0] >= min_x
@@ -266,6 +289,24 @@ def overlap_area_rect_cell(obstacle, min_x, min_y, max_x, max_y):
     return polygon_area(poly)
 
 
+def overlap_area_circle_cell(obstacle, min_x, min_y, max_x, max_y):
+    _, cx, cy, radius = obstacle
+    samples_per_axis = 10
+    inside = 0
+    step_x = (max_x - min_x) / samples_per_axis
+    step_y = (max_y - min_y) / samples_per_axis
+    radius_sq = radius * radius
+    for ix in range(samples_per_axis):
+        px = min_x + (ix + 0.5) * step_x
+        for iy in range(samples_per_axis):
+            py = min_y + (iy + 0.5) * step_y
+            if (px - cx) ** 2 + (py - cy) ** 2 <= radius_sq:
+                inside += 1
+    return (inside / (samples_per_axis * samples_per_axis)) * (
+        (max_x - min_x) * (max_y - min_y)
+    )
+
+
 def compute_blocked_cells(cells, obstacles, grid_size, occupancy_threshold):
     if not obstacles:
         return set()
@@ -277,8 +318,15 @@ def compute_blocked_cells(cells, obstacles, grid_size, occupancy_threshold):
         cell_max_x = cx + grid_size
         cell_max_y = cy + grid_size
         for obs in obstacles:
-            overlap = overlap_area_rect_cell(obs, cell_min_x, cell_min_y, cell_max_x, cell_max_y)
-            if (overlap / cell_area) >= occupancy_threshold:
+            overlap = overlap_area_obstacle_cell(
+                obs, cell_min_x, cell_min_y, cell_max_x, cell_max_y
+            )
+            threshold = (
+                CIRCLE_OBSTACLE_OCCUPANCY_THRESHOLD
+                if obs[0] == "circle"
+                else occupancy_threshold
+            )
+            if (overlap / cell_area) >= threshold:
                 blocked.add(idx)
                 break
     return blocked
@@ -418,7 +466,7 @@ def analyze_run(run_id: str, run_dir: Path, root_dir: Path) -> bool:
     paths = read_robot_paths(paths_csv) if paths_csv.exists() else {}
 
     cells = build_cells(ENV_MIN, ENV_MAX)
-    obstacles = load_obstacle_rectangles(WORLD_SDF)
+    obstacles = load_obstacle_rectangles(world_sdf_for_run(run_dir))
     blocked = compute_blocked_cells(
         cells, obstacles, GRID_SIZE, OBSTACLE_OCCUPANCY_THRESHOLD
     )

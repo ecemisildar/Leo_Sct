@@ -12,6 +12,7 @@ from rclpy.node import Node
 
 from tf2_msgs.msg import TFMessage
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from ament_index_python.packages import get_package_share_directory
 
 class CoverageCounter(Node):
     """
@@ -26,7 +27,7 @@ class CoverageCounter(Node):
         super().__init__("coverage_counter")
 
         # fixed settings (no args)
-        package_root = Path(__file__).resolve().parents[1]
+        package_root = Path(get_package_share_directory("swarm_basics"))
 
         results_dir_default = package_root / "results_exp"
         self.results_root = Path(
@@ -46,9 +47,38 @@ class CoverageCounter(Node):
         self.run_duration = float(self.declare_parameter("run_duration", 200.0).value)
         self.flush_interval_sec = float(self.declare_parameter("flush_interval_sec", 3.0).value)
         self.flush_max_rows = int(self.declare_parameter("flush_max_rows", 2000).value)
+        launch_parameter_names = (
+            "sim_world",
+            "headless",
+            "auto_start",
+            "robot_ns",
+            "run_duration",
+            "total_robots",
+            "spawn_layout",
+            "spawn_seed",
+            "random_seed",
+            "sct_choice_mode",
+            "controller_mode",
+            "peer_warning_enabled",
+            "auto_start_supervisor",
+            "results_dir",
+            "metadata_yaml_path",
+            "prompt_text",
+            "prompt_file_path",
+        )
+        self.launch_arguments = {
+            name: str(self.declare_parameter(f"launch_{name}", "").value)
+            for name in launch_parameter_names
+        }
 
         self.obstacle_occupancy_threshold = 0.4
-        self.world_sdf = package_root / "worlds" / "random_world.sdf"
+        self.circle_obstacle_occupancy_threshold = 0.05
+        sim_world = self.launch_arguments.get("sim_world", "").strip()
+        self.world_sdf = (
+            Path(sim_world)
+            if sim_world
+            else package_root / "worlds" / "random_world.sdf"
+        )
 
         self.results_dir = self.results_root / self.run_id
         self.results_dir.mkdir(parents=True, exist_ok=True)
@@ -109,6 +139,11 @@ class CoverageCounter(Node):
             f"results_dir: {self.results_dir}\n"
             f"metadata_yaml: {self.metadata_yaml_path}\n"
             f"prompt_file: {self.prompt_file_path}\n"
+            "launch_arguments:\n"
+            + "".join(
+                f"  {name}: {value}\n"
+                for name, value in self.launch_arguments.items()
+            )
         )
         self._save_run_metadata()
 
@@ -294,8 +329,15 @@ class CoverageCounter(Node):
             cell_max_x = cx + self.grid_size
             cell_max_y = cy + self.grid_size
             for obs in obstacles:
-                overlap = self._overlap_area_rect_cell(obs, cell_min_x, cell_min_y, cell_max_x, cell_max_y)
-                if (overlap / cell_area) >= self.obstacle_occupancy_threshold:
+                overlap = self._overlap_area_obstacle_cell(
+                    obs, cell_min_x, cell_min_y, cell_max_x, cell_max_y
+                )
+                threshold = (
+                    self.circle_obstacle_occupancy_threshold
+                    if obs[0] == "circle"
+                    else self.obstacle_occupancy_threshold
+                )
+                if (overlap / cell_area) >= threshold:
                     blocked.add(idx)
                     break
         return blocked
@@ -315,21 +357,25 @@ class CoverageCounter(Node):
         obstacles = []
         for model in world.findall("model"):
             name = model.get("name", "")
-            if name == "ground_plane":
+            if name == "ground_plane" or name.endswith("_wall"):
                 continue
             model_pose = self._parse_pose(model.findtext("pose"))
             for link in model.findall("link"):
                 link_pose = self._parse_pose(link.findtext("pose"))
                 for collision in link.findall("collision"):
                     collision_pose = self._parse_pose(collision.findtext("pose"))
-                    size_text = collision.findtext("geometry/box/size")
-                    if not size_text:
-                        continue
-                    sx, sy, _ = (float(v) for v in size_text.split())
                     x = model_pose[0] + link_pose[0] + collision_pose[0]
                     y = model_pose[1] + link_pose[1] + collision_pose[1]
                     yaw = model_pose[5] + link_pose[5] + collision_pose[5]
-                    obstacles.append((x, y, sx, sy, yaw))
+
+                    size_text = collision.findtext("geometry/box/size")
+                    if size_text:
+                        sx, sy, _ = (float(v) for v in size_text.split())
+                        obstacles.append(("box", x, y, sx, sy, yaw))
+                        continue
+                    radius_text = collision.findtext("geometry/cylinder/radius")
+                    if radius_text:
+                        obstacles.append(("circle", x, y, float(radius_text)))
         return obstacles
 
     def _parse_pose(self, pose_text):
@@ -379,8 +425,13 @@ class CoverageCounter(Node):
             area += x1 * y2 - x2 * y1
         return abs(area) * 0.5
 
+    def _overlap_area_obstacle_cell(self, obstacle, min_x, min_y, max_x, max_y):
+        if obstacle[0] == "circle":
+            return self._overlap_area_circle_cell(obstacle, min_x, min_y, max_x, max_y)
+        return self._overlap_area_rect_cell(obstacle, min_x, min_y, max_x, max_y)
+
     def _overlap_area_rect_cell(self, obstacle, min_x, min_y, max_x, max_y):
-        cx, cy, sx, sy, yaw = obstacle
+        _, cx, cy, sx, sy, yaw = obstacle
         poly = self._rect_corners(cx, cy, sx, sy, yaw)
 
         def clip_left(p):   return p[0] >= min_x
@@ -409,6 +460,23 @@ class CoverageCounter(Node):
         poly = self._clip_polygon(poly, clip_bottom, lambda a, b: intersect_y(a, b, min_y))
         poly = self._clip_polygon(poly, clip_top,    lambda a, b: intersect_y(a, b, max_y))
         return self._polygon_area(poly)
+
+    def _overlap_area_circle_cell(self, obstacle, min_x, min_y, max_x, max_y):
+        _, cx, cy, radius = obstacle
+        samples_per_axis = 10
+        inside = 0
+        step_x = (max_x - min_x) / samples_per_axis
+        step_y = (max_y - min_y) / samples_per_axis
+        radius_sq = radius * radius
+        for ix in range(samples_per_axis):
+            px = min_x + (ix + 0.5) * step_x
+            for iy in range(samples_per_axis):
+                py = min_y + (iy + 0.5) * step_y
+                if (px - cx) ** 2 + (py - cy) ** 2 <= radius_sq:
+                    inside += 1
+        return (inside / (samples_per_axis * samples_per_axis)) * (
+            (max_x - min_x) * (max_y - min_y)
+        )
 
 
 def main(args=None):
